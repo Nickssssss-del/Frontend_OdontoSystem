@@ -10,33 +10,102 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as OdontologoRouteImport } from './routes/odontologo'
+import { Route as PacienteCatalogoRouteImport } from './routes/paciente.catalogo'
+import { Route as PacientePanelRouteImport } from './routes/paciente.panel'
+import { Route as PacienteAgendarIdRouteImport } from './routes/paciente.agendar.$id'
+import { Route as PacienteDentistaIdRouteImport } from './routes/paciente.dentista.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OdontologoRoute = OdontologoRouteImport.update({
+  id: '/odontologo',
+  path: '/odontologo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PacienteCatalogoRoute = PacienteCatalogoRouteImport.update({
+  id: '/paciente/catalogo',
+  path: '/paciente/catalogo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PacientePanelRoute = PacientePanelRouteImport.update({
+  id: '/paciente/panel',
+  path: '/paciente/panel',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PacienteAgendarIdRoute = PacienteAgendarIdRouteImport.update({
+  id: '/paciente/agendar/$id',
+  path: '/paciente/agendar/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PacienteDentistaIdRoute = PacienteDentistaIdRouteImport.update({
+  id: '/paciente/dentista/$id',
+  path: '/paciente/dentista/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/odontologo': typeof OdontologoRoute
+  '/paciente/catalogo': typeof PacienteCatalogoRoute
+  '/paciente/panel': typeof PacientePanelRoute
+  '/paciente/agendar/$id': typeof PacienteAgendarIdRoute
+  '/paciente/dentista/$id': typeof PacienteDentistaIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/odontologo': typeof OdontologoRoute
+  '/paciente/catalogo': typeof PacienteCatalogoRoute
+  '/paciente/panel': typeof PacientePanelRoute
+  '/paciente/agendar/$id': typeof PacienteAgendarIdRoute
+  '/paciente/dentista/$id': typeof PacienteDentistaIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/odontologo': typeof OdontologoRoute
+  '/paciente/catalogo': typeof PacienteCatalogoRoute
+  '/paciente/panel': typeof PacientePanelRoute
+  '/paciente/agendar/$id': typeof PacienteAgendarIdRoute
+  '/paciente/dentista/$id': typeof PacienteDentistaIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/odontologo'
+    | '/paciente/catalogo'
+    | '/paciente/panel'
+    | '/paciente/agendar/$id'
+    | '/paciente/dentista/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/odontologo'
+    | '/paciente/catalogo'
+    | '/paciente/panel'
+    | '/paciente/agendar/$id'
+    | '/paciente/dentista/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/odontologo'
+    | '/paciente/catalogo'
+    | '/paciente/panel'
+    | '/paciente/agendar/$id'
+    | '/paciente/dentista/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  OdontologoRoute: typeof OdontologoRoute
+  PacienteCatalogoRoute: typeof PacienteCatalogoRoute
+  PacientePanelRoute: typeof PacientePanelRoute
+  PacienteAgendarIdRoute: typeof PacienteAgendarIdRoute
+  PacienteDentistaIdRoute: typeof PacienteDentistaIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +117,51 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/odontologo': {
+      id: '/odontologo'
+      path: '/odontologo'
+      fullPath: '/odontologo'
+      preLoaderRoute: typeof OdontologoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/paciente/catalogo': {
+      id: '/paciente/catalogo'
+      path: '/paciente/catalogo'
+      fullPath: '/paciente/catalogo'
+      preLoaderRoute: typeof PacienteCatalogoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/paciente/panel': {
+      id: '/paciente/panel'
+      path: '/paciente/panel'
+      fullPath: '/paciente/panel'
+      preLoaderRoute: typeof PacientePanelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/paciente/agendar/$id': {
+      id: '/paciente/agendar/$id'
+      path: '/paciente/agendar/$id'
+      fullPath: '/paciente/agendar/$id'
+      preLoaderRoute: typeof PacienteAgendarIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/paciente/dentista/$id': {
+      id: '/paciente/dentista/$id'
+      path: '/paciente/dentista/$id'
+      fullPath: '/paciente/dentista/$id'
+      preLoaderRoute: typeof PacienteDentistaIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  OdontologoRoute: OdontologoRoute,
+  PacienteCatalogoRoute: PacienteCatalogoRoute,
+  PacientePanelRoute: PacientePanelRoute,
+  PacienteAgendarIdRoute: PacienteAgendarIdRoute,
+  PacienteDentistaIdRoute: PacienteDentistaIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
