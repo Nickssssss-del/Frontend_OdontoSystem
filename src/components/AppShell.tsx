@@ -31,12 +31,12 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Link
                 key={to}
                 to={to}
-                className="group relative rounded-full px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[status=active]:text-primary"
-                activeProps={{ "data-status": "active" } as never}
+                className="relative rounded-full px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                activeProps={{ className: "text-primary" }}
               >
-                {({ isActive }: { isActive: boolean }) => (
+                {(state) => (
                   <span className="relative flex items-center gap-1.5">
-                    {isActive && (
+                    {state.isActive && (
                       <motion.span
                         layoutId="nav-pill"
                         className="absolute inset-x-[-10px] inset-y-[-6px] -z-10 rounded-full bg-primary/12"
