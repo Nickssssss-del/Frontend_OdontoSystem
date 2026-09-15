@@ -48,9 +48,15 @@ export const Route = createFileRoute("/paciente/panel")({
 });
 
 function Panel() {
-  const { patient, strikes, isBanned, appointments, updateAppointment } = useAppState();
+  const { patient, strikes, isBanned, appointments, updateAppointment, resubmitVoucher } =
+    useAppState();
   const [ficha, setFicha] = React.useState<Appointment | null>(null);
   const [tab, setTab] = React.useState<"futuras" | "pasadas">("futuras");
+  const [reenviarId, setReenviarId] = React.useState<string | null>(null);
+  const [nuevoPreview, setNuevoPreview] = React.useState<string | null>(null);
+  const [nuevoMetodo, setNuevoMetodo] = React.useState<"yape" | "plin">("yape");
+  const [nuevaRef, setNuevaRef] = React.useState("");
+  const [subiendo, setSubiendo] = React.useState(false);
 
   const completadas = appointments.filter((a) => a.status === "COMPLETED");
   const invertido = completadas.reduce((s, a) => s + a.amount, 0);
@@ -58,8 +64,32 @@ function Panel() {
     (a) => a.status === "CANCELLED" || a.status === "NO_SHOW",
   ).length;
 
+  const rechazadas = appointments.filter((a) => a.status === "PAYMENT_REJECTED");
+  const reenviar = appointments.find((a) => a.id === reenviarId) ?? null;
+
+  const abrirReenvio = (a: Appointment) => {
+    setReenviarId(a.id);
+    setNuevoPreview(null);
+    setNuevaRef("");
+    setNuevoMetodo(a.voucher?.method ?? "yape");
+  };
+
+  const enviarNuevo = () => {
+    if (!reenviar) return;
+    setSubiendo(true);
+    window.setTimeout(() => {
+      resubmitVoucher(reenviar.id, {
+        ...(nuevoPreview ? { imageUrl: nuevoPreview } : {}),
+        reference: nuevaRef.trim() || `OP ${Math.floor(1000000 + Math.random() * 8999999)}`,
+        method: nuevoMetodo,
+      });
+      setSubiendo(false);
+      setReenviarId(null);
+    }, 1200);
+  };
+
   const futuras = appointments.filter((a) =>
-    ["CONFIRMED", "VERIFYING", "PENDING_PAYMENT"].includes(a.status),
+    ["CONFIRMED", "VERIFYING", "PENDING_PAYMENT", "PAYMENT_REJECTED"].includes(a.status),
   );
   const pasadas = appointments.filter((a) =>
     ["COMPLETED", "CANCELLED", "NO_SHOW"].includes(a.status),
