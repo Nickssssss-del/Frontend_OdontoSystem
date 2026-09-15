@@ -184,6 +184,68 @@ function Odontologo() {
         />
       </div>
 
+      <motion.section
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="mt-6 rounded-3xl border border-border bg-card p-6"
+      >
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="flex size-10 items-center justify-center rounded-2xl bg-warning/15 text-warning-foreground">
+            <Receipt className="size-5" />
+          </span>
+          <div className="flex-1">
+            <h2 className="font-display text-lg font-semibold">Comprobantes Yape / Plin</h2>
+            <p className="text-sm text-muted-foreground">
+              Revisa cada captura y aprueba o rechaza el anticipo de S/ 20.
+            </p>
+          </div>
+          <span className="rounded-full border border-warning/40 bg-warning/15 px-3 py-1 text-xs font-semibold text-warning-foreground">
+            {enRevision.length} en revisión
+          </span>
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <AnimatePresence mode="popLayout">
+            {vouchersPorRevisar.map((a) => (
+              <motion.div
+                key={a.id}
+                layout
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96 }}
+                className="rounded-2xl border border-border bg-background p-4"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-medium">{a.patient}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {a.date} · {a.time} · {a.service}
+                    </p>
+                  </div>
+                  <span className="font-display text-sm font-semibold">{soles(a.amount)}</span>
+                </div>
+                {a.voucher && <VoucherBadge status={a.voucher.status} className="mt-3" />}
+                {a.voucher?.status === "RECHAZADO" && a.voucher.reason && (
+                  <p className="mt-2 rounded-xl bg-destructive/10 p-2 text-xs text-destructive">
+                    Motivo: {a.voucher.reason}
+                  </p>
+                )}
+                <button
+                  onClick={() => abrirRevision(a)}
+                  className="mt-3 w-full rounded-full border border-border py-2 text-xs font-semibold transition-colors hover:border-primary hover:text-primary"
+                >
+                  Ver comprobante adjunto
+                </button>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          {vouchersPorRevisar.length === 0 && (
+            <p className="text-sm text-muted-foreground">No hay comprobantes registrados.</p>
+          )}
+        </div>
+      </motion.section>
+
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.2fr]">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
