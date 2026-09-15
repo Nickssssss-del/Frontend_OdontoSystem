@@ -16,9 +16,9 @@ export type Voucher = {
   reference: string;
   amount: number;
   uploadedAt: string;
-  imageUrl?: string;
+  imageUrl?: string | undefined;
   status: VoucherStatus;
-  reason?: string;
+  reason?: string | undefined;
   attempt: number;
 };
 
