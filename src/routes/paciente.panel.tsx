@@ -4,16 +4,21 @@ import { AnimatePresence, motion } from "motion/react";
 import {
   AlertTriangle,
   CalendarClock,
+  CheckCircle2,
   FileDown,
   FileText,
+  ImagePlus,
+  Loader2,
   Lock,
   ShieldAlert,
+  Smartphone,
   Sparkles,
   Wallet,
   X,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { StrikeMeter } from "@/components/StrikeMeter";
+import { VoucherBadge, VoucherReceipt } from "@/components/VoucherBits";
 import { getDentist, soles } from "@/lib/mock-data";
 import {
   statusClass,
