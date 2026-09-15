@@ -354,7 +354,18 @@ function Odontologo() {
                           🔒 {cita.note}
                         </p>
                       )}
-                      {["CONFIRMED", "VERIFYING", "PENDING_PAYMENT"].includes(cita.status) && (
+                      {cita.voucher && (
+                        <button
+                          onClick={() => abrirRevision(cita)}
+                          className="mt-2 flex items-center gap-1.5 rounded-full border border-warning/40 bg-warning/10 px-3 py-1.5 text-xs font-semibold text-warning-foreground"
+                        >
+                          <Receipt className="size-3.5" />
+                          Revisar comprobante
+                        </button>
+                      )}
+                      {["CONFIRMED", "VERIFYING", "PENDING_PAYMENT", "PAYMENT_REJECTED"].includes(
+                        cita.status,
+                      ) && (
                         <div className="mt-2 flex flex-wrap gap-2">
                           <button
                             onClick={() => marcarAtendido(cita)}
