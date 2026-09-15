@@ -15,14 +15,23 @@ import {
   CalendarX2,
   CheckCircle2,
   NotebookPen,
+  Receipt,
+  ThumbsDown,
   TrendingUp,
   UserX,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { VoucherBadge, VoucherReceipt } from "@/components/VoucherBits";
 import { ingresosMensuales, soles, timeBlocks } from "@/lib/mock-data";
-import { statusClass, statusLabel, useAppState, type Appointment } from "@/lib/app-state";
+import {
+  motivosRechazo,
+  statusClass,
+  statusLabel,
+  useAppState,
+  type Appointment,
+} from "@/lib/app-state";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/odontologo")({
@@ -47,9 +56,48 @@ export const Route = createFileRoute("/odontologo")({
 const dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
 function Odontologo() {
-  const { agenda, updateAgenda, addStrike, strikes, blockedToday, setBlockedToday } = useAppState();
+  const {
+    agenda,
+    updateAgenda,
+    addStrike,
+    strikes,
+    blockedToday,
+    setBlockedToday,
+    vouchersPorRevisar,
+    approveVoucher,
+    rejectVoucher,
+  } = useAppState();
   const [notaFor, setNotaFor] = React.useState<Appointment | null>(null);
   const [nota, setNota] = React.useState("");
+  const [revisandoId, setRevisandoId] = React.useState<string | null>(null);
+  const [motivo, setMotivo] = React.useState(motivosRechazo[0]!);
+  const [modoRechazo, setModoRechazo] = React.useState(false);
+
+  const revisando = vouchersPorRevisar.find((a) => a.id === revisandoId) ?? null;
+  const enRevision = vouchersPorRevisar.filter((a) => a.voucher?.status === "EN_REVISION");
+
+  const abrirRevision = (a: Appointment) => {
+    setRevisandoId(a.id);
+    setModoRechazo(false);
+    setMotivo(motivosRechazo[0]!);
+  };
+
+  const aprobar = (a: Appointment) => {
+    approveVoucher(a.id);
+    setRevisandoId(null);
+    toast.success("Comprobante aprobado", {
+      description: `La cita de ${a.patient} pasó a CONFIRMED.`,
+    });
+  };
+
+  const rechazar = (a: Appointment) => {
+    rejectVoucher(a.id, motivo);
+    setRevisandoId(null);
+    setModoRechazo(false);
+    toast.error("Comprobante rechazado", {
+      description: `${a.patient} podrá subir uno nuevo. Motivo: ${motivo}`,
+    });
+  };
 
   const atendidas = agenda.filter((a) => a.status === "COMPLETED").length;
   const ingresosMes = ingresosMensuales.at(-1)?.ingresos ?? 0;
@@ -135,6 +183,68 @@ function Odontologo() {
           delay={0.12}
         />
       </div>
+
+      <motion.section
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="mt-6 rounded-3xl border border-border bg-card p-6"
+      >
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="flex size-10 items-center justify-center rounded-2xl bg-warning/15 text-warning-foreground">
+            <Receipt className="size-5" />
+          </span>
+          <div className="flex-1">
+            <h2 className="font-display text-lg font-semibold">Comprobantes Yape / Plin</h2>
+            <p className="text-sm text-muted-foreground">
+              Revisa cada captura y aprueba o rechaza el anticipo de S/ 20.
+            </p>
+          </div>
+          <span className="rounded-full border border-warning/40 bg-warning/15 px-3 py-1 text-xs font-semibold text-warning-foreground">
+            {enRevision.length} en revisión
+          </span>
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <AnimatePresence mode="popLayout">
+            {vouchersPorRevisar.map((a) => (
+              <motion.div
+                key={a.id}
+                layout
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96 }}
+                className="rounded-2xl border border-border bg-background p-4"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-medium">{a.patient}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {a.date} · {a.time} · {a.service}
+                    </p>
+                  </div>
+                  <span className="font-display text-sm font-semibold">{soles(a.amount)}</span>
+                </div>
+                {a.voucher && <VoucherBadge status={a.voucher.status} className="mt-3" />}
+                {a.voucher?.status === "RECHAZADO" && a.voucher.reason && (
+                  <p className="mt-2 rounded-xl bg-destructive/10 p-2 text-xs text-destructive">
+                    Motivo: {a.voucher.reason}
+                  </p>
+                )}
+                <button
+                  onClick={() => abrirRevision(a)}
+                  className="mt-3 w-full rounded-full border border-border py-2 text-xs font-semibold transition-colors hover:border-primary hover:text-primary"
+                >
+                  Ver comprobante adjunto
+                </button>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          {vouchersPorRevisar.length === 0 && (
+            <p className="text-sm text-muted-foreground">No hay comprobantes registrados.</p>
+          )}
+        </div>
+      </motion.section>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.2fr]">
         <motion.div
@@ -244,7 +354,18 @@ function Odontologo() {
                           🔒 {cita.note}
                         </p>
                       )}
-                      {["CONFIRMED", "VERIFYING", "PENDING_PAYMENT"].includes(cita.status) && (
+                      {cita.voucher && (
+                        <button
+                          onClick={() => abrirRevision(cita)}
+                          className="mt-2 flex items-center gap-1.5 rounded-full border border-warning/40 bg-warning/10 px-3 py-1.5 text-xs font-semibold text-warning-foreground"
+                        >
+                          <Receipt className="size-3.5" />
+                          Revisar comprobante
+                        </button>
+                      )}
+                      {["CONFIRMED", "VERIFYING", "PENDING_PAYMENT", "PAYMENT_REJECTED"].includes(
+                        cita.status,
+                      ) && (
                         <div className="mt-2 flex flex-wrap gap-2">
                           <button
                             onClick={() => marcarAtendido(cita)}
@@ -293,6 +414,110 @@ function Odontologo() {
           </div>
         </motion.div>
       </div>
+
+      <AnimatePresence>
+        {revisando?.voucher && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setRevisandoId(null)}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 24, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.97 }}
+              transition={{ type: "spring", stiffness: 300, damping: 28 }}
+              onClick={(e) => e.stopPropagation()}
+              className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-3xl border border-border bg-card p-6 shadow-2xl"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="font-display text-xl font-semibold">Verificación de pago</h2>
+                  <p className="text-sm text-muted-foreground">
+                    {revisando.patient} · {revisando.date} · {revisando.time}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setRevisandoId(null)}
+                  className="rounded-full p-1.5 text-muted-foreground hover:bg-muted"
+                >
+                  <X className="size-5" />
+                </button>
+              </div>
+
+              <VoucherBadge status={revisando.voucher.status} className="mt-3" />
+
+              <div className="mt-4">
+                <VoucherReceipt voucher={revisando.voucher} />
+              </div>
+
+              {revisando.voucher.status === "APROBADO" ? (
+                <p className="mt-4 rounded-2xl border border-success/40 bg-success/10 p-3 text-sm text-success-foreground">
+                  Pago aprobado. La cita quedó confirmada para el paciente.
+                </p>
+              ) : modoRechazo ? (
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4">
+                  <p className="text-sm font-medium">Motivo del rechazo</p>
+                  <div className="mt-2 space-y-2">
+                    {motivosRechazo.map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => setMotivo(m)}
+                        className={cn(
+                          "w-full rounded-xl border px-3 py-2 text-left text-xs font-medium transition-colors",
+                          motivo === m
+                            ? "border-destructive bg-destructive/10 text-destructive"
+                            : "border-border text-muted-foreground hover:border-destructive/50",
+                        )}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    value={motivo}
+                    onChange={(e) => setMotivo(e.target.value.slice(0, 160))}
+                    placeholder="O escribe un motivo personalizado"
+                    className="mt-3 h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-primary"
+                  />
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      onClick={() => setModoRechazo(false)}
+                      className="flex-1 rounded-full border border-border py-3 text-sm font-semibold"
+                    >
+                      Volver
+                    </button>
+                    <button
+                      disabled={motivo.trim().length < 5}
+                      onClick={() => rechazar(revisando)}
+                      className="flex-1 rounded-full bg-destructive py-3 text-sm font-semibold text-destructive-foreground disabled:bg-muted disabled:text-muted-foreground"
+                    >
+                      Confirmar rechazo
+                    </button>
+                  </div>
+                </motion.div>
+              ) : (
+                <div className="mt-4 flex gap-2">
+                  <button
+                    onClick={() => setModoRechazo(true)}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-destructive/40 py-3 text-sm font-semibold text-destructive hover:bg-destructive/10"
+                  >
+                    <ThumbsDown className="size-4" /> Rechazar
+                  </button>
+                  <button
+                    onClick={() => aprobar(revisando)}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-success py-3 text-sm font-semibold text-success-foreground"
+                  >
+                    <CheckCircle2 className="size-4" /> Aprobar
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {notaFor && (

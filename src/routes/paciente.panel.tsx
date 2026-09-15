@@ -4,16 +4,21 @@ import { AnimatePresence, motion } from "motion/react";
 import {
   AlertTriangle,
   CalendarClock,
+  CheckCircle2,
   FileDown,
   FileText,
+  ImagePlus,
+  Loader2,
   Lock,
   ShieldAlert,
+  Smartphone,
   Sparkles,
   Wallet,
   X,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { StrikeMeter } from "@/components/StrikeMeter";
+import { VoucherBadge, VoucherReceipt } from "@/components/VoucherBits";
 import { getDentist, soles } from "@/lib/mock-data";
 import {
   statusClass,
@@ -43,9 +48,15 @@ export const Route = createFileRoute("/paciente/panel")({
 });
 
 function Panel() {
-  const { patient, strikes, isBanned, appointments, updateAppointment } = useAppState();
+  const { patient, strikes, isBanned, appointments, updateAppointment, resubmitVoucher } =
+    useAppState();
   const [ficha, setFicha] = React.useState<Appointment | null>(null);
   const [tab, setTab] = React.useState<"futuras" | "pasadas">("futuras");
+  const [reenviarId, setReenviarId] = React.useState<string | null>(null);
+  const [nuevoPreview, setNuevoPreview] = React.useState<string | null>(null);
+  const [nuevoMetodo, setNuevoMetodo] = React.useState<"yape" | "plin">("yape");
+  const [nuevaRef, setNuevaRef] = React.useState("");
+  const [subiendo, setSubiendo] = React.useState(false);
 
   const completadas = appointments.filter((a) => a.status === "COMPLETED");
   const invertido = completadas.reduce((s, a) => s + a.amount, 0);
@@ -53,8 +64,32 @@ function Panel() {
     (a) => a.status === "CANCELLED" || a.status === "NO_SHOW",
   ).length;
 
+  const rechazadas = appointments.filter((a) => a.status === "PAYMENT_REJECTED");
+  const reenviar = appointments.find((a) => a.id === reenviarId) ?? null;
+
+  const abrirReenvio = (a: Appointment) => {
+    setReenviarId(a.id);
+    setNuevoPreview(null);
+    setNuevaRef("");
+    setNuevoMetodo(a.voucher?.method ?? "yape");
+  };
+
+  const enviarNuevo = () => {
+    if (!reenviar) return;
+    setSubiendo(true);
+    window.setTimeout(() => {
+      resubmitVoucher(reenviar.id, {
+        ...(nuevoPreview ? { imageUrl: nuevoPreview } : {}),
+        reference: nuevaRef.trim() || `OP ${Math.floor(1000000 + Math.random() * 8999999)}`,
+        method: nuevoMetodo,
+      });
+      setSubiendo(false);
+      setReenviarId(null);
+    }, 1200);
+  };
+
   const futuras = appointments.filter((a) =>
-    ["CONFIRMED", "VERIFYING", "PENDING_PAYMENT"].includes(a.status),
+    ["CONFIRMED", "VERIFYING", "PENDING_PAYMENT", "PAYMENT_REJECTED"].includes(a.status),
   );
   const pasadas = appointments.filter((a) =>
     ["COMPLETED", "CANCELLED", "NO_SHOW"].includes(a.status),
@@ -89,6 +124,37 @@ function Panel() {
             </div>
           </motion.div>
         )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {rechazadas.map((a) => (
+          <motion.div
+            key={a.id}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-4 overflow-hidden"
+          >
+            <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-destructive/40 bg-destructive/10 p-4">
+              <AlertTriangle className="size-5 shrink-0 text-destructive" />
+              <div className="min-w-48 flex-1">
+                <p className="font-semibold text-destructive">
+                  Tu comprobante fue rechazado — {a.service}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {a.voucher?.reason ?? "Revisa la captura enviada."} Sube un comprobante corregido
+                  para conservar tu cita del {a.date} a las {a.time}.
+                </p>
+              </div>
+              <button
+                onClick={() => abrirReenvio(a)}
+                className="rounded-full bg-destructive px-4 py-2 text-xs font-semibold text-destructive-foreground"
+              >
+                Volver a subir comprobante
+              </button>
+            </div>
+          </motion.div>
+        ))}
       </AnimatePresence>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -168,6 +234,7 @@ function Panel() {
                     <p className="text-sm text-muted-foreground">
                       {d?.name} · {a.date} · {a.time}
                     </p>
+                    {a.voucher && <VoucherBadge status={a.voucher.status} className="mt-1.5" />}
                   </div>
                   <span
                     className={cn(
@@ -186,6 +253,15 @@ function Panel() {
                       <FileText className="mr-1 inline size-3.5" />
                       Ver ficha
                     </button>
+                    {a.status === "PAYMENT_REJECTED" && (
+                      <button
+                        onClick={() => abrirReenvio(a)}
+                        className="rounded-full bg-destructive px-3 py-1.5 text-xs font-semibold text-destructive-foreground"
+                      >
+                        <ImagePlus className="mr-1 inline size-3.5" />
+                        Corregir comprobante
+                      </button>
+                    )}
                     {tab === "futuras" &&
                       (isBanned ? (
                         <span className="flex items-center gap-1 rounded-full bg-muted px-3 py-1.5 text-xs font-semibold text-muted-foreground">
@@ -263,6 +339,116 @@ function Panel() {
 
               <button className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground">
                 <FileDown className="size-4" /> Descargar ficha en PDF
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {reenviar && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setReenviarId(null)}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 24, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.97 }}
+              transition={{ type: "spring", stiffness: 300, damping: 28 }}
+              onClick={(e) => e.stopPropagation()}
+              className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-3xl border border-border bg-card p-6 shadow-2xl"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="font-display text-xl font-semibold">Corregir comprobante</h2>
+                  <p className="text-sm text-muted-foreground">
+                    {reenviar.service} · {reenviar.date} · {reenviar.time}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setReenviarId(null)}
+                  className="rounded-full p-1.5 text-muted-foreground hover:bg-muted"
+                >
+                  <X className="size-5" />
+                </button>
+              </div>
+
+              {reenviar.voucher?.reason && (
+                <p className="mt-3 rounded-xl bg-destructive/10 p-3 text-xs font-medium text-destructive">
+                  Rechazado por: {reenviar.voucher.reason}
+                </p>
+              )}
+
+              {reenviar.voucher && (
+                <div className="mt-3">
+                  <VoucherReceipt voucher={reenviar.voucher} />
+                </div>
+              )}
+
+              <div className="mt-4 flex gap-2">
+                {(["yape", "plin"] as const).map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setNuevoMetodo(m)}
+                    className={cn(
+                      "flex-1 rounded-xl border py-2.5 text-sm font-semibold capitalize transition-colors",
+                      nuevoMetodo === m
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border text-muted-foreground",
+                    )}
+                  >
+                    <Smartphone className="mr-1.5 inline size-4" />
+                    {m}
+                  </button>
+                ))}
+              </div>
+
+              <input
+                value={nuevaRef}
+                onChange={(e) => setNuevaRef(e.target.value.slice(0, 30))}
+                placeholder="N° de operación (opcional)"
+                className="mt-3 h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-primary"
+              />
+
+              <label className="mt-3 flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-border bg-muted/30 px-6 py-8 text-center transition-colors hover:border-primary/60">
+                <ImagePlus className="size-7 text-primary" />
+                <span className="text-sm font-medium">Sube la nueva captura del Yape/Plin</span>
+                <span className="text-xs text-muted-foreground">PNG o JPG hasta 5 MB</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) setNuevoPreview(URL.createObjectURL(f));
+                  }}
+                />
+              </label>
+
+              <AnimatePresence>
+                {nuevoPreview && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.96 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="mt-3 flex items-center gap-2 rounded-xl bg-success/12 p-3 text-xs font-medium text-success-foreground"
+                  >
+                    <CheckCircle2 className="size-4" /> Nueva captura lista para enviar
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <button
+                disabled={!nuevoPreview || subiendo}
+                onClick={enviarNuevo}
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:bg-muted disabled:text-muted-foreground"
+              >
+                {subiendo && <Loader2 className="size-4 animate-spin" />}
+                {subiendo ? "Enviando…" : "Enviar para nueva verificación"}
               </button>
             </motion.div>
           </motion.div>
