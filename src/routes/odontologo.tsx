@@ -416,6 +416,110 @@ function Odontologo() {
       </div>
 
       <AnimatePresence>
+        {revisando?.voucher && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setRevisandoId(null)}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 24, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.97 }}
+              transition={{ type: "spring", stiffness: 300, damping: 28 }}
+              onClick={(e) => e.stopPropagation()}
+              className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-3xl border border-border bg-card p-6 shadow-2xl"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="font-display text-xl font-semibold">Verificación de pago</h2>
+                  <p className="text-sm text-muted-foreground">
+                    {revisando.patient} · {revisando.date} · {revisando.time}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setRevisandoId(null)}
+                  className="rounded-full p-1.5 text-muted-foreground hover:bg-muted"
+                >
+                  <X className="size-5" />
+                </button>
+              </div>
+
+              <VoucherBadge status={revisando.voucher.status} className="mt-3" />
+
+              <div className="mt-4">
+                <VoucherReceipt voucher={revisando.voucher} />
+              </div>
+
+              {revisando.voucher.status === "APROBADO" ? (
+                <p className="mt-4 rounded-2xl border border-success/40 bg-success/10 p-3 text-sm text-success-foreground">
+                  Pago aprobado. La cita quedó confirmada para el paciente.
+                </p>
+              ) : modoRechazo ? (
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4">
+                  <p className="text-sm font-medium">Motivo del rechazo</p>
+                  <div className="mt-2 space-y-2">
+                    {motivosRechazo.map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => setMotivo(m)}
+                        className={cn(
+                          "w-full rounded-xl border px-3 py-2 text-left text-xs font-medium transition-colors",
+                          motivo === m
+                            ? "border-destructive bg-destructive/10 text-destructive"
+                            : "border-border text-muted-foreground hover:border-destructive/50",
+                        )}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    value={motivo}
+                    onChange={(e) => setMotivo(e.target.value.slice(0, 160))}
+                    placeholder="O escribe un motivo personalizado"
+                    className="mt-3 h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-primary"
+                  />
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      onClick={() => setModoRechazo(false)}
+                      className="flex-1 rounded-full border border-border py-3 text-sm font-semibold"
+                    >
+                      Volver
+                    </button>
+                    <button
+                      disabled={motivo.trim().length < 5}
+                      onClick={() => rechazar(revisando)}
+                      className="flex-1 rounded-full bg-destructive py-3 text-sm font-semibold text-destructive-foreground disabled:bg-muted disabled:text-muted-foreground"
+                    >
+                      Confirmar rechazo
+                    </button>
+                  </div>
+                </motion.div>
+              ) : (
+                <div className="mt-4 flex gap-2">
+                  <button
+                    onClick={() => setModoRechazo(true)}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-destructive/40 py-3 text-sm font-semibold text-destructive hover:bg-destructive/10"
+                  >
+                    <ThumbsDown className="size-4" /> Rechazar
+                  </button>
+                  <button
+                    onClick={() => aprobar(revisando)}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-success py-3 text-sm font-semibold text-success-foreground"
+                  >
+                    <CheckCircle2 className="size-4" /> Aprobar
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {notaFor && (
           <motion.div
             initial={{ opacity: 0 }}
