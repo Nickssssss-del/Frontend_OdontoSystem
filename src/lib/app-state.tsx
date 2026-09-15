@@ -192,7 +192,16 @@ const agendaHoy: Appointment[] = [
     time: "12:00",
     service: "Control mensual",
     amount: 80,
-    status: "PENDING_PAYMENT",
+    status: "PAYMENT_REJECTED",
+    voucher: {
+      method: "plin",
+      reference: "OP 6620881",
+      amount: 20,
+      uploadedAt: "14 Set, 20:31",
+      status: "RECHAZADO",
+      reason: "La imagen está borrosa o incompleta",
+      attempt: 1,
+    },
   },
   {
     id: "h5",
