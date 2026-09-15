@@ -165,6 +165,14 @@ const agendaHoy: Appointment[] = [
     service: "Evaluación ortodóncica",
     amount: 60,
     status: "VERIFYING",
+    voucher: {
+      method: "yape",
+      reference: "OP 7712045",
+      amount: 20,
+      uploadedAt: "15 Set, 08:12",
+      status: "EN_REVISION",
+      attempt: 1,
+    },
   },
   {
     id: "h3",
