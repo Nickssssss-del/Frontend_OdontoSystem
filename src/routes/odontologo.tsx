@@ -15,14 +15,23 @@ import {
   CalendarX2,
   CheckCircle2,
   NotebookPen,
+  Receipt,
+  ThumbsDown,
   TrendingUp,
   UserX,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { VoucherBadge, VoucherReceipt } from "@/components/VoucherBits";
 import { ingresosMensuales, soles, timeBlocks } from "@/lib/mock-data";
-import { statusClass, statusLabel, useAppState, type Appointment } from "@/lib/app-state";
+import {
+  motivosRechazo,
+  statusClass,
+  statusLabel,
+  useAppState,
+  type Appointment,
+} from "@/lib/app-state";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/odontologo")({
