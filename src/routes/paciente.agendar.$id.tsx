@@ -112,6 +112,20 @@ function Agendar() {
         service,
         amount: dentist.services.find((s) => s.name === service)?.price ?? dentist.price,
         status: "VERIFYING",
+        voucher: {
+          method: metodo,
+          reference: `OP ${Math.floor(1000000 + Math.random() * 8999999)}`,
+          amount: ANTICIPO,
+          uploadedAt: new Date().toLocaleString("es-PE", {
+            day: "2-digit",
+            month: "short",
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          ...(preview ? { imageUrl: preview } : {}),
+          status: "EN_REVISION",
+          attempt: 1,
+        },
       });
       setEnviando(false);
       setDone(true);
