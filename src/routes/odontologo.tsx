@@ -56,9 +56,48 @@ export const Route = createFileRoute("/odontologo")({
 const dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
 function Odontologo() {
-  const { agenda, updateAgenda, addStrike, strikes, blockedToday, setBlockedToday } = useAppState();
+  const {
+    agenda,
+    updateAgenda,
+    addStrike,
+    strikes,
+    blockedToday,
+    setBlockedToday,
+    vouchersPorRevisar,
+    approveVoucher,
+    rejectVoucher,
+  } = useAppState();
   const [notaFor, setNotaFor] = React.useState<Appointment | null>(null);
   const [nota, setNota] = React.useState("");
+  const [revisandoId, setRevisandoId] = React.useState<string | null>(null);
+  const [motivo, setMotivo] = React.useState(motivosRechazo[0]!);
+  const [modoRechazo, setModoRechazo] = React.useState(false);
+
+  const revisando = vouchersPorRevisar.find((a) => a.id === revisandoId) ?? null;
+  const enRevision = vouchersPorRevisar.filter((a) => a.voucher?.status === "EN_REVISION");
+
+  const abrirRevision = (a: Appointment) => {
+    setRevisandoId(a.id);
+    setModoRechazo(false);
+    setMotivo(motivosRechazo[0]!);
+  };
+
+  const aprobar = (a: Appointment) => {
+    approveVoucher(a.id);
+    setRevisandoId(null);
+    toast.success("Comprobante aprobado", {
+      description: `La cita de ${a.patient} pasó a CONFIRMED.`,
+    });
+  };
+
+  const rechazar = (a: Appointment) => {
+    rejectVoucher(a.id, motivo);
+    setRevisandoId(null);
+    setModoRechazo(false);
+    toast.error("Comprobante rechazado", {
+      description: `${a.patient} podrá subir uno nuevo. Motivo: ${motivo}`,
+    });
+  };
 
   const atendidas = agenda.filter((a) => a.status === "COMPLETED").length;
   const ingresosMes = ingresosMensuales.at(-1)?.ingresos ?? 0;
