@@ -301,14 +301,16 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     approveVoucher: (id) =>
       patchBoth(id, (a) => ({
         status: "CONFIRMED",
-        voucher: a.voucher
-          ? { ...a.voucher, status: "APROBADO", reason: undefined }
-          : a.voucher,
+        ...(a.voucher
+          ? { voucher: { ...a.voucher, status: "APROBADO" as const, reason: undefined } }
+          : {}),
       })),
     rejectVoucher: (id, reason) =>
       patchBoth(id, (a) => ({
         status: "PAYMENT_REJECTED",
-        voucher: a.voucher ? { ...a.voucher, status: "RECHAZADO", reason } : a.voucher,
+        ...(a.voucher
+          ? { voucher: { ...a.voucher, status: "RECHAZADO" as const, reason } }
+          : {}),
       })),
     resubmitVoucher: (id, data) =>
       patchBoth(id, (a) => ({
