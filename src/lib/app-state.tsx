@@ -231,11 +231,15 @@ type Ctx = {
   isBanned: boolean;
   appointments: Appointment[];
   agenda: Appointment[];
+  vouchersPorRevisar: Appointment[];
   addStrike: () => void;
   clearStrikes: () => void;
   addAppointment: (a: Appointment) => void;
   updateAppointment: (id: string, patch: Partial<Appointment>) => void;
   updateAgenda: (id: string, patch: Partial<Appointment>) => void;
+  approveVoucher: (id: string) => void;
+  rejectVoucher: (id: string, reason: string) => void;
+  resubmitVoucher: (id: string, data: { imageUrl?: string; reference: string; method: "yape" | "plin" }) => void;
   blockedToday: boolean;
   setBlockedToday: (v: boolean) => void;
 };
@@ -244,11 +248,38 @@ const AppStateContext = React.createContext<Ctx | null>(null);
 
 export const STRIKE_LIMIT = 3;
 
+const ahora = () =>
+  new Date().toLocaleString("es-PE", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
 export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [strikes, setStrikes] = React.useState(1);
   const [appointments, setAppointments] = React.useState<Appointment[]>(seed);
   const [agenda, setAgenda] = React.useState<Appointment[]>(agendaHoy);
   const [blockedToday, setBlockedToday] = React.useState(false);
+
+  const patchBoth = (id: string, patch: (a: Appointment) => Partial<Appointment>) => {
+    const apply = (prev: Appointment[]) =>
+      prev.map((a) => (a.id === id ? { ...a, ...patch(a) } : a));
+    setAppointments(apply);
+    setAgenda(apply);
+  };
+
+  const vouchersPorRevisar = React.useMemo(() => {
+    const all = [...agenda, ...appointments].filter((a) => a.voucher);
+    const seen = new Set<string>();
+    return all
+      .filter((a) => (seen.has(a.id) ? false : (seen.add(a.id), true)))
+      .sort((a, b) => {
+        const rank = (v?: VoucherStatus) =>
+          v === "EN_REVISION" ? 0 : v === "RECHAZADO" ? 1 : 2;
+        return rank(a.voucher?.status) - rank(b.voucher?.status);
+      });
+  }, [agenda, appointments]);
 
   const value: Ctx = {
     patient: "Nicole Ramírez",
@@ -256,13 +287,42 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     isBanned: strikes >= STRIKE_LIMIT,
     appointments,
     agenda,
+    vouchersPorRevisar,
     addStrike: () => setStrikes((s) => Math.min(STRIKE_LIMIT, s + 1)),
     clearStrikes: () => setStrikes(0),
-    addAppointment: (a) => setAppointments((prev) => [a, ...prev]),
+    addAppointment: (a) => {
+      setAppointments((prev) => [a, ...prev]);
+      setAgenda((prev) => [...prev, a]);
+    },
     updateAppointment: (id, patch) =>
       setAppointments((prev) => prev.map((a) => (a.id === id ? { ...a, ...patch } : a))),
     updateAgenda: (id, patch) =>
       setAgenda((prev) => prev.map((a) => (a.id === id ? { ...a, ...patch } : a))),
+    approveVoucher: (id) =>
+      patchBoth(id, (a) => ({
+        status: "CONFIRMED",
+        voucher: a.voucher
+          ? { ...a.voucher, status: "APROBADO", reason: undefined }
+          : a.voucher,
+      })),
+    rejectVoucher: (id, reason) =>
+      patchBoth(id, (a) => ({
+        status: "PAYMENT_REJECTED",
+        voucher: a.voucher ? { ...a.voucher, status: "RECHAZADO", reason } : a.voucher,
+      })),
+    resubmitVoucher: (id, data) =>
+      patchBoth(id, (a) => ({
+        status: "VERIFYING",
+        voucher: {
+          method: data.method,
+          reference: data.reference,
+          amount: a.voucher?.amount ?? 20,
+          uploadedAt: ahora(),
+          imageUrl: data.imageUrl,
+          status: "EN_REVISION",
+          attempt: (a.voucher?.attempt ?? 1) + 1,
+        },
+      })),
     blockedToday,
     setBlockedToday,
   };
