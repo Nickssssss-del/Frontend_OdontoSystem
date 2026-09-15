@@ -116,6 +116,32 @@ const seed: Appointment[] = [
     service: "Control mensual de brackets",
     amount: 80,
     status: "CONFIRMED",
+    voucher: {
+      method: "yape",
+      reference: "OP 8842190",
+      amount: 20,
+      uploadedAt: "12 Set, 18:42",
+      status: "APROBADO",
+      attempt: 1,
+    },
+  },
+  {
+    id: "a5",
+    dentistId: "d4",
+    patient: "Nicole Ramírez",
+    date: "2026-09-22",
+    time: "16:00",
+    service: "Blanqueamiento láser",
+    amount: 480,
+    status: "VERIFYING",
+    voucher: {
+      method: "plin",
+      reference: "OP 9013774",
+      amount: 20,
+      uploadedAt: "15 Set, 09:05",
+      status: "EN_REVISION",
+      attempt: 1,
+    },
   },
 ];
 
