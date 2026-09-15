@@ -344,6 +344,116 @@ function Panel() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {reenviar && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setReenviarId(null)}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 24, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.97 }}
+              transition={{ type: "spring", stiffness: 300, damping: 28 }}
+              onClick={(e) => e.stopPropagation()}
+              className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-3xl border border-border bg-card p-6 shadow-2xl"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="font-display text-xl font-semibold">Corregir comprobante</h2>
+                  <p className="text-sm text-muted-foreground">
+                    {reenviar.service} · {reenviar.date} · {reenviar.time}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setReenviarId(null)}
+                  className="rounded-full p-1.5 text-muted-foreground hover:bg-muted"
+                >
+                  <X className="size-5" />
+                </button>
+              </div>
+
+              {reenviar.voucher?.reason && (
+                <p className="mt-3 rounded-xl bg-destructive/10 p-3 text-xs font-medium text-destructive">
+                  Rechazado por: {reenviar.voucher.reason}
+                </p>
+              )}
+
+              {reenviar.voucher && (
+                <div className="mt-3">
+                  <VoucherReceipt voucher={reenviar.voucher} />
+                </div>
+              )}
+
+              <div className="mt-4 flex gap-2">
+                {(["yape", "plin"] as const).map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setNuevoMetodo(m)}
+                    className={cn(
+                      "flex-1 rounded-xl border py-2.5 text-sm font-semibold capitalize transition-colors",
+                      nuevoMetodo === m
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border text-muted-foreground",
+                    )}
+                  >
+                    <Smartphone className="mr-1.5 inline size-4" />
+                    {m}
+                  </button>
+                ))}
+              </div>
+
+              <input
+                value={nuevaRef}
+                onChange={(e) => setNuevaRef(e.target.value.slice(0, 30))}
+                placeholder="N° de operación (opcional)"
+                className="mt-3 h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-primary"
+              />
+
+              <label className="mt-3 flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-border bg-muted/30 px-6 py-8 text-center transition-colors hover:border-primary/60">
+                <ImagePlus className="size-7 text-primary" />
+                <span className="text-sm font-medium">Sube la nueva captura del Yape/Plin</span>
+                <span className="text-xs text-muted-foreground">PNG o JPG hasta 5 MB</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) setNuevoPreview(URL.createObjectURL(f));
+                  }}
+                />
+              </label>
+
+              <AnimatePresence>
+                {nuevoPreview && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.96 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="mt-3 flex items-center gap-2 rounded-xl bg-success/12 p-3 text-xs font-medium text-success-foreground"
+                  >
+                    <CheckCircle2 className="size-4" /> Nueva captura lista para enviar
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <button
+                disabled={!nuevoPreview || subiendo}
+                onClick={enviarNuevo}
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:bg-muted disabled:text-muted-foreground"
+              >
+                {subiendo && <Loader2 className="size-4 animate-spin" />}
+                {subiendo ? "Enviando…" : "Enviar para nueva verificación"}
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </AppShell>
   );
 }
