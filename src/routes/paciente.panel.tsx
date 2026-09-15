@@ -126,6 +126,37 @@ function Panel() {
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {rechazadas.map((a) => (
+          <motion.div
+            key={a.id}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-4 overflow-hidden"
+          >
+            <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-destructive/40 bg-destructive/10 p-4">
+              <AlertTriangle className="size-5 shrink-0 text-destructive" />
+              <div className="min-w-48 flex-1">
+                <p className="font-semibold text-destructive">
+                  Tu comprobante fue rechazado — {a.service}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {a.voucher?.reason ?? "Revisa la captura enviada."} Sube un comprobante corregido
+                  para conservar tu cita del {a.date} a las {a.time}.
+                </p>
+              </div>
+              <button
+                onClick={() => abrirReenvio(a)}
+                className="rounded-full bg-destructive px-4 py-2 text-xs font-semibold text-destructive-foreground"
+              >
+                Volver a subir comprobante
+              </button>
+            </div>
+          </motion.div>
+        ))}
+      </AnimatePresence>
+
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Metric
           icon={<Sparkles className="size-5" />}
