@@ -3,10 +3,24 @@ import * as React from "react";
 export type AppointmentStatus =
   | "PENDING_PAYMENT"
   | "VERIFYING"
+  | "PAYMENT_REJECTED"
   | "CONFIRMED"
   | "COMPLETED"
   | "CANCELLED"
   | "NO_SHOW";
+
+export type VoucherStatus = "EN_REVISION" | "APROBADO" | "RECHAZADO";
+
+export type Voucher = {
+  method: "yape" | "plin";
+  reference: string;
+  amount: number;
+  uploadedAt: string;
+  imageUrl?: string;
+  status: VoucherStatus;
+  reason?: string;
+  attempt: number;
+};
 
 export type Appointment = {
   id: string;
@@ -18,11 +32,13 @@ export type Appointment = {
   amount: number;
   status: AppointmentStatus;
   note?: string;
+  voucher?: Voucher;
 };
 
 export const statusLabel: Record<AppointmentStatus, string> = {
   PENDING_PAYMENT: "Pago pendiente",
   VERIFYING: "Verificando pago",
+  PAYMENT_REJECTED: "Comprobante rechazado",
   CONFIRMED: "Confirmada",
   COMPLETED: "Atendida",
   CANCELLED: "Cancelada",
@@ -32,11 +48,31 @@ export const statusLabel: Record<AppointmentStatus, string> = {
 export const statusClass: Record<AppointmentStatus, string> = {
   PENDING_PAYMENT: "bg-muted text-muted-foreground border-border",
   VERIFYING: "bg-warning/15 text-warning-foreground border-warning/40",
+  PAYMENT_REJECTED: "bg-destructive/15 text-destructive border-destructive/40",
   CONFIRMED: "bg-primary/15 text-primary border-primary/30",
   COMPLETED: "bg-success/15 text-success-foreground border-success/40",
   CANCELLED: "bg-muted text-muted-foreground border-border",
   NO_SHOW: "bg-destructive/15 text-destructive border-destructive/30",
 };
+
+export const voucherLabel: Record<VoucherStatus, string> = {
+  EN_REVISION: "En revisión",
+  APROBADO: "Aprobado",
+  RECHAZADO: "Rechazado",
+};
+
+export const voucherClass: Record<VoucherStatus, string> = {
+  EN_REVISION: "bg-warning/15 text-warning-foreground border-warning/40",
+  APROBADO: "bg-success/15 text-success-foreground border-success/40",
+  RECHAZADO: "bg-destructive/15 text-destructive border-destructive/40",
+};
+
+export const motivosRechazo = [
+  "La imagen está borrosa o incompleta",
+  "El monto no coincide con el anticipo",
+  "El número de operación no aparece en la cuenta",
+  "El comprobante corresponde a otra fecha",
+];
 
 const seed: Appointment[] = [
   {
