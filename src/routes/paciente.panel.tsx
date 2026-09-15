@@ -234,6 +234,7 @@ function Panel() {
                     <p className="text-sm text-muted-foreground">
                       {d?.name} · {a.date} · {a.time}
                     </p>
+                    {a.voucher && <VoucherBadge status={a.voucher.status} className="mt-1.5" />}
                   </div>
                   <span
                     className={cn(
