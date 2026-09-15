@@ -253,6 +253,15 @@ function Panel() {
                       <FileText className="mr-1 inline size-3.5" />
                       Ver ficha
                     </button>
+                    {a.status === "PAYMENT_REJECTED" && (
+                      <button
+                        onClick={() => abrirReenvio(a)}
+                        className="rounded-full bg-destructive px-3 py-1.5 text-xs font-semibold text-destructive-foreground"
+                      >
+                        <ImagePlus className="mr-1 inline size-3.5" />
+                        Corregir comprobante
+                      </button>
+                    )}
                     {tab === "futuras" &&
                       (isBanned ? (
                         <span className="flex items-center gap-1 rounded-full bg-muted px-3 py-1.5 text-xs font-semibold text-muted-foreground">
