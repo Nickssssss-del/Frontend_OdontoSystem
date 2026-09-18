@@ -1,109 +1,75 @@
 import * as React from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Bot, CheckCheck, MessageSquare, Send, X } from "lucide-react";
+import { Bot, MessageSquare, Send, X } from "lucide-react";
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
+import { toast } from "sonner";
 import { dentists, soles } from "@/lib/mock-data";
+import { useAppState } from "@/lib/app-state";
+import { statusLabel } from "@/lib/app-state";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type Bubble =
-  | { id: string; from: "user"; text: string }
-  | { id: string; from: "bot"; text: string; kind?: "text" }
-  | { id: string; from: "bot"; kind: "carousel"; text: string }
-  | { id: string; from: "bot"; kind: "slots"; text: string; slots: string[] }
-  | { id: string; from: "bot"; kind: "qr"; text: string }
-  | { id: string; from: "bot"; kind: "reminder"; text: string }
-  | { id: string; from: "bot"; kind: "commands"; text: string };
-
 const quickOptions = [
-  { label: "Recomiéndame un dentista", intent: "carousel" },
-  { label: "Quiero reservar a las 10 AM", intent: "slots" },
-  { label: "¿Cómo pago con Yape?", intent: "qr" },
-  { label: "Mi próxima cita", intent: "reminder" },
-  { label: "Soy dentista", intent: "commands" },
-] as const;
-
-let seq = 0;
-const nid = () => `b${++seq}`;
+  "¿Qué dentista me recomiendas para ortodoncia?",
+  "¿Qué horarios libres hay hoy?",
+  "¿Cuánto cuesta una limpieza dental?",
+  "¿Cómo pago con Yape o Plin?",
+  "¿Cómo va mi próxima cita?",
+];
 
 export function ChatbotWidget() {
   const [open, setOpen] = React.useState(false);
-  const [typing, setTyping] = React.useState(false);
   const [input, setInput] = React.useState("");
-  const [bubbles, setBubbles] = React.useState<Bubble[]>([
-    {
-      id: nid(),
-      from: "bot",
-      text: "¡Hola Nicole! 👋 Soy OdontoBot. Puedo recomendarte un dentista en Ica, agendar tu cita o guiarte con el pago por Yape/Plin.",
-    },
-  ]);
+  const state = useAppState();
   const scroller = React.useRef<HTMLDivElement>(null);
+
+  const contexto = React.useMemo(() => {
+    const citas = state.appointments
+      .map(
+        (a) =>
+          `${a.date} ${a.time} · ${a.service} con ${dentists.find((d) => d.id === a.dentistId)?.name ?? "—"} · ${soles(a.amount)} · estado: ${statusLabel[a.status]}${
+            a.voucher ? ` · comprobante ${a.voucher.method} ${a.voucher.status}` : ""
+          }`,
+      )
+      .join("\n");
+    return [
+      `Paciente: ${state.patient}. Strikes de puntualidad: ${state.strikes}. Cuenta suspendida: ${state.isBanned ? "sí" : "no"}.`,
+      "Sus citas registradas:",
+      citas || "Sin citas registradas.",
+    ].join("\n");
+  }, [state.appointments, state.patient, state.strikes, state.isBanned]);
+
+  const transport = React.useMemo(
+    () => new DefaultChatTransport({ api: "/api/chat", body: () => ({ contexto }) }),
+    [contexto],
+  );
+
+  const { messages, sendMessage, status } = useChat({
+    transport,
+    onError: (error) =>
+      toast.error("OdontoBot no pudo responder", {
+        description: error.message || "Intenta de nuevo en unos segundos.",
+      }),
+  });
+
+  const loading = status === "submitted" || status === "streaming";
 
   React.useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
-  }, [bubbles, typing, open]);
+  }, [messages, status, open]);
 
-  const respond = (intent: string, userText: string) => {
-    setBubbles((b) => [...b, { id: nid(), from: "user", text: userText }]);
-    setTyping(true);
-    window.setTimeout(() => {
-      setTyping(false);
-      setBubbles((b) => [...b, buildReply(intent)]);
-    }, 900);
-  };
-
-  const buildReply = (intent: string): Bubble => {
-    switch (intent) {
-      case "carousel":
-        return {
-          id: nid(),
-          from: "bot",
-          kind: "carousel",
-          text: "Estos son los 3 odontólogos mejor calificados cerca de ti 👇",
-        };
-      case "slots":
-        return {
-          id: nid(),
-          from: "bot",
-          kind: "slots",
-          text: "Las 10:00 AM ya está ocupada 😥 Pero tengo estas alternativas:",
-          slots: ["Hoy 11:00 AM", "Hoy 4:00 PM", "Mañana 9:00 AM"],
-        };
-      case "qr":
-        return {
-          id: nid(),
-          from: "bot",
-          kind: "qr",
-          text: "Escanea este QR con Yape o Plin y súbeme la captura del comprobante.",
-        };
-      case "reminder":
-        return {
-          id: nid(),
-          from: "bot",
-          kind: "reminder",
-          text: "Tienes una cita mañana a las 10:00 AM con la Dra. Claudia Manrique.",
-        };
-      case "commands":
-        return {
-          id: nid(),
-          from: "bot",
-          kind: "commands",
-          text: "Modo dentista activado. Usa un comando rápido:",
-        };
-      default:
-        return {
-          id: nid(),
-          from: "bot",
-          text: "Puedo ayudarte con reservas, pagos y recordatorios. Elige una opción para continuar.",
-        };
-    }
+  const ask = (text: string) => {
+    if (loading) return;
+    void sendMessage({ text });
   };
 
   const send = (e: React.FormEvent) => {
     e.preventDefault();
     const text = input.trim();
-    if (!text) return;
+    if (!text || loading) return;
     setInput("");
-    respond("free", text);
+    ask(text);
   };
 
   return (
@@ -147,16 +113,32 @@ export function ChatbotWidget() {
               <div>
                 <p className="text-sm font-semibold">OdontoBot</p>
                 <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <span className="size-1.5 rounded-full bg-success" /> En línea
+                  <span className="size-1.5 rounded-full bg-success" />
+                  {loading ? "Escribiendo…" : "En línea"}
                 </p>
               </div>
             </header>
 
             <div ref={scroller} className="flex-1 space-y-3 overflow-y-auto px-3 py-4">
-              {bubbles.map((b) => (
-                <BubbleView key={b.id} bubble={b} onSlot={(s) => respond("qr", `Reservar ${s}`)} />
-              ))}
-              {typing && (
+              <BubbleView
+                from="bot"
+                text={`¡Hola ${state.patient.split(" ")[0]}! 👋 Soy OdontoBot. Pregúntame por horarios libres, precios de tratamientos o qué dentista de Ica te conviene.`}
+              />
+              {messages.map((m) => {
+                const text = m.parts
+                  .map((p) => (p.type === "text" ? p.text : ""))
+                  .join("")
+                  .trim();
+                if (!text) return null;
+                return (
+                  <BubbleView
+                    key={m.id}
+                    from={m.role === "user" ? "user" : "bot"}
+                    text={text}
+                  />
+                );
+              })}
+              {status === "submitted" && (
                 <div className="flex w-16 items-center justify-center gap-1 rounded-2xl rounded-bl-sm bg-muted px-3 py-3">
                   {[0, 1, 2].map((i) => (
                     <motion.span
@@ -173,11 +155,12 @@ export function ChatbotWidget() {
             <div className="flex gap-2 overflow-x-auto border-t border-border px-3 py-2">
               {quickOptions.map((o) => (
                 <button
-                  key={o.label}
-                  onClick={() => respond(o.intent, o.label)}
-                  className="shrink-0 rounded-full border border-primary/30 bg-primary/5 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/15"
+                  key={o}
+                  onClick={() => ask(o)}
+                  disabled={loading}
+                  className="shrink-0 rounded-full border border-primary/30 bg-primary/5 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/15 disabled:opacity-50"
                 >
-                  {o.label}
+                  {o}
                 </button>
               ))}
             </div>
@@ -186,10 +169,10 @@ export function ChatbotWidget() {
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Escribe un mensaje…"
+                placeholder="Escribe tu pregunta…"
                 className="h-10 flex-1 rounded-full border border-input bg-background px-4 text-sm outline-none focus:border-primary"
               />
-              <Button type="submit" size="icon" className="size-10 rounded-full">
+              <Button type="submit" size="icon" className="size-10 rounded-full" disabled={loading}>
                 <Send className="size-4" />
               </Button>
             </form>
@@ -200,8 +183,8 @@ export function ChatbotWidget() {
   );
 }
 
-function BubbleView({ bubble, onSlot }: { bubble: Bubble; onSlot: (slot: string) => void }) {
-  const isUser = bubble.from === "user";
+function BubbleView({ from, text }: { from: "user" | "bot"; text: string }) {
+  const isUser = from === "user";
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -211,94 +194,13 @@ function BubbleView({ bubble, onSlot }: { bubble: Bubble; onSlot: (slot: string)
     >
       <div
         className={cn(
-          "max-w-[86%] space-y-3 rounded-2xl px-3.5 py-2.5 text-sm",
+          "max-w-[86%] whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed",
           isUser
             ? "rounded-br-sm bg-primary text-primary-foreground"
             : "rounded-bl-sm bg-muted text-foreground",
         )}
       >
-        <p className="leading-relaxed">{bubble.text}</p>
-
-        {"kind" in bubble && bubble.kind === "carousel" && (
-          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-            {dentists
-              .filter((d) => d.verified)
-              .slice(0, 3)
-              .map((d) => (
-                <div
-                  key={d.id}
-                  className="w-40 shrink-0 rounded-2xl border border-border bg-card p-3"
-                >
-                  <div
-                    className={cn(
-                      "mb-2 flex h-16 items-center justify-center rounded-xl bg-gradient-to-br font-display text-lg font-semibold text-foreground",
-                      d.tint,
-                    )}
-                  >
-                    {d.initials}
-                  </div>
-                  <p className="text-xs font-semibold leading-tight">{d.name}</p>
-                  <p className="text-[11px] text-muted-foreground">{d.specialty}</p>
-                  <p className="mt-1 text-xs font-semibold text-primary">
-                    Desde {soles(d.price)}
-                  </p>
-                  <button className="mt-2 w-full rounded-full bg-primary py-1.5 text-[11px] font-semibold text-primary-foreground">
-                    Ver horarios
-                  </button>
-                </div>
-              ))}
-          </div>
-        )}
-
-        {"kind" in bubble && bubble.kind === "slots" && (
-          <div className="flex flex-wrap gap-2">
-            {bubble.slots.map((s) => (
-              <button
-                key={s}
-                onClick={() => onSlot(s)}
-                className="rounded-full border border-primary/40 bg-card px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/10"
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {"kind" in bubble && bubble.kind === "qr" && (
-          <div className="rounded-2xl border border-border bg-card p-3 text-center">
-            <QrArt />
-            <p className="mt-2 text-xs font-semibold">Yape / Plin: 956 402 118</p>
-            <p className="text-[11px] text-muted-foreground">Titular: OdontoSystem SAC</p>
-            <button className="mt-2 w-full rounded-full border border-primary/40 py-1.5 text-[11px] font-semibold text-primary">
-              Adjuntar comprobante
-            </button>
-          </div>
-        )}
-
-        {"kind" in bubble && bubble.kind === "reminder" && (
-          <div className="flex gap-2">
-            <button className="flex-1 rounded-full bg-success/20 px-3 py-1.5 text-xs font-semibold text-success-foreground">
-              <CheckCheck className="mr-1 inline size-3.5" />
-              Confirmar
-            </button>
-            <button className="flex-1 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold">
-              Reprogramar
-            </button>
-          </div>
-        )}
-
-        {"kind" in bubble && bubble.kind === "commands" && (
-          <div className="space-y-1.5">
-            {["Ver agenda de hoy", "Bloquear tarde", "Ingresos del mes"].map((c) => (
-              <button
-                key={c}
-                className="block w-full rounded-xl border border-border bg-card px-3 py-2 text-left text-xs font-medium"
-              >
-                /{c.toLowerCase().replaceAll(" ", "-")} — {c}
-              </button>
-            ))}
-          </div>
-        )}
+        {text}
       </div>
     </motion.div>
   );
