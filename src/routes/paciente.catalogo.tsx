@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { AlertTriangle, Info, Search, SlidersHorizontal } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { DentistCard } from "@/components/DentistCard";
+import { DentistMap } from "@/components/DentistMap";
 import { dentists, especialidades } from "@/lib/mock-data";
 import { useAppState } from "@/lib/app-state";
 import { cn } from "@/lib/utils";
