@@ -14,6 +14,8 @@ export type Dentist = {
   tint: string;
   services: { name: string; price: number }[];
   bio: string;
+  /** Posición relativa (0-100) dentro del mapa estilizado de Ica */
+  pin: { x: number; y: number };
 };
 
 export const especialidades = [
