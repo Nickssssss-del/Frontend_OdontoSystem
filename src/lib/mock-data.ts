@@ -48,6 +48,7 @@ export const dentists: Dentist[] = [
       { name: "Control mensual", price: 80 },
     ],
     bio: "Especialista en ortodoncia con 12 años atendiendo en Ica. Enfoque en tratamientos con brackets estéticos y alineadores.",
+    pin: { x: 34, y: 28 },
   },
   {
     id: "d2",
@@ -69,6 +70,7 @@ export const dentists: Dentist[] = [
       { name: "Profilaxis completa", price: 90 },
     ],
     bio: "Manejo de dolor dental y tratamientos de conducto con microscopía. Atención de urgencias el mismo día.",
+    pin: { x: 58, y: 44 },
   },
   {
     id: "d3",
@@ -90,6 +92,7 @@ export const dentists: Dentist[] = [
       { name: "Fluorización", price: 70 },
     ],
     bio: "Consultorio ambientado para niños de 2 a 12 años, con manejo conductual sin sedación.",
+    pin: { x: 74, y: 22 },
   },
   {
     id: "d4",
@@ -111,6 +114,7 @@ export const dentists: Dentist[] = [
       { name: "Resina estética", price: 120 },
     ],
     bio: "Rehabilitación estética anterior, carillas de resina y blanqueamiento supervisado.",
+    pin: { x: 26, y: 55 },
   },
   {
     id: "d5",
@@ -132,6 +136,7 @@ export const dentists: Dentist[] = [
       { name: "Aplicación de flúor", price: 45 },
     ],
     bio: "Odontología preventiva y control de placa para toda la familia.",
+    pin: { x: 46, y: 74 },
   },
   {
     id: "d6",
@@ -149,6 +154,7 @@ export const dentists: Dentist[] = [
     tint: "from-muted to-muted",
     services: [{ name: "Evaluación ortodóncica", price: 55 }],
     bio: "Perfil en proceso de validación de colegiatura ante el COP.",
+    pin: { x: 82, y: 66 },
   },
 ];
 
