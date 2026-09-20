@@ -125,10 +125,10 @@ function Catalogo() {
           ))}
         </div>
 
-        <div className="grid gap-4 border-t border-border pt-4 sm:grid-cols-3">
+        <div className="grid gap-4 border-t border-border pt-4">
           <label className="text-sm">
             <span className="mb-1.5 flex items-center gap-1 font-medium text-muted-foreground">
-              <SlidersHorizontal className="size-3.5" /> Distrito
+              <SlidersHorizontal className="size-3.5" /> Distrito de Ica
             </span>
             <select
               value={distrito}
