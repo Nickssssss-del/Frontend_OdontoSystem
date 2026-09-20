@@ -12,7 +12,7 @@ export function DentistMap({ dentists }: { dentists: Dentist[] }) {
           className="absolute inset-0 opacity-70"
           style={{
             backgroundImage:
-              "linear-gradient(to right, hsl(var(--border)) 1px, transparent 1px), linear-gradient(to bottom, hsl(var(--border)) 1px, transparent 1px)",
+              "linear-gradient(to right, rgb(0 0 0 / 0.06) 1px, transparent 1px), linear-gradient(to bottom, rgb(0 0 0 / 0.06) 1px, transparent 1px)",
             backgroundSize: "38px 38px",
           }}
         />
