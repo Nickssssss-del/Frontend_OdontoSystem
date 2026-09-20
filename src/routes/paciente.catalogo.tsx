@@ -94,7 +94,9 @@ function Catalogo() {
         )}
       </AnimatePresence>
 
-      <div className="mt-6 space-y-4 rounded-3xl border border-border bg-card p-4 shadow-sm">
+      <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,320px)_1fr]">
+      <div className="space-y-4 rounded-3xl border border-border bg-card p-4 shadow-sm">
+        <p className="font-display text-base font-semibold">Filtros</p>
         <div className="relative">
           <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <input
