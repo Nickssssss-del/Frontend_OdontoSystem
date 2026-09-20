@@ -173,6 +173,11 @@ function Catalogo() {
         </div>
       </div>
 
+        <div className="rounded-3xl border border-border bg-card p-4 shadow-sm">
+          <DentistMap dentists={results} />
+        </div>
+      </div>
+
       <p className="mt-6 text-sm text-muted-foreground">
         {results.length} odontólogo(s) disponibles
       </p>
