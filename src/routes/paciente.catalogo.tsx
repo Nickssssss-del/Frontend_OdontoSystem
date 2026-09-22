@@ -1,5 +1,6 @@
 import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "motion/react";
 import { AlertTriangle, Info, Search, SlidersHorizontal } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
