@@ -8,50 +8,77 @@ import {
   Mail,
   ShieldCheck,
   Stethoscope,
-  X,
+  UserRound,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChatbotWidget } from "@/components/ChatbotWidget";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "OdontoSystem · Marketplace dental en Ica" },
+      { title: "OdontoSystem · Ingresar a tu cuenta" },
       {
         name: "description",
         content:
-          "Reserva con odontólogos colegiados en Ica: agenda por bloques, anticipo por Yape o Plin e historial clínico cifrado. Ingresa con Google, correo o biometría.",
+          "Inicia sesión o regístrate en OdontoSystem: pacientes y odontólogos independientes con colegiatura COP verificada en Ica, Perú.",
       },
-      { property: "og:title", content: "OdontoSystem · Marketplace dental en Ica" },
+      { property: "og:title", content: "OdontoSystem · Ingresar a tu cuenta" },
       {
         property: "og:description",
         content:
-          "Marketplace dental de Ica: dentistas verificados por el COP, reserva con temporizador y pagos por Yape/Plin.",
+          "Acceso para pacientes y odontólogos independientes con colegiatura COP verificada.",
       },
     ],
   }),
-  component: Onboarding,
+  component: LoginScreen,
 });
 
-function Onboarding() {
-  const navigate = useNavigate();
-  const [modo, setModo] = React.useState<"paciente" | "dentista">("paciente");
-  const [bio, setBio] = React.useState(false);
-  const [recuperar, setRecuperar] = React.useState(false);
-  const [otpSent, setOtpSent] = React.useState(false);
-  const [otp, setOtp] = React.useState(["", "", "", "", "", ""]);
+type Role = "paciente" | "odontologo";
+type Mode = "login" | "registro";
 
-  const entrar = () =>
-    navigate({ to: modo === "paciente" ? "/paciente/catalogo" : "/odontologo" });
+function LoginScreen() {
+  const navigate = useNavigate();
+  const [role, setRole] = React.useState<Role>("paciente");
+  const [mode, setMode] = React.useState<Mode>("login");
+  const [bio, setBio] = React.useState(false);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    toast.success("Sesión iniciada", {
+      description:
+        role === "paciente"
+          ? "Bienvenida a tu panel de paciente."
+          : "Bienvenida a tu panel de odontólogo.",
+    });
+    navigate({ to: role === "paciente" ? "/paciente/catalogo" : "/odontologo" });
+  };
+
+  const googleLogin = () => {
+    toast.success("Continuando con Google");
+    navigate({ to: role === "paciente" ? "/paciente/catalogo" : "/odontologo" });
+  };
 
   return (
     <div className="relative min-h-screen overflow-hidden grid-aurora">
-      <div className="mx-auto grid min-h-screen max-w-6xl items-center gap-12 px-4 py-12 lg:grid-cols-2">
+      <div className="mx-auto grid min-h-screen max-w-6xl items-center gap-10 px-4 py-10 lg:grid-cols-2">
+        {/* Lado izquierdo — hero/marketing */}
         <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ type: "spring", stiffness: 220, damping: 26 }}
+          className="hidden lg:block"
         >
           <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card/70 px-3 py-1.5 text-xs font-semibold backdrop-blur">
             <CalendarHeart className="size-4 text-primary" /> OdontoSystem v4.3 · Ica, Perú
@@ -84,220 +111,241 @@ function Onboarding() {
           </ul>
         </motion.section>
 
+        {/* Lado derecho — tarjeta de login/registro */}
         <motion.section
           initial={{ opacity: 0, y: 28, scale: 0.97 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ delay: 0.1, type: "spring", stiffness: 220, damping: 26 }}
-          className="rounded-3xl border border-border bg-card/90 p-7 shadow-xl backdrop-blur"
+          className="w-full"
         >
-          <div className="flex gap-1 rounded-full bg-muted p-1">
-            {(
-              [
-                { id: "paciente", label: "Soy paciente", icon: CalendarHeart },
-                { id: "dentista", label: "Soy odontólogo", icon: Stethoscope },
-              ] as const
-            ).map((m) => (
-              <button
-                key={m.id}
-                onClick={() => setModo(m.id)}
-                className="relative flex-1 rounded-full px-3 py-2 text-sm font-semibold"
+          <Card className="border-border bg-card/90 p-2 shadow-xl backdrop-blur">
+            <CardHeader className="space-y-3">
+              <div className="flex items-center justify-center gap-2 text-center">
+                <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                  <CalendarHeart className="size-5" />
+                </span>
+                <CardTitle className="font-display text-2xl">
+                  Odonto<span className="text-primary">System</span>
+                </CardTitle>
+              </div>
+              <CardDescription className="text-center">
+                Ingresa a tu cuenta o crea una nueva
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              {/* Pestañas Paciente / Odontólogo */}
+              <Tabs
+                value={role}
+                onValueChange={(v) => setRole(v as Role)}
+                className="w-full"
               >
-                {modo === m.id && (
-                  <motion.span
-                    layoutId="role-pill"
-                    className="absolute inset-0 rounded-full bg-card shadow-sm"
-                    transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="paciente" className="gap-1.5">
+                    <UserRound className="size-4" /> Paciente
+                  </TabsTrigger>
+                  <TabsTrigger value="odontologo" className="gap-1.5">
+                    <Stethoscope className="size-4" /> Odontólogo
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="paciente">
+                  <AuthForm
+                    role="paciente"
+                    mode={mode}
+                    onModeChange={setMode}
+                    onSubmit={submit}
+                    onGoogle={googleLogin}
                   />
-                )}
-                <span
+                </TabsContent>
+                <TabsContent value="odontologo">
+                  <AuthForm
+                    role="odontologo"
+                    mode={mode}
+                    onModeChange={setMode}
+                    onSubmit={submit}
+                    onGoogle={googleLogin}
+                  />
+                </TabsContent>
+              </Tabs>
+
+              {/* Biometría */}
+              <div className="flex items-center gap-3 rounded-2xl border border-border bg-muted/40 p-3">
+                <span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <Fingerprint className="size-5" />
+                </span>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold">Autenticación biométrica</p>
+                  <p className="text-xs text-muted-foreground">Huella o FaceID en este dispositivo</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setBio(!bio);
+                    toast.success(bio ? "Biometría desactivada" : "Biometría activada");
+                  }}
+                  aria-label="Activar autenticación biométrica"
                   className={cn(
-                    "relative flex items-center justify-center gap-1.5",
-                    modo === m.id ? "text-primary" : "text-muted-foreground",
+                    "flex h-7 w-12 items-center rounded-full p-1 transition-colors",
+                    bio ? "bg-primary" : "bg-muted-foreground/30",
                   )}
                 >
-                  <m.icon className="size-4" />
-                  {m.label}
-                </span>
-              </button>
-            ))}
-          </div>
+                  <motion.span
+                    layout
+                    transition={{ type: "spring", stiffness: 500, damping: 32 }}
+                    className={cn(
+                      "size-5 rounded-full bg-card shadow",
+                      bio ? "ml-auto" : "mr-auto",
+                    )}
+                  />
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.section>
+      </div>
 
+      <ChatbotWidget />
+    </div>
+  );
+}
+
+function AuthForm({
+  role,
+  mode,
+  onModeChange,
+  onSubmit,
+  onGoogle,
+}: {
+  role: Role;
+  mode: Mode;
+  onModeChange: (m: Mode) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  onGoogle: () => void;
+}) {
+  const isRegistro = mode === "registro";
+  return (
+    <div className="space-y-4 pt-2">
+      {/* Toggle Login / Registro */}
+      <div className="flex gap-1 rounded-full bg-muted p-1">
+        {(
+          [
+            { id: "login" as const, label: "Ingresar" },
+            { id: "registro" as const, label: "Registrarme" },
+          ]
+        ).map((m) => (
           <button
-            onClick={entrar}
-            className="mt-6 flex w-full items-center justify-center gap-3 rounded-full border border-border bg-background py-3 text-sm font-semibold transition-colors hover:bg-muted"
+            key={m.id}
+            type="button"
+            onClick={() => onModeChange(m.id)}
+            className="relative flex-1 rounded-full px-3 py-2 text-sm font-semibold"
           >
-            <GoogleMark /> Continuar con Google
+            {mode === m.id && (
+              <motion.span
+                layoutId={`mode-pill-${role}`}
+                className="absolute inset-0 rounded-full bg-card shadow-sm"
+                transition={{ type: "spring", stiffness: 400, damping: 32 }}
+              />
+            )}
+            <span
+              className={cn(
+                "relative flex items-center justify-center",
+                mode === m.id ? "text-primary" : "text-muted-foreground",
+              )}
+            >
+              {m.label}
+            </span>
           </button>
+        ))}
+      </div>
 
-          <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="h-px flex-1 bg-border" /> o con tu correo{" "}
-            <span className="h-px flex-1 bg-border" />
+      <form className="space-y-3" onSubmit={onSubmit}>
+        {isRegistro && (
+          <div className="space-y-1.5">
+            <Label htmlFor={`name-${role}`}>Nombre completo</Label>
+            <Input id={`name-${role}`} type="text" required placeholder="Tu nombre y apellido" />
           </div>
+        )}
 
-          <form
-            className="space-y-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              entrar();
-            }}
+        <div className="space-y-1.5">
+          <Label htmlFor={`email-${role}`}>Correo electrónico</Label>
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              id={`email-${role}`}
+              type="email"
+              required
+              defaultValue="nicole@odontosystem.pe"
+              className="pl-10"
+              placeholder="tu@correo.com"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor={`pass-${role}`}>Contraseña</Label>
+          <Input
+            id={`pass-${role}`}
+            type="password"
+            required
+            defaultValue="••••••••"
+            placeholder="••••••••"
+          />
+        </div>
+
+        {/* Campo dinámico: N° de colegiatura COP solo para odontólogo en registro (RF08) */}
+        {isRegistro && role === "odontologo" && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="space-y-1.5 overflow-hidden"
           >
-            <label className="block text-sm">
-              <span className="mb-1.5 block font-medium text-muted-foreground">Correo</span>
-              <input
-                type="email"
-                required
-                defaultValue="nicole@odontosystem.pe"
-                className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-primary"
-              />
-            </label>
-            <label className="block text-sm">
-              <span className="mb-1.5 block font-medium text-muted-foreground">Contraseña</span>
-              <input
-                type="password"
-                required
-                defaultValue="••••••••"
-                className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-primary"
-              />
-            </label>
+            <Label htmlFor={`cop-${role}`}>
+              N.º de colegiatura COP <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id={`cop-${role}`}
+              type="text"
+              required
+              placeholder="Ej. COP-12345"
+            />
+            <p className="text-xs text-muted-foreground">
+              Verificamos tu colegiatura antes de publicar tu perfil.
+            </p>
+          </motion.div>
+        )}
+
+        {!isRegistro && (
+          <div className="flex justify-end">
             <button
               type="button"
-              onClick={() => setRecuperar(true)}
               className="text-xs font-semibold text-primary hover:underline"
             >
               ¿Olvidaste tu contraseña?
             </button>
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              type="submit"
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground"
-            >
-              Iniciar sesión <ArrowRight className="size-4" />
-            </motion.button>
-          </form>
-
-          <div className="mt-5 flex items-center gap-3 rounded-2xl border border-border bg-muted/40 p-3">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <Fingerprint className="size-5" />
-            </span>
-            <div className="flex-1">
-              <p className="text-sm font-semibold">Autenticación biométrica</p>
-              <p className="text-xs text-muted-foreground">Huella o FaceID en este dispositivo</p>
-            </div>
-            <button
-              onClick={() => {
-                setBio(!bio);
-                toast.success(bio ? "Biometría desactivada" : "Biometría activada");
-              }}
-              aria-label="Activar autenticación biométrica"
-              className={cn(
-                "flex h-7 w-12 items-center rounded-full p-1 transition-colors",
-                bio ? "bg-primary" : "bg-muted-foreground/30",
-              )}
-            >
-              <motion.span
-                layout
-                transition={{ type: "spring", stiffness: 500, damping: 32 }}
-                className={cn(
-                  "size-5 rounded-full bg-card shadow",
-                  bio ? "ml-auto" : "mr-auto",
-                )}
-              />
-            </button>
           </div>
-        </motion.section>
+        )}
+
+        <Button type="submit" className="h-11 w-full gap-2 rounded-full">
+          {isRegistro ? "Crear cuenta" : "Ingresar"} <ArrowRight className="size-4" />
+        </Button>
+      </form>
+
+      {/* Separador */}
+      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <span className="h-px flex-1 bg-border" /> o {isRegistro ? "regístrate" : "continúa"} con{" "}
+        <span className="h-px flex-1 bg-border" />
       </div>
 
-      <AnimatePresence>
-        {recuperar && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setRecuperar(false)}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4 backdrop-blur-sm"
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 24, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 16, scale: 0.97 }}
-              transition={{ type: "spring", stiffness: 300, damping: 28 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md rounded-3xl border border-border bg-card p-6 shadow-2xl"
-            >
-              <div className="flex items-start justify-between">
-                <h2 className="font-display text-xl font-semibold">Recuperar contraseña</h2>
-                <button
-                  onClick={() => setRecuperar(false)}
-                  className="rounded-full p-1.5 text-muted-foreground hover:bg-muted"
-                >
-                  <X className="size-5" />
-                </button>
-              </div>
-
-              <AnimatePresence mode="wait">
-                {!otpSent ? (
-                  <motion.div key="mail" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      Te enviaremos un código de 6 dígitos a tu correo.
-                    </p>
-                    <div className="relative mt-4">
-                      <Mail className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                      <input
-                        type="email"
-                        defaultValue="nicole@odontosystem.pe"
-                        className="h-11 w-full rounded-xl border border-input bg-background pl-10 pr-3 text-sm outline-none focus:border-primary"
-                      />
-                    </div>
-                    <button
-                      onClick={() => setOtpSent(true)}
-                      className="mt-4 w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground"
-                    >
-                      Enviar código
-                    </button>
-                  </motion.div>
-                ) : (
-                  <motion.div key="otp" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      Ingresa el código que enviamos a tu correo.
-                    </p>
-                    <div className="mt-4 flex justify-between gap-2">
-                      {otp.map((v, i) => (
-                        <input
-                          key={i}
-                          value={v}
-                          maxLength={1}
-                          inputMode="numeric"
-                          aria-label={`Dígito ${i + 1}`}
-                          onChange={(e) =>
-                            setOtp((prev) =>
-                              prev.map((p, k) => (k === i ? e.target.value.slice(-1) : p)),
-                            )
-                          }
-                          className="h-14 w-full rounded-xl border border-input bg-background text-center font-display text-xl outline-none focus:border-primary"
-                        />
-                      ))}
-                    </div>
-                    <button
-                      onClick={() => {
-                        setRecuperar(false);
-                        setOtpSent(false);
-                        toast.success("Código verificado", {
-                          description: "Ahora puedes crear una nueva contraseña.",
-                        });
-                      }}
-                      className="mt-5 w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground"
-                    >
-                      Verificar código
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <ChatbotWidget />
+      {/* Google (RF16) */}
+      <Button
+        type="button"
+        variant="outline"
+        onClick={onGoogle}
+        className="h-11 w-full gap-3 rounded-full"
+      >
+        <GoogleMark /> Continuar con Google
+      </Button>
     </div>
   );
 }
