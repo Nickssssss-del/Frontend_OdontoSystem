@@ -7,7 +7,13 @@ import { DentistCard } from "@/components/DentistCard";
 import { DentistMap } from "@/components/DentistMap";
 import { dentists, especialidades } from "@/lib/mock-data";
 import { useAppState } from "@/lib/app-state";
-import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export const Route = createFileRoute("/paciente/catalogo")({
   head: () => ({
@@ -28,7 +34,7 @@ export const Route = createFileRoute("/paciente/catalogo")({
   component: Catalogo,
 });
 
-const distritos = ["Todos", "Ica Centro", "San Joaquín", "Parcona", "La Tinguiña", "Salas Guadalupe"];
+const distritos = ["Todos", "Ica", "La Tinguiña", "Parcona", "Subtanjalla"] as const;
 const ordenes = [
   { id: "rating", label: "Mejor calificados" },
   { id: "precio", label: "Menor precio" },
@@ -39,7 +45,8 @@ function Catalogo() {
   const { isBanned } = useAppState();
   const [query, setQuery] = React.useState("");
   const [chips, setChips] = React.useState<string[]>([]);
-  const [distrito, setDistrito] = React.useState("Todos");
+  const [distrito, setDistrito] = React.useState<string>("Todos");
+  const [especialidad, setEspecialidad] = React.useState<string>("Todas");
   const [maxPrecio, setMaxPrecio] = React.useState(100);
   const [orden, setOrden] = React.useState<(typeof ordenes)[number]["id"]>("rating");
 
@@ -51,6 +58,7 @@ function Catalogo() {
       .filter((d) => d.verified)
       .filter((d) => d.name.toLowerCase().includes(query.toLowerCase()))
       .filter((d) => (chips.length ? chips.some((c) => d.specialties.includes(c)) : true))
+      .filter((d) => (especialidad === "Todas" ? true : d.specialties.includes(especialidad)))
       .filter((d) => (distrito === "Todos" ? true : d.district === distrito))
       .filter((d) => d.price <= maxPrecio);
     return [...list].sort((a, b) =>
@@ -60,7 +68,7 @@ function Catalogo() {
           ? a.distanceKm - b.distanceKm
           : b.rating - a.rating,
     );
-  }, [query, chips, distrito, maxPrecio, orden]);
+  }, [query, chips, distrito, especialidad, maxPrecio, orden]);
 
   return (
     <AppShell>
@@ -95,57 +103,90 @@ function Catalogo() {
         )}
       </AnimatePresence>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,320px)_1fr]">
-      <div className="space-y-4 rounded-3xl border border-border bg-card p-4 shadow-sm">
-        <p className="font-display text-base font-semibold">Filtros</p>
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Busca por nombre del odontólogo…"
-            className="h-12 w-full rounded-2xl border border-input bg-background pl-11 pr-4 text-sm outline-none transition-colors focus:border-primary"
-          />
-        </div>
+      <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,300px)_1fr]">
+        {/* ===== Sidebar de Filtros ===== */}
+        <aside className="space-y-5 rounded-3xl border border-border bg-card p-5 shadow-sm">
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal className="size-4 text-primary" />
+            <p className="font-display text-base font-semibold">Filtros</p>
+          </div>
 
-        <div className="flex flex-wrap gap-2">
-          {especialidades.map((c) => (
-            <motion.button
-              key={c}
-              whileTap={{ scale: 0.94 }}
-              onClick={() => toggleChip(c)}
-              className={cn(
-                "rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors",
-                chips.includes(c)
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-background text-muted-foreground hover:border-primary/50",
-              )}
-            >
-              {c}
-            </motion.button>
-          ))}
-        </div>
+          {/* Búsqueda por nombre */}
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Busca por nombre…"
+              className="h-11 w-full rounded-xl border border-input bg-background pl-11 pr-4 text-sm outline-none transition-colors focus:border-primary"
+            />
+          </div>
 
-        <div className="grid gap-4 border-t border-border pt-4">
-          <label className="text-sm">
-            <span className="mb-1.5 flex items-center gap-1 font-medium text-muted-foreground">
-              <SlidersHorizontal className="size-3.5" /> Distrito de Ica
-            </span>
-            <select
-              value={distrito}
-              onChange={(e) => setDistrito(e.target.value)}
-              className="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-primary"
-            >
-              {distritos.map((d) => (
-                <option key={d}>{d}</option>
+          {/* Distrito (Select) */}
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-muted-foreground">
+              Distrito de Ica
+            </label>
+            <Select value={distrito} onValueChange={setDistrito}>
+              <SelectTrigger className="h-11 rounded-xl">
+                <SelectValue placeholder="Todos los distritos" />
+              </SelectTrigger>
+              <SelectContent>
+                {distritos.map((d) => (
+                  <SelectItem key={d} value={d}>
+                    {d}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Especialidad (Select) */}
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-muted-foreground">Especialidad</label>
+            <Select value={especialidad} onValueChange={setEspecialidad}>
+              <SelectTrigger className="h-11 rounded-xl">
+                <SelectValue placeholder="Todas las especialidades" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Todas">Todas</SelectItem>
+                {especialidades.map((e) => (
+                  <SelectItem key={e} value={e}>
+                    {e}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Chips de especialidades rápidas */}
+          <div className="space-y-1.5">
+            <span className="block text-sm font-medium text-muted-foreground">Acceso rápido</span>
+            <div className="flex flex-wrap gap-2">
+              {especialidades.map((c) => (
+                <motion.button
+                  key={c}
+                  whileTap={{ scale: 0.94 }}
+                  onClick={() => toggleChip(c)}
+                  className={cn(
+                    "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                    chips.includes(c)
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background text-muted-foreground hover:border-primary/50",
+                  )}
+                >
+                  {c}
+                </motion.button>
               ))}
-            </select>
-          </label>
+            </div>
+          </div>
 
-          <label className="text-sm">
-            <span className="mb-1.5 block font-medium text-muted-foreground">
-              Precio base hasta S/ {maxPrecio}
-            </span>
+          {/* Precio */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-muted-foreground">Precio base</span>
+              <span className="text-sm font-semibold text-primary">hasta S/ {maxPrecio}</span>
+            </div>
             <input
               type="range"
               min={30}
@@ -153,53 +194,61 @@ function Catalogo() {
               step={5}
               value={maxPrecio}
               onChange={(e) => setMaxPrecio(Number(e.target.value))}
-              className="mt-3 w-full accent-primary"
+              className="w-full accent-primary"
             />
-          </label>
+          </div>
 
-          <label className="text-sm">
-            <span className="mb-1.5 block font-medium text-muted-foreground">Ordenar por</span>
-            <select
-              value={orden}
-              onChange={(e) => setOrden(e.target.value as typeof orden)}
-              className="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-primary"
-            >
-              {ordenes.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.label}
-                </option>
+          {/* Ordenar */}
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-muted-foreground">Ordenar por</label>
+            <Select value={orden} onValueChange={(v) => setOrden(v as typeof orden)}>
+              <SelectTrigger className="h-11 rounded-xl">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ordenes.map((o) => (
+                  <SelectItem key={o.id} value={o.id}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </aside>
+
+        {/* ===== Área principal: mapa + grilla ===== */}
+        <div className="space-y-5">
+          {/* Mapa (mitad superior/derecha) */}
+          <div className="rounded-3xl border border-border bg-card p-4 shadow-sm">
+            <DentistMap dentists={results} />
+          </div>
+
+          {/* Grilla de tarjetas (mitad inferior/izquierda) */}
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              {results.length} odontólogo(s) disponibles
+            </p>
+          </div>
+
+          <motion.div layout className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            <AnimatePresence mode="popLayout">
+              {results.map((d, i) => (
+                <DentistCard key={d.id} dentist={d} index={i} />
               ))}
-            </select>
-          </label>
+            </AnimatePresence>
+          </motion.div>
+
+          {results.length === 0 && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mt-6 text-center text-muted-foreground"
+            >
+              No encontramos odontólogos con esos filtros. Prueba ampliar el precio o el distrito.
+            </motion.p>
+          )}
         </div>
       </div>
-
-        <div className="rounded-3xl border border-border bg-card p-4 shadow-sm">
-          <DentistMap dentists={results} />
-        </div>
-      </div>
-
-      <p className="mt-6 text-sm text-muted-foreground">
-        {results.length} odontólogo(s) disponibles
-      </p>
-
-      <motion.div layout className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        <AnimatePresence mode="popLayout">
-          {results.map((d, i) => (
-            <DentistCard key={d.id} dentist={d} index={i} />
-          ))}
-        </AnimatePresence>
-      </motion.div>
-
-      {results.length === 0 && (
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="mt-10 text-center text-muted-foreground"
-        >
-          No encontramos odontólogos con esos filtros. Prueba ampliar el precio o el distrito.
-        </motion.p>
-      )}
 
       <div className="mt-8 flex items-start gap-3 rounded-2xl border border-border bg-muted/50 p-4 text-sm text-muted-foreground">
         <Info className="mt-0.5 size-4 shrink-0" />
