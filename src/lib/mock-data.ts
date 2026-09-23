@@ -202,6 +202,7 @@ export const busyBlocks: Record<string, string[]> = {
   d4: ["09:00", "10:00", "19:00"],
   d5: ["17:00"],
   d6: [],
+  d7: ["08:00", "12:00", "17:00"],
 };
 
 export const nextDays = (count = 7) => {
