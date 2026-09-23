@@ -66,7 +66,7 @@ function Agendar() {
   const { dentist } = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = useNavigate();
-  const { addAppointment } = useAppState();
+  const { addAppointment, appointments } = useAppState();
 
   const days = React.useMemo(() => nextDays(7), []);
   const initialDay = React.useMemo(() => {
@@ -87,7 +87,12 @@ function Agendar() {
   const [enviando, setEnviando] = React.useState(false);
   const [done, setDone] = React.useState(false);
 
-  const busy = busyBlocks[dentist.id] ?? [];
+  const busy = [
+    ...(busyBlocks[dentist.id] ?? []),
+    ...appointments
+      .filter((a) => a.dentistId === dentist.id && a.date === fechaISO && a.status !== "CANCELLED")
+      .map((a) => a.time),
+  ];
   const holdActive = step >= 2 && !done && !expired;
 
   React.useEffect(() => {

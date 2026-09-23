@@ -46,15 +46,20 @@ const reseñas = [
 
 function PerfilDentista() {
   const { dentist } = Route.useLoaderData();
-  const { isBanned } = useAppState();
+  const { isBanned, appointments } = useAppState();
 
   const days = React.useMemo(() => nextDays(7), []);
   const [dayIndex, setDayIndex] = React.useState(0);
   const [hora, setHora] = React.useState<string | null>(null);
 
-  const busy = busyBlocks[dentist.id] ?? [];
   const selectedDay = days[dayIndex]!;
   const fechaISO = selectedDay.toISOString().slice(0, 10);
+  const busy = [
+    ...(busyBlocks[dentist.id] ?? []),
+    ...appointments
+      .filter((a) => a.dentistId === dentist.id && a.date === fechaISO && a.status !== "CANCELLED")
+      .map((a) => a.time),
+  ];
   const fechaLarga = `${diaCorto[selectedDay.getDay()]} ${selectedDay.getDate()} ${
     mesCorto[selectedDay.getMonth()]
   }`;
