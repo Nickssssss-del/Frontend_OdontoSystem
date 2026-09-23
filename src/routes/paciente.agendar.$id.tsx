@@ -32,12 +32,12 @@ import {
 import { useAppState } from "@/lib/app-state";
 import { cn } from "@/lib/utils";
 
-type AgendarSearch = { fecha?: string; hora?: string };
+type AgendarSearch = { fecha?: string | undefined; hora?: string | undefined };
 
 export const Route = createFileRoute("/paciente/agendar/$id")({
   validateSearch: (search: Record<string, unknown>): AgendarSearch => ({
-    fecha: typeof search.fecha === "string" ? search.fecha : undefined,
-    hora: typeof search.hora === "string" ? search.hora : undefined,
+    fecha: typeof search["fecha"] === "string" ? search["fecha"] : undefined,
+    hora: typeof search["hora"] === "string" ? search["hora"] : undefined,
   }),
   loader: ({ params }) => {
     const dentist = getDentist(params.id);
@@ -66,7 +66,7 @@ function Agendar() {
   const { dentist } = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = useNavigate();
-  const { addAppointment } = useAppState();
+  const { addAppointment, appointments } = useAppState();
 
   const days = React.useMemo(() => nextDays(7), []);
   const initialDay = React.useMemo(() => {
@@ -87,7 +87,6 @@ function Agendar() {
   const [enviando, setEnviando] = React.useState(false);
   const [done, setDone] = React.useState(false);
 
-  const busy = busyBlocks[dentist.id] ?? [];
   const holdActive = step >= 2 && !done && !expired;
 
   React.useEffect(() => {
@@ -110,6 +109,12 @@ function Agendar() {
   const pct = (secondsLeft / HOLD_SECONDS) * 100;
   const selectedDay = days[dayIndex]!;
   const fechaISO = selectedDay.toISOString().slice(0, 10);
+  const busy = [
+    ...(busyBlocks[dentist.id] ?? []),
+    ...appointments
+      .filter((a) => a.dentistId === dentist.id && a.date === fechaISO)
+      .map((a) => a.time),
+  ];
   const fechaLarga = `${diaCorto[selectedDay.getDay()]} ${selectedDay.getDate()} ${
     mesCorto[selectedDay.getMonth()]
   }`;
