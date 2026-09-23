@@ -156,6 +156,28 @@ export const dentists: Dentist[] = [
     bio: "Perfil en proceso de validación de colegiatura ante el COP.",
     pin: { x: 82, y: 66 },
   },
+  {
+    id: "d7",
+    name: "Dra. Nicole Hernández Paredes",
+    specialty: "Evaluación",
+    specialties: ["Evaluación", "Limpieza", "Estética"],
+    cop: "COP-42016",
+    verified: true,
+    rating: 4.8,
+    reviews: 47,
+    price: 40,
+    district: "La Tinguiña",
+    distanceKm: 2.6,
+    initials: "NH",
+    tint: "from-primary/25 to-chart-2/30",
+    services: [
+      { name: "Evaluación integral", price: 40 },
+      { name: "Profilaxis y destartraje", price: 85 },
+      { name: "Resina estética", price: 110 },
+    ],
+    bio: "Odontóloga general colegiada (COP-42016). Atiende lunes a sábado de 08:00 a 12:00 y de 15:00 a 19:00 en La Tinguiña.",
+    pin: { x: 62, y: 60 },
+  },
 ];
 
 export const getDentist = (id: string) => dentists.find((d) => d.id === id);

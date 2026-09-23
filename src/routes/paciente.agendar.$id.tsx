@@ -32,12 +32,12 @@ import {
 import { useAppState } from "@/lib/app-state";
 import { cn } from "@/lib/utils";
 
-type AgendarSearch = { fecha?: string; hora?: string };
+type AgendarSearch = { fecha?: string | undefined; hora?: string | undefined };
 
 export const Route = createFileRoute("/paciente/agendar/$id")({
   validateSearch: (search: Record<string, unknown>): AgendarSearch => ({
-    fecha: typeof search.fecha === "string" ? search.fecha : undefined,
-    hora: typeof search.hora === "string" ? search.hora : undefined,
+    fecha: typeof search["fecha"] === "string" ? search["fecha"] : undefined,
+    hora: typeof search["hora"] === "string" ? search["hora"] : undefined,
   }),
   loader: ({ params }) => {
     const dentist = getDentist(params.id);
