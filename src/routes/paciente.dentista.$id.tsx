@@ -57,7 +57,7 @@ function PerfilDentista() {
   const busy = [
     ...(busyBlocks[dentist.id] ?? []),
     ...appointments
-      .filter((a) => a.dentistId === dentist.id && a.date === fechaISO && a.status !== "CANCELLED")
+      .filter((a) => a.dentistId === dentist.id && a.date === fechaISO)
       .map((a) => a.time),
   ];
   const fechaLarga = `${diaCorto[selectedDay.getDay()]} ${selectedDay.getDate()} ${

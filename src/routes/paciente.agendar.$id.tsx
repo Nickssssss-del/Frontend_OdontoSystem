@@ -87,12 +87,6 @@ function Agendar() {
   const [enviando, setEnviando] = React.useState(false);
   const [done, setDone] = React.useState(false);
 
-  const busy = [
-    ...(busyBlocks[dentist.id] ?? []),
-    ...appointments
-      .filter((a) => a.dentistId === dentist.id && a.date === fechaISO && a.status !== "CANCELLED")
-      .map((a) => a.time),
-  ];
   const holdActive = step >= 2 && !done && !expired;
 
   React.useEffect(() => {
@@ -115,6 +109,12 @@ function Agendar() {
   const pct = (secondsLeft / HOLD_SECONDS) * 100;
   const selectedDay = days[dayIndex]!;
   const fechaISO = selectedDay.toISOString().slice(0, 10);
+  const busy = [
+    ...(busyBlocks[dentist.id] ?? []),
+    ...appointments
+      .filter((a) => a.dentistId === dentist.id && a.date === fechaISO)
+      .map((a) => a.time),
+  ];
   const fechaLarga = `${diaCorto[selectedDay.getDay()]} ${selectedDay.getDate()} ${
     mesCorto[selectedDay.getMonth()]
   }`;
