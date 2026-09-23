@@ -56,17 +56,18 @@ export const Route = createFileRoute("/odontologo")({
 const dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
 function Odontologo() {
-  const {
-    agenda,
-    updateAgenda,
-    addStrike,
-    strikes,
-    blockedToday,
-    setBlockedToday,
-    vouchersPorRevisar,
-    approveVoucher,
-    rejectVoucher,
-  } = useAppState();
+const {
+     agenda,
+     updateAgenda,
+     addStrike,
+     strikes,
+     blockedToday,
+     setBlockedToday,
+     vouchersPorRevisar,
+     approveVoucher,
+     rejectVoucher,
+     bloqueoExpressActivo,
+   } = useAppState();
   const [notaFor, setNotaFor] = React.useState<Appointment | null>(null);
   const [nota, setNota] = React.useState("");
   const [revisandoId, setRevisandoId] = React.useState<string | null>(null);
@@ -125,13 +126,27 @@ function Odontologo() {
     });
   };
 
-  return (
-    <AppShell>
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-wrap items-end justify-between gap-4"
-      >
+return (
+     <AppShell>
+       {bloqueoExpressActivo && (
+         <div className="mb-4 p-4 bg-destructive/10 text-destructive rounded-lg border border-destructive/20">
+           <div className="flex items-start gap-3">
+             <X className="size-5 shrink-0" />
+             <div>
+               <h3 className="font-medium">Bloqueo express activado</h3>
+               <p className="text-sm">
+                 Los turnos de hoy han sido cancelados o pausados por emergencia. 
+                 El bloqueo se mantendrá activo hasta que lo desactives desde la configuración.
+               </p>
+             </div>
+           </div>
+         </div>
+       )}
+       <motion.div
+         initial={{ opacity: 0, y: 12 }}
+         animate={{ opacity: 1, y: 0 }}
+         className="flex flex-wrap items-end justify-between gap-4"
+       >
         <div>
           <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <BadgeCheck className="size-4 text-primary" /> COP-24851 verificado

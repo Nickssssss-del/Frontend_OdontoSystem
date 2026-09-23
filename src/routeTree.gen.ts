@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OdontologoRouteImport } from './routes/odontologo'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as OdontologoConfiguracionRouteImport } from './routes/odontologo.configuracion'
 import { Route as PacienteCatalogoRouteImport } from './routes/paciente.catalogo'
 import { Route as PacientePanelRouteImport } from './routes/paciente.panel'
 import { Route as PacienteAgendarIdRouteImport } from './routes/paciente.agendar.$id'
@@ -31,6 +32,11 @@ const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
+} as any)
+const OdontologoConfiguracionRoute = OdontologoConfiguracionRouteImport.update({
+  id: '/configuracion',
+  path: '/configuracion',
+  getParentRoute: () => OdontologoRoute,
 } as any)
 const PacienteCatalogoRoute = PacienteCatalogoRouteImport.update({
   id: '/paciente/catalogo',
@@ -55,8 +61,9 @@ const PacienteDentistaIdRoute = PacienteDentistaIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/odontologo': typeof OdontologoRoute
+  '/odontologo': typeof OdontologoRouteWithChildren
   '/api/chat': typeof ApiChatRoute
+  '/odontologo/configuracion': typeof OdontologoConfiguracionRoute
   '/paciente/catalogo': typeof PacienteCatalogoRoute
   '/paciente/panel': typeof PacientePanelRoute
   '/paciente/agendar/$id': typeof PacienteAgendarIdRoute
@@ -64,8 +71,9 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/odontologo': typeof OdontologoRoute
+  '/odontologo': typeof OdontologoRouteWithChildren
   '/api/chat': typeof ApiChatRoute
+  '/odontologo/configuracion': typeof OdontologoConfiguracionRoute
   '/paciente/catalogo': typeof PacienteCatalogoRoute
   '/paciente/panel': typeof PacientePanelRoute
   '/paciente/agendar/$id': typeof PacienteAgendarIdRoute
@@ -74,8 +82,9 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/odontologo': typeof OdontologoRoute
+  '/odontologo': typeof OdontologoRouteWithChildren
   '/api/chat': typeof ApiChatRoute
+  '/odontologo/configuracion': typeof OdontologoConfiguracionRoute
   '/paciente/catalogo': typeof PacienteCatalogoRoute
   '/paciente/panel': typeof PacientePanelRoute
   '/paciente/agendar/$id': typeof PacienteAgendarIdRoute
@@ -87,6 +96,7 @@ export interface FileRouteTypes {
     | '/'
     | '/odontologo'
     | '/api/chat'
+    | '/odontologo/configuracion'
     | '/paciente/catalogo'
     | '/paciente/panel'
     | '/paciente/agendar/$id'
@@ -96,6 +106,7 @@ export interface FileRouteTypes {
     | '/'
     | '/odontologo'
     | '/api/chat'
+    | '/odontologo/configuracion'
     | '/paciente/catalogo'
     | '/paciente/panel'
     | '/paciente/agendar/$id'
@@ -105,6 +116,7 @@ export interface FileRouteTypes {
     | '/'
     | '/odontologo'
     | '/api/chat'
+    | '/odontologo/configuracion'
     | '/paciente/catalogo'
     | '/paciente/panel'
     | '/paciente/agendar/$id'
@@ -113,7 +125,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  OdontologoRoute: typeof OdontologoRoute
+  OdontologoRoute: typeof OdontologoRouteWithChildren
   ApiChatRoute: typeof ApiChatRoute
   PacienteCatalogoRoute: typeof PacienteCatalogoRoute
   PacientePanelRoute: typeof PacientePanelRoute
@@ -143,6 +155,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/chat'
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/odontologo/configuracion': {
+      id: '/odontologo/configuracion'
+      path: '/configuracion'
+      fullPath: '/odontologo/configuracion'
+      preLoaderRoute: typeof OdontologoConfiguracionRouteImport
+      parentRoute: typeof OdontologoRoute
     }
     '/paciente/catalogo': {
       id: '/paciente/catalogo'
@@ -175,9 +194,21 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface OdontologoRouteChildren {
+  OdontologoConfiguracionRoute: typeof OdontologoConfiguracionRoute
+}
+
+const OdontologoRouteChildren: OdontologoRouteChildren = {
+  OdontologoConfiguracionRoute: OdontologoConfiguracionRoute,
+}
+
+const OdontologoRouteWithChildren = OdontologoRoute._addFileChildren(
+  OdontologoRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  OdontologoRoute: OdontologoRoute,
+  OdontologoRoute: OdontologoRouteWithChildren,
   ApiChatRoute: ApiChatRoute,
   PacienteCatalogoRoute: PacienteCatalogoRoute,
   PacientePanelRoute: PacientePanelRoute,
