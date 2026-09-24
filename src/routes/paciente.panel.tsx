@@ -1,488 +1,297 @@
 import * as React from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { AnimatePresence, motion } from "motion/react";
+import { createFileRoute } from "@tanstack/react-router";
+import { motion } from "motion/react";
 import {
-  AlertTriangle,
-  CalendarClock,
+  Calendar,
+  Clock,
   CheckCircle2,
-  FileDown,
-  FileText,
-  ImagePlus,
-  Loader2,
-  Lock,
-  ShieldAlert,
-  Smartphone,
-  Sparkles,
-  Wallet,
-  X,
+  TrendingUp,
+  AlertCircle,
+  DollarSign,
+  Zap,
+  Activity,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { StrikeMeter } from "@/components/StrikeMeter";
-import { VoucherBadge, VoucherReceipt } from "@/components/VoucherBits";
-import { getDentist, soles } from "@/lib/mock-data";
+import { useAppState } from "@/lib/app-state";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import {
-  statusClass,
-  statusLabel,
-  useAppState,
-  type Appointment,
-} from "@/lib/app-state";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/paciente/panel")({
   head: () => ({
     meta: [
-      { title: "Mi panel del paciente | OdontoSystem" },
+      { title: "Mi Panel | OdontoSystem" },
       {
         name: "description",
         content:
-          "Revisa tus tratamientos realizados, el total invertido en soles, tu nivel de puntualidad y tu historial clínico cifrado.",
+          "Tu panel de paciente: KPIs de salud dental, historial de citas y seguimiento de puntualidad.",
       },
-      { property: "og:title", content: "Mi panel del paciente | OdontoSystem" },
+      { property: "og:title", content: "Mi Panel | OdontoSystem" },
       {
         property: "og:description",
-        content: "Métricas, historial clínico y próximas citas del paciente en OdontoSystem.",
+        content: "Control centralizado de tu historial dental y citas.",
       },
     ],
   }),
-  component: Panel,
+  component: PacientePanel,
 });
 
-function Panel() {
-  const { patient, strikes, isBanned, appointments, updateAppointment, resubmitVoucher } =
-    useAppState();
-  const [ficha, setFicha] = React.useState<Appointment | null>(null);
-  const [tab, setTab] = React.useState<"futuras" | "pasadas">("futuras");
-  const [reenviarId, setReenviarId] = React.useState<string | null>(null);
-  const [nuevoPreview, setNuevoPreview] = React.useState<string | null>(null);
-  const [nuevoMetodo, setNuevoMetodo] = React.useState<"yape" | "plin">("yape");
-  const [nuevaRef, setNuevaRef] = React.useState("");
-  const [subiendo, setSubiendo] = React.useState(false);
+type KPI = {
+  id: string;
+  label: string;
+  value: string | number;
+  icon: React.ReactNode;
+  trend?: { value: number; direction: "up" | "down" };
+  color: "primary" | "accent" | "destructive" | "success";
+};
 
-  const completadas = appointments.filter((a) => a.status === "COMPLETED");
-  const invertido = completadas.reduce((s, a) => s + a.amount, 0);
-  const canceladas = appointments.filter(
-    (a) => a.status === "CANCELLED" || a.status === "NO_SHOW",
-  ).length;
+function PacientePanel() {
+  const { patient, appointments, strikes } = useAppState();
 
-  const rechazadas = appointments.filter((a) => a.status === "PAYMENT_REJECTED");
-  const reenviar = appointments.find((a) => a.id === reenviarId) ?? null;
+  // Calcular KPIs
+  const totalInvested = appointments
+    .filter((a) => a.status === "COMPLETED" || a.status === "CONFIRMED")
+    .reduce((sum, a) => sum + a.amount, 0);
 
-  const abrirReenvio = (a: Appointment) => {
-    setReenviarId(a.id);
-    setNuevoPreview(null);
-    setNuevaRef("");
-    setNuevoMetodo(a.voucher?.method ?? "yape");
-  };
+  const completedCount = appointments.filter((a) => a.status === "COMPLETED").length;
+  const activeAppointments = appointments.filter((a) => a.status === "CONFIRMED").length;
+  const attendanceRate = Math.round((completedCount / Math.max(1, appointments.length)) * 100);
 
-  const enviarNuevo = () => {
-    if (!reenviar) return;
-    setSubiendo(true);
-    window.setTimeout(() => {
-      resubmitVoucher(reenviar.id, {
-        ...(nuevoPreview ? { imageUrl: nuevoPreview } : {}),
-        reference: nuevaRef.trim() || `OP ${Math.floor(1000000 + Math.random() * 8999999)}`,
-        method: nuevoMetodo,
-      });
-      setSubiendo(false);
-      setReenviarId(null);
-    }, 1200);
-  };
+  const kpis: KPI[] = [
+    {
+      id: "invested",
+      label: "Total invertido",
+      value: `S/ ${totalInvested}`,
+      icon: <DollarSign className="size-5" />,
+      color: "primary",
+    },
+    {
+      id: "completed",
+      label: "Tratamientos completados",
+      value: completedCount,
+      icon: <CheckCircle2 className="size-5" />,
+      color: "success",
+    },
+    {
+      id: "active",
+      label: "Citas activas",
+      value: activeAppointments,
+      icon: <Calendar className="size-5" />,
+      color: "accent",
+    },
+    {
+      id: "attendance",
+      label: "Puntualidad",
+      value: `${attendanceRate}%`,
+      icon: <TrendingUp className="size-5" />,
+      color: "primary",
+    },
+  ];
 
-  const futuras = appointments.filter((a) =>
-    ["CONFIRMED", "VERIFYING", "PENDING_PAYMENT", "PAYMENT_REJECTED"].includes(a.status),
-  );
-  const pasadas = appointments.filter((a) =>
-    ["COMPLETED", "CANCELLED", "NO_SHOW"].includes(a.status),
-  );
-  const lista = tab === "futuras" ? futuras : pasadas;
+  // Datos de semáforo de puntualidad
+  const punctualityData = [
+    { label: "Inasistencias", value: 1, max: 3, color: "bg-destructive" },
+    { label: "Cancelaciones", value: 0, max: 3, color: "bg-warning" },
+    { label: "Reprogramaciones", value: 2, max: 5, color: "bg-accent" },
+  ];
 
   return (
     <AppShell>
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-        <p className="text-sm text-muted-foreground">Hola de nuevo,</p>
-        <h1 className="font-display text-3xl font-semibold">{patient}</h1>
-      </motion.div>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        {/* Welcome Banner */}
+        <div className="mb-8 rounded-xl border border-border/70 bg-gradient-to-r from-primary/10 to-accent/10 p-6">
+          <h1 className="text-2xl font-semibold mb-2">
+            Hola, <span className="text-primary">{patient}</span> 👋
+          </h1>
+          <p className="text-muted-foreground">Tu salud dental, siempre bajo control.</p>
+        </div>
 
-      <AnimatePresence>
-        {isBanned && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mt-5 overflow-hidden"
-          >
-            <div className="flex items-start gap-3 rounded-2xl border border-destructive/40 bg-destructive/10 p-4">
-              <ShieldAlert className="mt-0.5 size-5 shrink-0 text-destructive" />
-              <div>
-                <p className="font-semibold text-destructive">
-                  Cuenta suspendida temporalmente por inasistencias
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  No podrás generar nuevas reservas hasta recuperar tu nivel de puntualidad.
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {rechazadas.map((a) => (
-          <motion.div
-            key={a.id}
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mt-4 overflow-hidden"
-          >
-            <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-destructive/40 bg-destructive/10 p-4">
-              <AlertTriangle className="size-5 shrink-0 text-destructive" />
-              <div className="min-w-48 flex-1">
-                <p className="font-semibold text-destructive">
-                  Tu comprobante fue rechazado — {a.service}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {a.voucher?.reason ?? "Revisa la captura enviada."} Sube un comprobante corregido
-                  para conservar tu cita del {a.date} a las {a.time}.
-                </p>
-              </div>
-              <button
-                onClick={() => abrirReenvio(a)}
-                className="rounded-full bg-destructive px-4 py-2 text-xs font-semibold text-destructive-foreground"
-              >
-                Volver a subir comprobante
-              </button>
-            </div>
-          </motion.div>
-        ))}
-      </AnimatePresence>
-
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Metric
-          icon={<Sparkles className="size-5" />}
-          label="Tratamientos realizados"
-          value={String(completadas.length)}
-          delay={0}
-        />
-        <Metric
-          icon={<Wallet className="size-5" />}
-          label="Total invertido"
-          value={soles(invertido)}
-          delay={0.06}
-        />
-        <Metric
-          icon={<AlertTriangle className="size-5" />}
-          label="Citas canceladas / ausencias"
-          value={String(canceladas)}
-          delay={0.12}
-        />
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.18 }}
-          className="rounded-3xl border border-border bg-card p-5"
-        >
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Nivel de puntualidad
-          </p>
-          <div className="mt-3">
-            <StrikeMeter strikes={strikes} />
-          </div>
-        </motion.div>
-      </div>
-
-      <div className="mt-8 rounded-3xl border border-border bg-card">
-        <div className="flex items-center gap-1 border-b border-border p-2">
-          {(["futuras", "pasadas"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className="relative rounded-full px-4 py-2 text-sm font-medium capitalize transition-colors"
+        {/* KPIs */}
+        <div className="grid gap-4 mb-8 sm:grid-cols-2 lg:grid-cols-4">
+          {kpis.map((kpi, idx) => (
+            <motion.div
+              key={kpi.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.1 }}
             >
-              {tab === t && (
-                <motion.span
-                  layoutId="panel-tab"
-                  className="absolute inset-0 rounded-full bg-primary/12"
-                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                />
-              )}
-              <span className={cn("relative", tab === t ? "text-primary" : "text-muted-foreground")}>
-                Citas {t}
-              </span>
-            </button>
+              <Card className="relative overflow-hidden hover:shadow-md transition-shadow">
+                <CardContent className="pt-6">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium mb-1">
+                        {kpi.label}
+                      </p>
+                      <p className="text-2xl font-bold">{kpi.value}</p>
+                    </div>
+                    <div className={cn(
+                      "p-2 rounded-lg",
+                      kpi.color === "primary" && "bg-primary/12 text-primary",
+                      kpi.color === "accent" && "bg-accent/12 text-accent",
+                      kpi.color === "destructive" && "bg-destructive/12 text-destructive",
+                      kpi.color === "success" && "bg-success/12 text-success",
+                    )}>
+                      {kpi.icon}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
           ))}
         </div>
 
-        <div className="divide-y divide-border">
-          <AnimatePresence mode="popLayout">
-            {lista.map((a) => {
-              const d = getDentist(a.dentistId);
-              return (
-                <motion.div
-                  key={a.id}
-                  layout
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="flex flex-wrap items-center gap-4 p-5"
-                >
-                  <span className="flex size-11 items-center justify-center rounded-2xl bg-primary/10 font-display text-sm font-semibold text-primary">
-                    {d?.initials}
-                  </span>
-                  <div className="min-w-40 flex-1">
-                    <p className="font-medium">{a.service}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {d?.name} · {a.date} · {a.time}
-                    </p>
-                    {a.voucher && <VoucherBadge status={a.voucher.status} className="mt-1.5" />}
-                  </div>
-                  <span
-                    className={cn(
-                      "rounded-full border px-2.5 py-1 text-xs font-semibold",
-                      statusClass[a.status],
-                    )}
-                  >
-                    {statusLabel[a.status]}
-                  </span>
-                  <span className="font-display font-semibold">{soles(a.amount)}</span>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setFicha(a)}
-                      className="rounded-full border border-border px-3 py-1.5 text-xs font-semibold transition-colors hover:border-primary hover:text-primary"
-                    >
-                      <FileText className="mr-1 inline size-3.5" />
-                      Ver ficha
-                    </button>
-                    {a.status === "PAYMENT_REJECTED" && (
-                      <button
-                        onClick={() => abrirReenvio(a)}
-                        className="rounded-full bg-destructive px-3 py-1.5 text-xs font-semibold text-destructive-foreground"
-                      >
-                        <ImagePlus className="mr-1 inline size-3.5" />
-                        Corregir comprobante
-                      </button>
-                    )}
-                    {tab === "futuras" &&
-                      (isBanned ? (
-                        <span className="flex items-center gap-1 rounded-full bg-muted px-3 py-1.5 text-xs font-semibold text-muted-foreground">
-                          <Lock className="size-3.5" /> Bloqueado
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => updateAppointment(a.id, { status: "CANCELLED" })}
-                          className="rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:border-destructive hover:text-destructive"
-                        >
-                          <CalendarClock className="mr-1 inline size-3.5" />
-                          Reprogramar / Cancelar
-                        </button>
+        {/* Punctuality Meter */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="size-5 text-primary" />
+                Semáforo de Puntualidad
+              </CardTitle>
+              <CardDescription>
+                Control de incumplimientos. Tres strikes = cuenta suspendida.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {punctualityData.map((item, idx) => (
+                  <div key={item.label}>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-sm font-medium">{item.label}</label>
+                      <span className="text-xs text-muted-foreground">
+                        {item.value}/{item.max}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      {/* Filled blocks */}
+                      {Array.from({ length: item.value }).map((_, i) => (
+                        <div
+                          key={`fill-${i}`}
+                          className={cn("h-6 rounded-md flex-1", item.color)}
+                        />
                       ))}
+                      {/* Empty blocks */}
+                      {Array.from({ length: item.max - item.value }).map((_, i) => (
+                        <div
+                          key={`empty-${i}`}
+                          className="h-6 rounded-md flex-1 bg-muted border border-border/50"
+                        />
+                      ))}
+                    </div>
                   </div>
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
-          {lista.length === 0 && (
-            <p className="p-8 text-center text-sm text-muted-foreground">
-              No tienes citas {tab}.{" "}
-              <Link to="/paciente/catalogo" className="font-semibold text-primary">
-                Buscar un dentista
-              </Link>
-            </p>
-          )}
-        </div>
-      </div>
-
-      <AnimatePresence>
-        {ficha && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4 backdrop-blur-sm"
-            onClick={() => setFicha(null)}
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 24, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 16, scale: 0.97 }}
-              transition={{ type: "spring", stiffness: 300, damping: 28 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-lg rounded-3xl border border-border bg-card p-6 shadow-2xl"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="font-display text-xl font-semibold">Historial clínico</h2>
-                  <p className="text-sm text-muted-foreground">
-                    {ficha.date} · {ficha.time} · {getDentist(ficha.dentistId)?.name}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setFicha(null)}
-                  className="rounded-full p-1.5 text-muted-foreground hover:bg-muted"
-                >
-                  <X className="size-5" />
-                </button>
-              </div>
-
-              <p className="mt-4 flex items-center gap-2 rounded-xl bg-success/12 px-3 py-2 text-xs font-medium text-success-foreground">
-                <Lock className="size-3.5" /> Nota desencriptada en tiempo real (AES-256)
-              </p>
-
-              <div className="mt-4 rounded-2xl border border-border bg-muted/40 p-4 text-sm leading-relaxed">
-                {ficha.note ?? "Esta cita aún no tiene una nota clínica registrada."}
-              </div>
-
-              <div className="mt-3 flex items-center justify-between rounded-2xl border border-border p-4 text-sm">
-                <span className="text-muted-foreground">Monto pagado</span>
-                <span className="font-display text-lg font-semibold">{soles(ficha.amount)}</span>
-              </div>
-
-              <button className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground">
-                <FileDown className="size-4" /> Descargar ficha en PDF
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {reenviar && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setReenviarId(null)}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4 backdrop-blur-sm"
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 24, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 16, scale: 0.97 }}
-              transition={{ type: "spring", stiffness: 300, damping: 28 }}
-              onClick={(e) => e.stopPropagation()}
-              className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-3xl border border-border bg-card p-6 shadow-2xl"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="font-display text-xl font-semibold">Corregir comprobante</h2>
-                  <p className="text-sm text-muted-foreground">
-                    {reenviar.service} · {reenviar.date} · {reenviar.time}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setReenviarId(null)}
-                  className="rounded-full p-1.5 text-muted-foreground hover:bg-muted"
-                >
-                  <X className="size-5" />
-                </button>
-              </div>
-
-              {reenviar.voucher?.reason && (
-                <p className="mt-3 rounded-xl bg-destructive/10 p-3 text-xs font-medium text-destructive">
-                  Rechazado por: {reenviar.voucher.reason}
-                </p>
-              )}
-
-              {reenviar.voucher && (
-                <div className="mt-3">
-                  <VoucherReceipt voucher={reenviar.voucher} />
-                </div>
-              )}
-
-              <div className="mt-4 flex gap-2">
-                {(["yape", "plin"] as const).map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => setNuevoMetodo(m)}
-                    className={cn(
-                      "flex-1 rounded-xl border py-2.5 text-sm font-semibold capitalize transition-colors",
-                      nuevoMetodo === m
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border text-muted-foreground",
-                    )}
-                  >
-                    <Smartphone className="mr-1.5 inline size-4" />
-                    {m}
-                  </button>
                 ))}
+                
+                {/* Strike Warning */}
+                {strikes >= 2 && (
+                  <div className="mt-4 rounded-lg border border-warning/50 bg-warning/5 p-3 flex gap-3">
+                    <AlertCircle className="size-5 text-warning flex-shrink-0 mt-0.5" />
+                    <div className="text-sm">
+                      <p className="font-medium text-warning">Atención: {strikes} strikes registrados</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Te quedan {3 - strikes} strike(s) antes de la suspensión de cuenta.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Appointment History */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="size-5 text-primary" />
+                Historial de Citas
+              </CardTitle>
+              <CardDescription>
+                Últimas {appointments.length} citas registradas en tu cuenta.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Odontólogo</TableHead>
+                      <TableHead>Servicio</TableHead>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Monto</TableHead>
+                      <TableHead>Estado</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {appointments.slice(0, 8).map((apt) => (
+                      <TableRow key={apt.id} className="hover:bg-muted/50">
+                        <TableCell className="font-medium text-sm">{apt.patient}</TableCell>
+                        <TableCell className="text-sm">{apt.service}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {new Date(apt.date).toLocaleDateString("es-PE", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}{" "}
+                          {apt.time}
+                        </TableCell>
+                        <TableCell className="text-sm font-medium">S/ {apt.amount}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              apt.status === "COMPLETED" &&
+                                "bg-success/10 text-success border-success/30",
+                              apt.status === "CONFIRMED" &&
+                                "bg-primary/10 text-primary border-primary/30",
+                              apt.status === "NO_SHOW" &&
+                                "bg-destructive/10 text-destructive border-destructive/30",
+                              apt.status === "CANCELLED" &&
+                                "bg-muted text-muted-foreground border-border"
+                            )}
+                          >
+                            {apt.status === "COMPLETED"
+                              ? "Completada"
+                              : apt.status === "CONFIRMED"
+                                ? "Confirmada"
+                                : apt.status === "NO_SHOW"
+                                  ? "Inasistencia"
+                                  : "Cancelada"}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
 
-              <input
-                value={nuevaRef}
-                onChange={(e) => setNuevaRef(e.target.value.slice(0, 30))}
-                placeholder="N° de operación (opcional)"
-                className="mt-3 h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-primary"
-              />
-
-              <label className="mt-3 flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-border bg-muted/30 px-6 py-8 text-center transition-colors hover:border-primary/60">
-                <ImagePlus className="size-7 text-primary" />
-                <span className="text-sm font-medium">Sube la nueva captura del Yape/Plin</span>
-                <span className="text-xs text-muted-foreground">PNG o JPG hasta 5 MB</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) setNuevoPreview(URL.createObjectURL(f));
-                  }}
-                />
-              </label>
-
-              <AnimatePresence>
-                {nuevoPreview && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.96 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="mt-3 flex items-center gap-2 rounded-xl bg-success/12 p-3 text-xs font-medium text-success-foreground"
-                  >
-                    <CheckCircle2 className="size-4" /> Nueva captura lista para enviar
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              <button
-                disabled={!nuevoPreview || subiendo}
-                onClick={enviarNuevo}
-                className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:bg-muted disabled:text-muted-foreground"
-              >
-                {subiendo && <Loader2 className="size-4 animate-spin" />}
-                {subiendo ? "Enviando…" : "Enviar para nueva verificación"}
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              {appointments.length === 0 && (
+                <div className="py-12 text-center">
+                  <Calendar className="size-8 mx-auto mb-3 text-muted-foreground" />
+                  <p className="text-muted-foreground">Aún no tienes citas registradas.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      </motion.div>
     </AppShell>
-  );
-}
-
-function Metric({
-  icon,
-  label,
-  value,
-  delay,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  delay: number;
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, type: "spring", stiffness: 240, damping: 26 }}
-      className="rounded-3xl border border-border bg-card p-5"
-    >
-      <span className="flex size-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-        {icon}
-      </span>
-      <p className="mt-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        {label}
-      </p>
-      <p className="mt-1 font-display text-2xl font-semibold">{value}</p>
-    </motion.div>
   );
 }

@@ -2,7 +2,7 @@ import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "motion/react";
-import { AlertTriangle, Info, Search, SlidersHorizontal } from "lucide-react";
+import { AlertTriangle, Info, Search, SlidersHorizontal, LayoutGrid, List, X } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { DentistCard } from "@/components/DentistCard";
 import { DentistMap } from "@/components/DentistMap";
@@ -15,6 +15,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Slider } from "@/components/ui/slider";
+import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/paciente/catalogo")({
   head: () => ({
@@ -48,8 +54,10 @@ function Catalogo() {
   const [chips, setChips] = React.useState<string[]>([]);
   const [distrito, setDistrito] = React.useState<string>("Todos");
   const [especialidad, setEspecialidad] = React.useState<string>("Todas");
-  const [maxPrecio, setMaxPrecio] = React.useState(100);
+  const [maxPrecio, setMaxPrecio] = React.useState([100]);
   const [orden, setOrden] = React.useState<(typeof ordenes)[number]["id"]>("rating");
+  const [viewMode, setViewMode] = React.useState<"grid" | "list">("grid");
+  const [filtersOpen, setFiltersOpen] = React.useState(true);
 
   const toggleChip = (c: string) =>
     setChips((prev) => (prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]));
@@ -61,7 +69,7 @@ function Catalogo() {
       .filter((d) => (chips.length ? chips.some((c) => d.specialties.includes(c)) : true))
       .filter((d) => (especialidad === "Todas" ? true : d.specialties.includes(especialidad)))
       .filter((d) => (distrito === "Todos" ? true : d.district === distrito))
-      .filter((d) => d.price <= maxPrecio);
+      .filter((d) => d.price <= (maxPrecio[0] ?? 100));
     return [...list].sort((a, b) =>
       orden === "precio"
         ? a.price - b.price
@@ -71,194 +79,324 @@ function Catalogo() {
     );
   }, [query, chips, distrito, especialidad, maxPrecio, orden]);
 
+  if (isBanned) {
+    return (
+      <AppShell>
+        <div className="flex items-center gap-3 rounded-lg border border-destructive/50 bg-destructive/5 p-4">
+          <AlertTriangle className="size-5 flex-shrink-0 text-destructive" />
+          <div>
+            <p className="font-semibold text-destructive">Cuenta suspendida</p>
+            <p className="text-sm text-muted-foreground">
+              Por incumplimientos repetidos. Contacta a soporte para apelar.
+            </p>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell>
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="font-display text-3xl font-semibold">Dentistas en Ica</h1>
-        <p className="mt-1 text-muted-foreground">
-          Filtros en tiempo real por especialidad, reputación, precio base y cercanía.
-        </p>
-      </motion.div>
-
-      <AnimatePresence>
-        {isBanned && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mt-5 overflow-hidden"
-          >
-            <div className="flex items-start gap-3 rounded-2xl border border-destructive/40 bg-destructive/10 p-4">
-              <AlertTriangle className="mt-0.5 size-5 shrink-0 text-destructive" />
-              <div>
-                <p className="font-semibold text-destructive">
-                  Cuenta suspendida temporalmente por inasistencias
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Alcanzaste el límite de strikes. El botón de reservar está deshabilitado hasta que
-                  un odontólogo restablezca tu puntualidad.
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,300px)_1fr]">
-        {/* ===== Sidebar de Filtros ===== */}
-        <aside className="space-y-5 rounded-3xl border border-border bg-card p-5 shadow-sm">
-          <div className="flex items-center gap-2">
-            <SlidersHorizontal className="size-4 text-primary" />
-            <p className="font-display text-base font-semibold">Filtros</p>
-          </div>
-
-          {/* Búsqueda por nombre */}
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Busca por nombre…"
-              className="h-11 w-full rounded-xl border border-input bg-background pl-11 pr-4 text-sm outline-none transition-colors focus:border-primary"
-            />
-          </div>
-
-          {/* Distrito (Select) */}
-          <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-muted-foreground">
-              Distrito de Ica
-            </label>
-            <Select value={distrito} onValueChange={setDistrito}>
-              <SelectTrigger className="h-11 rounded-xl">
-                <SelectValue placeholder="Todos los distritos" />
-              </SelectTrigger>
-              <SelectContent>
-                {distritos.map((d) => (
-                  <SelectItem key={d} value={d}>
-                    {d}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Especialidad (Select) */}
-          <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-muted-foreground">Especialidad</label>
-            <Select value={especialidad} onValueChange={setEspecialidad}>
-              <SelectTrigger className="h-11 rounded-xl">
-                <SelectValue placeholder="Todas las especialidades" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Todas">Todas</SelectItem>
-                {especialidades.map((e) => (
-                  <SelectItem key={e} value={e}>
-                    {e}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Chips de especialidades rápidas */}
-          <div className="space-y-1.5">
-            <span className="block text-sm font-medium text-muted-foreground">Acceso rápido</span>
-            <div className="flex flex-wrap gap-2">
-              {especialidades.map((c) => (
-                <motion.button
-                  key={c}
-                  whileTap={{ scale: 0.94 }}
-                  onClick={() => toggleChip(c)}
-                  className={cn(
-                    "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
-                    chips.includes(c)
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-background text-muted-foreground hover:border-primary/50",
-                  )}
-                >
-                  {c}
-                </motion.button>
-              ))}
-            </div>
-          </div>
-
-          {/* Precio */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-muted-foreground">Precio base</span>
-              <span className="text-sm font-semibold text-primary">hasta S/ {maxPrecio}</span>
-            </div>
-            <input
-              type="range"
-              min={30}
-              max={100}
-              step={5}
-              value={maxPrecio}
-              onChange={(e) => setMaxPrecio(Number(e.target.value))}
-              className="w-full accent-primary"
-            />
-          </div>
-
-          {/* Ordenar */}
-          <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-muted-foreground">Ordenar por</label>
-            <Select value={orden} onValueChange={(v) => setOrden(v as typeof orden)}>
-              <SelectTrigger className="h-11 rounded-xl">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ordenes.map((o) => (
-                  <SelectItem key={o.id} value={o.id}>
-                    {o.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </aside>
-
-        {/* ===== Área principal: mapa + grilla ===== */}
-        <div className="space-y-5">
-          {/* Mapa (mitad superior/derecha) */}
-          <div className="rounded-3xl border border-border bg-card p-4 shadow-sm">
-            <DentistMap dentists={results} />
-          </div>
-
-          {/* Grilla de tarjetas (mitad inferior/izquierda) */}
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              {results.length} odontólogo(s) disponibles
-            </p>
-          </div>
-
-          <motion.div layout className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-            <AnimatePresence mode="popLayout">
-              {results.map((d, i) => (
-                <DentistCard key={d.id} dentist={d} index={i} />
-              ))}
-            </AnimatePresence>
-          </motion.div>
-
-          {results.length === 0 && (
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="mt-6 text-center text-muted-foreground"
-            >
-              No encontramos odontólogos con esos filtros. Prueba ampliar el precio o el distrito.
-            </motion.p>
-          )}
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="font-display text-3xl font-semibold">Dentistas en Ica</h1>
+          <p className="mt-1 text-muted-foreground">
+            Filtros en tiempo real por especialidad, reputación, precio base y cercanía.
+          </p>
         </div>
-      </div>
 
-      <div className="mt-8 flex items-start gap-3 rounded-2xl border border-border bg-muted/50 p-4 text-sm text-muted-foreground">
-        <Info className="mt-0.5 size-4 shrink-0" />
-        <p>
-          1 perfil no aparece en esta búsqueda pública porque su colegiatura COP está
-          <span className="font-semibold text-warning-foreground"> En Revisión</span>. Se publicará
-          automáticamente al validarse.
-        </p>
-      </div>
+        {/* ===================== MAPA (arriba, sin eliminar) ===================== */}
+        <div className="mb-8 rounded-xl border border-border/70 overflow-hidden shadow-sm">
+          <DentistMap dentists={results} />
+        </div>
+
+        {/* ===================== BUSCADOR PRINCIPAL ===================== */}
+        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:gap-3">
+          <div className="flex-1">
+            <Label htmlFor="search" className="text-xs text-muted-foreground mb-2 block">
+              Buscar por nombre
+            </Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              <Input
+                id="search"
+                placeholder="Ej: Claudia, Manrique..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            {/* View Mode Toggle */}
+            <div className="flex border border-border rounded-lg overflow-hidden bg-muted/30">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={cn(
+                  "p-2 transition-colors",
+                  viewMode === "grid" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                )}
+              >
+                <LayoutGrid className="size-4" />
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={cn(
+                  "p-2 transition-colors border-l border-border",
+                  viewMode === "list" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                )}
+              >
+                <List className="size-4" />
+              </button>
+            </div>
+
+            {/* Filters Toggle */}
+            <Button
+              variant={filtersOpen ? "default" : "outline"}
+              size="sm"
+              onClick={() => setFiltersOpen(!filtersOpen)}
+              className="gap-2"
+            >
+              <SlidersHorizontal className="size-4" />
+              <span className="hidden sm:inline">Filtros</span>
+            </Button>
+          </div>
+        </div>
+
+        {/* ===================== LAYOUT: FILTROS LATERAL + RESULTADOS ===================== */}
+        <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
+          {/* Sidebar de Filtros */}
+          <AnimatePresence>
+            {filtersOpen && (
+              <motion.aside
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="rounded-xl border border-border/70 bg-card p-4 h-fit lg:sticky lg:top-24"
+              >
+                <div className="space-y-6">
+                  {/* Especialidades */}
+                  <div>
+                    <h3 className="font-semibold text-sm mb-3">Especialidad</h3>
+                    <div className="space-y-2">
+                      {["Todas", ...especialidades].map((esp) => (
+                        <label key={esp} className="flex items-center gap-2 cursor-pointer">
+                          <Checkbox
+                            checked={especialidad === esp}
+                            onCheckedChange={() => setEspecialidad(esp)}
+                          />
+                          <span className="text-sm">{esp}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Precio Máximo */}
+                  <div>
+                    <h3 className="font-semibold text-sm mb-3">Precio máximo</h3>
+                    <Slider
+                      value={maxPrecio}
+                      onValueChange={setMaxPrecio}
+                      min={0}
+                      max={300}
+                      step={10}
+                      className="mb-2"
+                    />
+                    <p className="text-xs text-muted-foreground">Hasta S/ {(maxPrecio[0] ?? 100)}</p>
+                  </div>
+
+                  {/* Distrito */}
+                  <div>
+                    <h3 className="font-semibold text-sm mb-3">Distrito</h3>
+                    <Select value={distrito} onValueChange={setDistrito}>
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {distritos.map((d) => (
+                          <SelectItem key={d} value={d}>
+                            {d}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Orden */}
+                  <div>
+                    <h3 className="font-semibold text-sm mb-3">Ordenar por</h3>
+                    <Select value={orden} onValueChange={(v) => setOrden(v as typeof orden)}>
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ordenes.map((o) => (
+                          <SelectItem key={o.id} value={o.id}>
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Horario */}
+                  <div>
+                    <h3 className="font-semibold text-sm mb-3">Horario disponible</h3>
+                    <div className="space-y-2 text-sm">
+                      {["Mañana", "Tarde", "Noche"].map((h) => (
+                        <label key={h} className="flex items-center gap-2 cursor-pointer">
+                          <Checkbox />
+                          <span>{h}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Calificación */}
+                  <div>
+                    <h3 className="font-semibold text-sm mb-3">Calificación mínima</h3>
+                    <div className="space-y-2 text-sm">
+                      {["5 ⭐", "4+ ⭐", "3+ ⭐"].map((r) => (
+                        <label key={r} className="flex items-center gap-2 cursor-pointer">
+                          <Checkbox />
+                          <span>{r}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </motion.aside>
+            )}
+          </AnimatePresence>
+
+          {/* Resultados */}
+          <div>
+            {/* Chips de filtros activos */}
+            {(query || chips.length > 0 || distrito !== "Todos" || especialidad !== "Todas" || (maxPrecio[0] ?? 100) < 100) && (
+              <div className="mb-6 flex flex-wrap gap-2">
+                {query && (
+                  <Badge variant="secondary" className="gap-1">
+                    {query}
+                    <button onClick={() => setQuery("")} className="hover:opacity-75">
+                      <X className="size-3" />
+                    </button>
+                  </Badge>
+                )}
+                {chips.map((c) => (
+                  <Badge key={c} variant="secondary" className="gap-1">
+                    {c}
+                    <button onClick={() => toggleChip(c)} className="hover:opacity-75">
+                      <X className="size-3" />
+                    </button>
+                  </Badge>
+                ))}
+                {especialidad !== "Todas" && (
+                  <Badge variant="secondary" className="gap-1">
+                    {especialidad}
+                    <button onClick={() => setEspecialidad("Todas")} className="hover:opacity-75">
+                      <X className="size-3" />
+                    </button>
+                  </Badge>
+                )}
+                {distrito !== "Todos" && (
+                  <Badge variant="secondary" className="gap-1">
+                    {distrito}
+                    <button onClick={() => setDistrito("Todos")} className="hover:opacity-75">
+                      <X className="size-3" />
+                    </button>
+                  </Badge>
+                )}
+                {(maxPrecio[0] ?? 100) < 100 && (
+                  <Badge variant="secondary" className="gap-1">
+                    Máx S/ {(maxPrecio[0] ?? 100)}
+                    <button onClick={() => setMaxPrecio([100])} className="hover:opacity-75">
+                      <X className="size-3" />
+                    </button>
+                  </Badge>
+                )}
+              </div>
+            )}
+
+            {/* View Mode: Grid */}
+            {viewMode === "grid" && (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <AnimatePresence>
+                  {results.length > 0 ? (
+                    results.map((d) => (
+                      <motion.div
+                        key={d.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                      >
+                        <DentistCard dentist={d} />
+                      </motion.div>
+                    ))
+                  ) : (
+                    <div className="col-span-full py-12 text-center">
+                      <Info className="size-8 mx-auto mb-3 text-muted-foreground" />
+                      <p className="text-muted-foreground">No hay odontólogos que coincidan con tus filtros.</p>
+                    </div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+
+            {/* View Mode: List */}
+            {viewMode === "list" && (
+              <div className="space-y-3">
+                <AnimatePresence>
+                  {results.length > 0 ? (
+                    results.map((d) => (
+                      <motion.div
+                        key={d.id}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -10 }}
+                        className="flex items-start gap-4 rounded-lg border border-border/70 bg-card p-4 hover:shadow-md transition-shadow"
+                      >
+                        <div className={cn("size-16 rounded-lg bg-gradient-to-br flex items-center justify-center text-lg font-semibold text-white", d.tint)}>
+                          {d.initials}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold">{d.name}</h3>
+                          <p className="text-xs text-muted-foreground mb-2">{d.specialty} • {d.district}</p>
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {d.specialties.map((s) => (
+                              <Badge key={s} variant="outline" className="text-xs">
+                                {s}
+                              </Badge>
+                            ))}
+                          </div>
+                          <p className="text-sm text-muted-foreground">{d.reviews} opiniones • Desde S/ {d.price}</p>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-bold text-primary">{d.rating.toFixed(1)}</div>
+                          <p className="text-xs text-muted-foreground">{d.distanceKm} km</p>
+                        </div>
+                      </motion.div>
+                    ))
+                  ) : (
+                    <div className="py-12 text-center">
+                      <Info className="size-8 mx-auto mb-3 text-muted-foreground" />
+                      <p className="text-muted-foreground">No hay odontólogos que coincidan con tus filtros.</p>
+                    </div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+
+            {/* Resultados Info */}
+            {results.length > 0 && (
+              <div className="mt-6 text-xs text-muted-foreground border-t border-border/70 pt-4">
+                Mostrando {results.length} de {dentists.length} odontólogos verificados en Ica
+              </div>
+            )}
+          </div>
+        </div>
+      </motion.div>
     </AppShell>
   );
 }

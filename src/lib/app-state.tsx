@@ -1,11 +1,22 @@
 import * as React from "react";
-import { differenceInHours, parse } from "date-fns";
 
-export type Appeal = {
-  certificateUrl?: string;
-  status: "PENDIENTE" | "APROBADA" | "RECHAZADA";
-  motivo: string;
+export type UserRole = "patient" | "dentist";
+
+export type DocumentType = "DNI" | "Título" | "Colegiatura" | "CV";
+export type DocumentStatus = "PENDIENTE" | "OBSERVADO" | "RECHAZADO" | "VERIFICADO";
+export type Document = {
+  type: DocumentType;
+  estado: DocumentStatus;
+  url?: string | undefined;
+  motivoRechazo?: string | undefined;
 };
+
+const documentosIniciales: Document[] = [
+  { type: "DNI", estado: "VERIFICADO" },
+  { type: "Título", estado: "VERIFICADO" },
+  { type: "Colegiatura", estado: "PENDIENTE" },
+  { type: "CV", estado: "PENDIENTE" },
+];
 
 export type AppointmentStatus =
   | "PENDING_PAYMENT"
@@ -19,7 +30,7 @@ export type AppointmentStatus =
 export type VoucherStatus = "EN_REVISION" | "APROBADO" | "RECHAZADO";
 
 export type Voucher = {
-  method: "yape" | "plin" | "tarjeta";
+  method: "yape" | "plin";
   reference: string;
   amount: number;
   uploadedAt: string;
@@ -27,19 +38,6 @@ export type Voucher = {
   status: VoucherStatus;
   reason?: string | undefined;
   attempt: number;
-  /** Pasarela de pago simulada cuando method === "tarjeta" */
-  gateway?: "culqi" | "niubiz";
-  /** ID del webhook simulado de confirmación automática (Culqi/Niubiz Sandbox) */
-  simulatedWebhookId?: string;
-};
-
-export type DocumentType = "DNI" | "Título" | "Colegiatura" | "CV";
-export type DocumentStatus = "PENDIENTE" | "OBSERVADO" | "RECHAZADO" | "VERIFICADO";
-
-export type Document = {
-  type: DocumentType;
-  estado: DocumentStatus;
-  motivoRechazo?: string;
 };
 
 export type Appointment = {
@@ -53,32 +51,7 @@ export type Appointment = {
   status: AppointmentStatus;
   note?: string;
   voucher?: Voucher;
-  /** Número de reprogramaciones realizadas por el paciente */
-  reprogramCount: number;
-  /** Motivo de cancelación (si aplica) */
-  cancelReason?: string;
-  /** Apelación a una cancelación tardía / inasistencia */
-  appeal?: Appeal;
 };
-
-const APPOINTMENT_DATETIME_FORMAT = "yyyy-MM-dd HH:mm";
-
-const getAppointmentDateTime = (cita: Appointment): Date =>
-  parse(`${cita.date} ${cita.time}`, APPOINTMENT_DATETIME_FORMAT, new Date());
-
-/**
- * Regla de negocio: el paciente puede reprogramar solo si faltan
- * al menos 12 horas para la cita.
- */
-export const puedeReprogramar = (cita: Appointment): boolean =>
-  differenceInHours(getAppointmentDateTime(cita), new Date()) >= 12;
-
-/**
- * Regla de negocio: una cancelación es tardía si se realiza con menos
- * de 12 horas de anticipación a la cita.
- */
-export const esCancelacionTardia = (cita: Appointment): boolean =>
-  differenceInHours(getAppointmentDateTime(cita), new Date()) < 12;
 
 export const statusLabel: Record<AppointmentStatus, string> = {
   PENDING_PAYMENT: "Pago pendiente",
@@ -129,7 +102,6 @@ const seed: Appointment[] = [
     service: "Control mensual de brackets",
     amount: 80,
     status: "COMPLETED",
-    reprogramCount: 0,
     note: "Cambio de ligas superiores. Buena higiene, se indica cepillo interdental.",
   },
   {
@@ -141,7 +113,6 @@ const seed: Appointment[] = [
     service: "Destartraje",
     amount: 80,
     status: "COMPLETED",
-    reprogramCount: 0,
     note: "Destartraje supragingival completo. Control en 6 meses.",
   },
   {
@@ -153,7 +124,6 @@ const seed: Appointment[] = [
     service: "Diagnóstico de dolor",
     amount: 45,
     status: "NO_SHOW",
-    reprogramCount: 0,
   },
   {
     id: "a4",
@@ -164,7 +134,6 @@ const seed: Appointment[] = [
     service: "Control mensual de brackets",
     amount: 80,
     status: "CONFIRMED",
-    reprogramCount: 0,
     voucher: {
       method: "yape",
       reference: "OP 8842190",
@@ -183,7 +152,6 @@ const seed: Appointment[] = [
     service: "Blanqueamiento láser",
     amount: 480,
     status: "VERIFYING",
-    reprogramCount: 0,
     voucher: {
       method: "plin",
       reference: "OP 9013774",
@@ -205,7 +173,6 @@ const agendaHoy: Appointment[] = [
     service: "Control de brackets",
     amount: 80,
     status: "CONFIRMED",
-    reprogramCount: 0,
   },
   {
     id: "h2",
@@ -216,7 +183,6 @@ const agendaHoy: Appointment[] = [
     service: "Evaluación ortodóncica",
     amount: 60,
     status: "VERIFYING",
-    reprogramCount: 0,
     voucher: {
       method: "yape",
       reference: "OP 7712045",
@@ -235,7 +201,6 @@ const agendaHoy: Appointment[] = [
     service: "Instalación de brackets",
     amount: 950,
     status: "CONFIRMED",
-    reprogramCount: 0,
   },
   {
     id: "h4",
@@ -246,7 +211,6 @@ const agendaHoy: Appointment[] = [
     service: "Control mensual",
     amount: 80,
     status: "PAYMENT_REJECTED",
-    reprogramCount: 0,
     voucher: {
       method: "plin",
       reference: "OP 6620881",
@@ -265,8 +229,7 @@ const agendaHoy: Appointment[] = [
     time: "16:00",
     service: "Retiro de brackets",
     amount: 320,
-    status: "COMPLETED",
-    reprogramCount: 0,
+    status: "CONFIRMED",
   },
   {
     id: "h6",
@@ -277,18 +240,12 @@ const agendaHoy: Appointment[] = [
     service: "Evaluación",
     amount: 60,
     status: "COMPLETED",
-    reprogramCount: 0,
   },
 ];
 
-const initialDocuments: Document[] = [
-  { type: "DNI", estado: "VERIFICADO" },
-  { type: "Título", estado: "VERIFICADO" },
-  { type: "Colegiatura", estado: "PENDIENTE" },
-  { type: "CV", estado: "VERIFICADO" },
-];
-
 type Ctx = {
+  userRole: UserRole;
+  setUserRole: (role: UserRole) => void;
   patient: string;
   strikes: number;
   isBanned: boolean;
@@ -305,15 +262,14 @@ type Ctx = {
   resubmitVoucher: (id: string, data: { imageUrl?: string; reference: string; method: "yape" | "plin" }) => void;
   blockedToday: boolean;
   setBlockedToday: (v: boolean) => void;
-  // New fields for odontologo configuration
   documentos: Document[];
-  setDocumentos: (documents: Document[]) => void;
+  setDocumentos: React.Dispatch<React.SetStateAction<Document[]>>;
   frecuenciaDisponibilidad: string;
-  setFrecuenciaDisponibilidad: (frecuencia: string) => void;
+  setFrecuenciaDisponibilidad: (v: string) => void;
   bloqueoExpressActivo: boolean;
-  setBloqueoExpressActivo: (activo: boolean) => void;
+  setBloqueoExpressActivo: (v: boolean) => void;
   confirmacionManual: boolean;
-  setConfirmacionManual: (confirmado: boolean) => void;
+  setConfirmacionManual: (v: boolean) => void;
 };
 
 const AppStateContext = React.createContext<Ctx | null>(null);
@@ -329,17 +285,17 @@ const ahora = () =>
   });
 
 export function AppStateProvider({ children }: { children: React.ReactNode }) {
+  const [userRole, setUserRole] = React.useState<UserRole>("patient");
   const [strikes, setStrikes] = React.useState(1);
   const [appointments, setAppointments] = React.useState<Appointment[]>(seed);
   const [agenda, setAgenda] = React.useState<Appointment[]>(agendaHoy);
   const [blockedToday, setBlockedToday] = React.useState(false);
-  // New state for odontologo configuration
-  const [documentos, setDocumentos] = React.useState<Document[]>(initialDocuments);
-  const [frecuenciaDisponibilidad, setFrecuenciaDisponibilidad] = React.useState<string>(
+  const [documentos, setDocumentos] = React.useState<Document[]>(documentosIniciales);
+  const [frecuenciaDisponibilidad, setFrecuenciaDisponibilidad] = React.useState(
     "Actualizo mi disponibilidad diariamente"
   );
-  const [bloqueoExpressActivo, setBloqueoExpressActivo] = React.useState<boolean>(false);
-  const [confirmacionManual, setConfirmacionManual] = React.useState<boolean>(false);
+  const [bloqueoExpressActivo, setBloqueoExpressActivo] = React.useState(false);
+  const [confirmacionManual, setConfirmacionManual] = React.useState(false);
 
   const patchBoth = (id: string, patch: (a: Appointment) => Partial<Appointment>) => {
     const apply = (prev: Appointment[]) =>
@@ -361,6 +317,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   }, [agenda, appointments]);
 
   const value: Ctx = {
+    userRole,
+    setUserRole,
     patient: "Nicole Ramírez",
     strikes,
     isBanned: strikes >= STRIKE_LIMIT,
@@ -391,10 +349,9 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
           ? { voucher: { ...a.voucher, status: "RECHAZADO" as const, reason } }
           : {}),
       })),
-resubmitVoucher: (id, data) =>
+    resubmitVoucher: (id, data) =>
       patchBoth(id, (a) => ({
         status: "VERIFYING",
-        reprogramCount: 0,
         voucher: {
           method: data.method,
           reference: data.reference,
@@ -407,7 +364,6 @@ resubmitVoucher: (id, data) =>
       })),
     blockedToday,
     setBlockedToday,
-    // New fields for odontologo configuration
     documentos,
     setDocumentos,
     frecuenciaDisponibilidad,
