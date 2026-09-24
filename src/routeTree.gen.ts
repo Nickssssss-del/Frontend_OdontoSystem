@@ -12,6 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OdontologoRouteImport } from './routes/odontologo'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as DentistAgendaRouteImport } from './routes/dentist.agenda'
+import { Route as DentistDashboardRouteImport } from './routes/dentist.dashboard'
+import { Route as DentistHorariosRouteImport } from './routes/dentist.horarios'
+import { Route as DentistPacientesRouteImport } from './routes/dentist.pacientes'
 import { Route as OdontologoConfiguracionRouteImport } from './routes/odontologo.configuracion'
 import { Route as PacienteCatalogoRouteImport } from './routes/paciente.catalogo'
 import { Route as PacientePanelRouteImport } from './routes/paciente.panel'
@@ -31,6 +35,26 @@ const OdontologoRoute = OdontologoRouteImport.update({
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DentistAgendaRoute = DentistAgendaRouteImport.update({
+  id: '/dentist/agenda',
+  path: '/dentist/agenda',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DentistDashboardRoute = DentistDashboardRouteImport.update({
+  id: '/dentist/dashboard',
+  path: '/dentist/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DentistHorariosRoute = DentistHorariosRouteImport.update({
+  id: '/dentist/horarios',
+  path: '/dentist/horarios',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DentistPacientesRoute = DentistPacientesRouteImport.update({
+  id: '/dentist/pacientes',
+  path: '/dentist/pacientes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OdontologoConfiguracionRoute = OdontologoConfiguracionRouteImport.update({
@@ -63,6 +87,10 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/odontologo': typeof OdontologoRouteWithChildren
   '/api/chat': typeof ApiChatRoute
+  '/dentist/agenda': typeof DentistAgendaRoute
+  '/dentist/dashboard': typeof DentistDashboardRoute
+  '/dentist/horarios': typeof DentistHorariosRoute
+  '/dentist/pacientes': typeof DentistPacientesRoute
   '/odontologo/configuracion': typeof OdontologoConfiguracionRoute
   '/paciente/catalogo': typeof PacienteCatalogoRoute
   '/paciente/panel': typeof PacientePanelRoute
@@ -73,6 +101,10 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/odontologo': typeof OdontologoRouteWithChildren
   '/api/chat': typeof ApiChatRoute
+  '/dentist/agenda': typeof DentistAgendaRoute
+  '/dentist/dashboard': typeof DentistDashboardRoute
+  '/dentist/horarios': typeof DentistHorariosRoute
+  '/dentist/pacientes': typeof DentistPacientesRoute
   '/odontologo/configuracion': typeof OdontologoConfiguracionRoute
   '/paciente/catalogo': typeof PacienteCatalogoRoute
   '/paciente/panel': typeof PacientePanelRoute
@@ -84,6 +116,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/odontologo': typeof OdontologoRouteWithChildren
   '/api/chat': typeof ApiChatRoute
+  '/dentist/agenda': typeof DentistAgendaRoute
+  '/dentist/dashboard': typeof DentistDashboardRoute
+  '/dentist/horarios': typeof DentistHorariosRoute
+  '/dentist/pacientes': typeof DentistPacientesRoute
   '/odontologo/configuracion': typeof OdontologoConfiguracionRoute
   '/paciente/catalogo': typeof PacienteCatalogoRoute
   '/paciente/panel': typeof PacientePanelRoute
@@ -96,6 +132,10 @@ export interface FileRouteTypes {
     | '/'
     | '/odontologo'
     | '/api/chat'
+    | '/dentist/agenda'
+    | '/dentist/dashboard'
+    | '/dentist/horarios'
+    | '/dentist/pacientes'
     | '/odontologo/configuracion'
     | '/paciente/catalogo'
     | '/paciente/panel'
@@ -106,6 +146,10 @@ export interface FileRouteTypes {
     | '/'
     | '/odontologo'
     | '/api/chat'
+    | '/dentist/agenda'
+    | '/dentist/dashboard'
+    | '/dentist/horarios'
+    | '/dentist/pacientes'
     | '/odontologo/configuracion'
     | '/paciente/catalogo'
     | '/paciente/panel'
@@ -116,6 +160,10 @@ export interface FileRouteTypes {
     | '/'
     | '/odontologo'
     | '/api/chat'
+    | '/dentist/agenda'
+    | '/dentist/dashboard'
+    | '/dentist/horarios'
+    | '/dentist/pacientes'
     | '/odontologo/configuracion'
     | '/paciente/catalogo'
     | '/paciente/panel'
@@ -127,6 +175,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   OdontologoRoute: typeof OdontologoRouteWithChildren
   ApiChatRoute: typeof ApiChatRoute
+  DentistAgendaRoute: typeof DentistAgendaRoute
+  DentistDashboardRoute: typeof DentistDashboardRoute
+  DentistHorariosRoute: typeof DentistHorariosRoute
+  DentistPacientesRoute: typeof DentistPacientesRoute
   PacienteCatalogoRoute: typeof PacienteCatalogoRoute
   PacientePanelRoute: typeof PacientePanelRoute
   PacienteAgendarIdRoute: typeof PacienteAgendarIdRoute
@@ -154,6 +206,34 @@ declare module '@tanstack/react-router' {
       path: '/api/chat'
       fullPath: '/api/chat'
       preLoaderRoute: typeof ApiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dentist/agenda': {
+      id: '/dentist/agenda'
+      path: '/dentist/agenda'
+      fullPath: '/dentist/agenda'
+      preLoaderRoute: typeof DentistAgendaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dentist/dashboard': {
+      id: '/dentist/dashboard'
+      path: '/dentist/dashboard'
+      fullPath: '/dentist/dashboard'
+      preLoaderRoute: typeof DentistDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dentist/horarios': {
+      id: '/dentist/horarios'
+      path: '/dentist/horarios'
+      fullPath: '/dentist/horarios'
+      preLoaderRoute: typeof DentistHorariosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dentist/pacientes': {
+      id: '/dentist/pacientes'
+      path: '/dentist/pacientes'
+      fullPath: '/dentist/pacientes'
+      preLoaderRoute: typeof DentistPacientesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/odontologo/configuracion': {
@@ -210,6 +290,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   OdontologoRoute: OdontologoRouteWithChildren,
   ApiChatRoute: ApiChatRoute,
+  DentistAgendaRoute: DentistAgendaRoute,
+  DentistDashboardRoute: DentistDashboardRoute,
+  DentistHorariosRoute: DentistHorariosRoute,
+  DentistPacientesRoute: DentistPacientesRoute,
   PacienteCatalogoRoute: PacienteCatalogoRoute,
   PacientePanelRoute: PacientePanelRoute,
   PacienteAgendarIdRoute: PacienteAgendarIdRoute,
