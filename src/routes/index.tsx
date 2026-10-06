@@ -87,18 +87,16 @@ function LoginScreen() {
     go();
   };
 
-  const roles: { value: Role; label: string; icon: React.ReactNode; hint: string }[] = [
+  const roles: { value: Role; label: string; icon: React.ReactNode }[] = [
     {
       value: "paciente",
-      label: "Paciente",
+      label: "Soy Paciente",
       icon: <UserRound className="size-4" />,
-      hint: "Catálogo, citas e historial",
     },
     {
       value: "odontologo",
-      label: "Odontólogo independiente",
+      label: "Soy Odontólogo",
       icon: <Stethoscope className="size-4" />,
-      hint: "Agenda, pacientes e ingresos",
     },
   ];
 
