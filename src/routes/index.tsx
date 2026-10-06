@@ -7,13 +7,17 @@ import { motion } from "motion/react";
 import {
   ArrowRight,
   CalendarHeart,
+  Eye,
+  Lock,
   Mail,
+  Shield,
   ShieldCheck,
   Stethoscope,
   UserRound,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Card,
   CardContent,
@@ -55,6 +59,7 @@ function LoginScreen() {
   const { setUserRole } = useAppState();
   const [role, setRole] = React.useState<Role>("paciente");
   const [mode, setMode] = React.useState<Mode>("login");
+  const [showPassword, setShowPassword] = React.useState(false);
 
   const go = () => {
     setUserRole(role === "paciente" ? "patient" : "dentist");
@@ -82,18 +87,16 @@ function LoginScreen() {
     go();
   };
 
-  const roles: { value: Role; label: string; icon: React.ReactNode; hint: string }[] = [
+  const roles: { value: Role; label: string; icon: React.ReactNode }[] = [
     {
       value: "paciente",
-      label: "Paciente",
+      label: "Soy Paciente",
       icon: <UserRound className="size-4" />,
-      hint: "Catálogo, citas e historial",
     },
     {
       value: "odontologo",
-      label: "Odontólogo independiente",
+      label: "Soy Odontólogo",
       icon: <Stethoscope className="size-4" />,
-      hint: "Agenda, pacientes e ingresos",
     },
   ];
 
@@ -146,22 +149,19 @@ function LoginScreen() {
         >
           <Card className="border-border/70 shadow-lg">
             <CardHeader>
-              <CardTitle>
-                {mode === "login" ? "Iniciar sesión" : "Crear cuenta"}
+              <CardTitle className="text-2xl font-bold">
+                {mode === "login" ? "Inicia sesión" : "Crear cuenta"}
               </CardTitle>
               <CardDescription>
                 {mode === "login"
-                  ? "Ingresa a tu cuenta en OdontoSystem"
+                  ? "Ingresa tus credenciales para continuar"
                   : "Únete a OdontoSystem en menos de un minuto"}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Selector de rol con botones */}
-              <div className="space-y-2">
-                <p className="text-sm font-semibold">
-                  {mode === "login" ? "Ingresar como" : "Registrarme como"}
-                </p>
-                <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-xl border border-border/60 bg-muted/40 p-1.5">
+                <div className="grid grid-cols-2 gap-1.5">
                   {roles.map((r) => (
                     <button
                       key={r.value}
@@ -169,22 +169,14 @@ function LoginScreen() {
                       onClick={() => setRole(r.value)}
                       aria-pressed={role === r.value}
                       className={cn(
-                        "flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition-all",
+                        "inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition-all",
                         role === r.value
-                          ? "border-primary bg-primary/10 shadow-sm"
-                          : "border-border/60 bg-card hover:border-primary/40 hover:bg-muted/40",
+                          ? "border-2 border-primary bg-card text-foreground shadow-sm"
+                          : "border-2 border-transparent text-muted-foreground hover:text-foreground",
                       )}
                     >
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-1.5 text-sm font-semibold",
-                          role === r.value ? "text-primary" : "text-foreground",
-                        )}
-                      >
-                        {r.icon}
-                        {r.label}
-                      </span>
-                      <span className="text-xs text-muted-foreground">{r.hint}</span>
+                      {r.icon}
+                      {r.label}
                     </button>
                   ))}
                 </div>
@@ -206,11 +198,60 @@ function LoginScreen() {
 
                   <div className="space-y-2">
                     <Label htmlFor="password">Contraseña</Label>
-                    <Input id="password" type="password" placeholder="••••••" required />
+                    <div className="relative">
+                      <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        className="pl-9 pr-10"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((v) => !v)}
+                        aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                      >
+                        <Eye className="size-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {role === "odontologo" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="cop-login">N.º de Colegiatura COP</Label>
+                      <div className="relative">
+                        <Shield className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          id="cop-login"
+                          placeholder="COP-12345"
+                          className="pl-9"
+                          required
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Verificamos en tiempo real con el registro oficial COP.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between">
+                    <label className="flex cursor-pointer items-center gap-2 text-sm">
+                      <Checkbox id="recordarme" />
+                      Recordarme
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => toast.info("Enviamos un enlace de recuperación a tu correo.")}
+                      className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
+                    >
+                      ¿Olvidaste tu contraseña?
+                    </button>
                   </div>
 
                   <Button type="submit" className="w-full">
-                    Ingresar
+                    Iniciar sesión
                     <ArrowRight className="size-4 ml-2" />
                   </Button>
 
