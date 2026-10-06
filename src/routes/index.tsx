@@ -7,13 +7,17 @@ import { motion } from "motion/react";
 import {
   ArrowRight,
   CalendarHeart,
+  Eye,
+  Lock,
   Mail,
+  Shield,
   ShieldCheck,
   Stethoscope,
   UserRound,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Card,
   CardContent,
