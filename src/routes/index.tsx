@@ -1,18 +1,16 @@
-// INSTRUCCIONES: Reemplaza el archivo actual /src/routes/index.tsx con este.
-// Incluye un botón de "Cambiar rol" en el login para alternar entre paciente y odontólogo.
+// Login/Registro principal: selección de rol con botones, solo "Iniciar sesión"
+// y enlace "Regístrate aquí" abajo para alternar a registro.
 
 import * as React from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 import {
   ArrowRight,
   CalendarHeart,
-  Fingerprint,
   Mail,
   ShieldCheck,
   Stethoscope,
   UserRound,
-  ArrowLeftRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -25,7 +23,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChatbotWidget } from "@/components/ChatbotWidget";
 import { useAppState } from "@/lib/app-state";
 import { cn } from "@/lib/utils";
@@ -58,38 +55,47 @@ function LoginScreen() {
   const { setUserRole } = useAppState();
   const [role, setRole] = React.useState<Role>("paciente");
   const [mode, setMode] = React.useState<Mode>("login");
-  const [bio, setBio] = React.useState(false);
+
+  const go = () => {
+    setUserRole(role === "paciente" ? "patient" : "dentist");
+    toast.success(
+      mode === "login" ? "Sesión iniciada" : "Cuenta creada",
+      {
+        description:
+          role === "paciente"
+            ? "Bienvenida a tu panel de paciente."
+            : "Bienvenida a tu panel de odontólogo.",
+      },
+    );
+    navigate({
+      to: role === "paciente" ? "/paciente/catalogo" : "/dentist/dashboard",
+    });
+  };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Actualizar el rol en el estado global
-    setUserRole(role === "paciente" ? "patient" : "dentist");
-    
-    toast.success("Sesión iniciada", {
-      description:
-        role === "paciente"
-          ? "Bienvenida a tu panel de paciente."
-          : "Bienvenida a tu panel de odontólogo.",
-    });
-    
-    // Navegar según el rol
-    navigate({ 
-      to: role === "paciente" ? "/paciente/catalogo" : "/dentist/dashboard" 
-    });
+    go();
   };
 
   const googleLogin = () => {
-    setUserRole(role === "paciente" ? "patient" : "dentist");
     toast.success("Continuando con Google");
-    navigate({ 
-      to: role === "paciente" ? "/paciente/catalogo" : "/dentist/dashboard" 
-    });
+    go();
   };
 
-  const toggleRole = () => {
-    setRole(role === "paciente" ? "odontologo" : "paciente");
-  };
+  const roles: { value: Role; label: string; icon: React.ReactNode; hint: string }[] = [
+    {
+      value: "paciente",
+      label: "Paciente",
+      icon: <UserRound className="size-4" />,
+      hint: "Catálogo, citas e historial",
+    },
+    {
+      value: "odontologo",
+      label: "Odontólogo independiente",
+      icon: <Stethoscope className="size-4" />,
+      hint: "Agenda, pacientes e ingresos",
+    },
+  ];
 
   return (
     <div className="relative min-h-screen overflow-hidden grid-aurora">
@@ -140,101 +146,73 @@ function LoginScreen() {
         >
           <Card className="border-border/70 shadow-lg">
             <CardHeader>
-              <CardTitle>Ingresar a OdontoSystem</CardTitle>
-              <CardDescription>Accede como paciente u odontólogo</CardDescription>
+              <CardTitle>
+                {mode === "login" ? "Iniciar sesión" : "Crear cuenta"}
+              </CardTitle>
+              <CardDescription>
+                {mode === "login"
+                  ? "Ingresa a tu cuenta en OdontoSystem"
+                  : "Únete a OdontoSystem en menos de un minuto"}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Role Selector con Toggle */}
-              <div className="bg-muted/30 rounded-lg p-4 border border-border/50">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold">Cambiar rol:</p>
-                    <p className="text-xs text-muted-foreground">
-                      Ingresa como {role === "paciente" ? "odontólogo" : "paciente"}
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    onClick={toggleRole}
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                  >
-                    <ArrowLeftRight className="size-4" />
-                    Cambiar
-                  </Button>
+              {/* Selector de rol con botones */}
+              <div className="space-y-2">
+                <p className="text-sm font-semibold">
+                  {mode === "login" ? "Ingresar como" : "Registrarme como"}
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {roles.map((r) => (
+                    <button
+                      key={r.value}
+                      type="button"
+                      onClick={() => setRole(r.value)}
+                      aria-pressed={role === r.value}
+                      className={cn(
+                        "flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition-all",
+                        role === r.value
+                          ? "border-primary bg-primary/10 shadow-sm"
+                          : "border-border/60 bg-card hover:border-primary/40 hover:bg-muted/40",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1.5 text-sm font-semibold",
+                          role === r.value ? "text-primary" : "text-foreground",
+                        )}
+                      >
+                        {r.icon}
+                        {r.label}
+                      </span>
+                      <span className="text-xs text-muted-foreground">{r.hint}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* Role Badge */}
-              <div className="flex items-center gap-2 rounded-lg bg-primary/10 p-3">
-                {role === "paciente" ? (
-                  <>
-                    <UserRound className="size-5 text-primary" />
-                    <div>
-                      <p className="text-xs font-semibold text-primary">Ingresando como Paciente</p>
-                      <p className="text-xs text-primary/70">
-                        Acceso al catálogo, mis citas e historial
-                      </p>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <Stethoscope className="size-5 text-primary" />
-                    <div>
-                      <p className="text-xs font-semibold text-primary">Ingresando como Odontólogo</p>
-                      <p className="text-xs text-primary/70">
-                        Dashboard, agenda, pacientes y horarios
-                      </p>
-                    </div>
-                  </>
-                )}
-              </div>
+              {mode === "login" ? (
+                <form onSubmit={submit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Correo electrónico</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder={
+                        role === "paciente" ? "paciente@example.com" : "dentista@example.com"
+                      }
+                      required
+                    />
+                  </div>
 
-              {/* Tab de Login/Registro */}
-              <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)}>
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="login">Iniciar sesión</TabsTrigger>
-                  <TabsTrigger value="registro">Registrarse</TabsTrigger>
-                </TabsList>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Contraseña</Label>
+                    <Input id="password" type="password" placeholder="••••••" required />
+                  </div>
 
-                <TabsContent value="login" className="space-y-4 mt-4">
-                  <form onSubmit={submit} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Correo electrónico</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder={
-                          role === "paciente"
-                            ? "paciente@example.com"
-                            : "dentista@example.com"
-                        }
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="password">Contraseña</Label>
-                      <Input id="password" type="password" placeholder="••••••" required />
-                    </div>
-
-                    {role === "odontologo" && (
-                      <div className="space-y-2">
-                        <Label htmlFor="cop">Número de Colegiatura COP</Label>
-                        <Input
-                          id="cop"
-                          placeholder="COP-XXXXX"
-                          required
-                        />
-                      </div>
-                    )}
-
-                    <Button type="submit" className="w-full">
-                      Continuar
-                      <ArrowRight className="size-4 ml-2" />
-                    </Button>
-                  </form>
+                  <Button type="submit" className="w-full">
+                    Ingresar
+                    <ArrowRight className="size-4 ml-2" />
+                  </Button>
 
                   <div className="relative">
                     <div className="absolute inset-0 flex items-center">
@@ -245,120 +223,66 @@ function LoginScreen() {
                     </div>
                   </div>
 
-                  <Button onClick={googleLogin} variant="outline" className="w-full">
+                  <Button onClick={googleLogin} variant="outline" className="w-full" type="button">
                     <Mail className="size-4 mr-2" />
                     Google
                   </Button>
-                </TabsContent>
+                </form>
+              ) : (
+                <form onSubmit={submit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="nombre">
+                      {role === "paciente" ? "Nombre completo" : "Nombre profesional"}
+                    </Label>
+                    <Input
+                      id="nombre"
+                      placeholder={role === "paciente" ? "Juan Pérez" : "Dra. Ana García"}
+                      required
+                    />
+                  </div>
 
-                <TabsContent value="registro" className="space-y-4 mt-4">
-                  <form onSubmit={submit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email-reg">Correo electrónico</Label>
+                    <Input
+                      id="email-reg"
+                      type="email"
+                      placeholder={role === "paciente" ? "juan@example.com" : "ana@example.com"}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="password-reg">Contraseña</Label>
+                    <Input id="password-reg" type="password" placeholder="••••••" required />
+                  </div>
+
+                  {role === "odontologo" && (
                     <div className="space-y-2">
-                      <Label htmlFor="nombre">
-                        {role === "paciente" ? "Nombre completo" : "Nombre profesional"}
-                      </Label>
-                      <Input
-                        id="nombre"
-                        placeholder={
-                          role === "paciente" ? "Juan Pérez" : "Dra. Ana García"
-                        }
-                        required
-                      />
+                      <Label htmlFor="cop-reg">N.º de colegiatura COP</Label>
+                      <Input id="cop-reg" placeholder="COP-XXXXX" required />
                     </div>
+                  )}
 
-                    <div className="space-y-2">
-                      <Label htmlFor="email-reg">Correo electrónico</Label>
-                      <Input
-                        id="email-reg"
-                        type="email"
-                        placeholder={
-                          role === "paciente"
-                            ? "juan@example.com"
-                            : "ana@example.com"
-                        }
-                        required
-                      />
-                    </div>
+                  <Button type="submit" className="w-full">
+                    Crear cuenta
+                    <ArrowRight className="size-4 ml-2" />
+                  </Button>
+                </form>
+              )}
 
-                    <div className="space-y-2">
-                      <Label htmlFor="password-reg">Contraseña</Label>
-                      <Input id="password-reg" type="password" placeholder="••••••" required />
-                    </div>
-
-                    {role === "odontologo" && (
-                      <>
-                        <div className="space-y-2">
-                          <Label htmlFor="cop-reg">Número de Colegiatura COP</Label>
-                          <Input
-                            id="cop-reg"
-                            placeholder="COP-XXXXX"
-                            required
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="especialidad">Especialidad</Label>
-                          <Input
-                            id="especialidad"
-                            placeholder="Ej: Ortodoncia"
-                            required
-                          />
-                        </div>
-                      </>
-                    )}
-
-                    {role === "paciente" && (
-                      <div className="space-y-2">
-                        <Label htmlFor="phone">Teléfono (opcional)</Label>
-                        <Input id="phone" placeholder="+51 987 654 321" />
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="terms"
-                        checked={bio}
-                        onChange={(e) => setBio(e.target.checked)}
-                        className="rounded"
-                        required
-                      />
-                      <label htmlFor="terms" className="text-xs text-muted-foreground cursor-pointer">
-                        Aceptar términos y condiciones
-                      </label>
-                    </div>
-
-                    <Button type="submit" disabled={!bio} className="w-full">
-                      Crear cuenta
-                      <ArrowRight className="size-4 ml-2" />
-                    </Button>
-                  </form>
-                </TabsContent>
-              </Tabs>
-
-              <p className="text-center text-xs text-muted-foreground">
-                {mode === "login"
-                  ? "¿No tienes cuenta? Usa la pestaña Registrarse"
-                  : "¿Ya tienes cuenta? Usa la pestaña Iniciar sesión"}
+              {/* Alternar entre login y registro */}
+              <p className="text-center text-sm text-muted-foreground">
+                {mode === "login" ? "¿No tienes cuenta? " : "¿Ya tienes cuenta? "}
+                <button
+                  type="button"
+                  onClick={() => setMode(mode === "login" ? "registro" : "login")}
+                  className="font-semibold text-primary underline-offset-4 hover:underline"
+                >
+                  {mode === "login" ? "Regístrate aquí" : "Inicia sesión"}
+                </button>
               </p>
             </CardContent>
           </Card>
-
-          {/* Quick Testing Instructions */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="mt-6 p-4 rounded-lg bg-muted/50 border border-border/50 text-xs text-muted-foreground space-y-2"
-          >
-            <p className="font-semibold">🧪 Testing rápido:</p>
-            <ul className="space-y-1 ml-4 list-disc">
-              <li>Usa el botón "Cambiar" para alterar entre Paciente y Odontólogo</li>
-              <li>Las vistas se actualizarán según el rol seleccionado</li>
-              <li>Paciente → Catálogo + Mi Panel + TopBar</li>
-              <li>Odontólogo → Dashboard + Agenda + Sidebar</li>
-            </ul>
-          </motion.div>
         </motion.section>
       </div>
 
