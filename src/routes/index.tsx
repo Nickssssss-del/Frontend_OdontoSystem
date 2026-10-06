@@ -198,11 +198,60 @@ function LoginScreen() {
 
                   <div className="space-y-2">
                     <Label htmlFor="password">Contraseña</Label>
-                    <Input id="password" type="password" placeholder="••••••" required />
+                    <div className="relative">
+                      <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        className="pl-9 pr-10"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((v) => !v)}
+                        aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                      >
+                        <Eye className="size-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {role === "odontologo" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="cop-login">N.º de Colegiatura COP</Label>
+                      <div className="relative">
+                        <Shield className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          id="cop-login"
+                          placeholder="COP-12345"
+                          className="pl-9"
+                          required
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Verificamos en tiempo real con el registro oficial COP.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between">
+                    <label className="flex cursor-pointer items-center gap-2 text-sm">
+                      <Checkbox id="recordarme" />
+                      Recordarme
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => toast.info("Enviamos un enlace de recuperación a tu correo.")}
+                      className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
+                    >
+                      ¿Olvidaste tu contraseña?
+                    </button>
                   </div>
 
                   <Button type="submit" className="w-full">
-                    Ingresar
+                    Iniciar sesión
                     <ArrowRight className="size-4 ml-2" />
                   </Button>
 
