@@ -149,22 +149,19 @@ function LoginScreen() {
         >
           <Card className="border-border/70 shadow-lg">
             <CardHeader>
-              <CardTitle>
-                {mode === "login" ? "Iniciar sesión" : "Crear cuenta"}
+              <CardTitle className="text-2xl font-bold">
+                {mode === "login" ? "Inicia sesión" : "Crear cuenta"}
               </CardTitle>
               <CardDescription>
                 {mode === "login"
-                  ? "Ingresa a tu cuenta en OdontoSystem"
+                  ? "Ingresa tus credenciales para continuar"
                   : "Únete a OdontoSystem en menos de un minuto"}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Selector de rol con botones */}
-              <div className="space-y-2">
-                <p className="text-sm font-semibold">
-                  {mode === "login" ? "Ingresar como" : "Registrarme como"}
-                </p>
-                <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-xl border border-border/60 bg-muted/40 p-1.5">
+                <div className="grid grid-cols-2 gap-1.5">
                   {roles.map((r) => (
                     <button
                       key={r.value}
@@ -172,22 +169,14 @@ function LoginScreen() {
                       onClick={() => setRole(r.value)}
                       aria-pressed={role === r.value}
                       className={cn(
-                        "flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition-all",
+                        "inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition-all",
                         role === r.value
-                          ? "border-primary bg-primary/10 shadow-sm"
-                          : "border-border/60 bg-card hover:border-primary/40 hover:bg-muted/40",
+                          ? "border-2 border-primary bg-card text-foreground shadow-sm"
+                          : "border-2 border-transparent text-muted-foreground hover:text-foreground",
                       )}
                     >
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-1.5 text-sm font-semibold",
-                          role === r.value ? "text-primary" : "text-foreground",
-                        )}
-                      >
-                        {r.icon}
-                        {r.label}
-                      </span>
-                      <span className="text-xs text-muted-foreground">{r.hint}</span>
+                      {r.icon}
+                      {r.label}
                     </button>
                   ))}
                 </div>
