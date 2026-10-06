@@ -59,6 +59,7 @@ function LoginScreen() {
   const { setUserRole } = useAppState();
   const [role, setRole] = React.useState<Role>("paciente");
   const [mode, setMode] = React.useState<Mode>("login");
+  const [showPassword, setShowPassword] = React.useState(false);
 
   const go = () => {
     setUserRole(role === "paciente" ? "patient" : "dentist");
