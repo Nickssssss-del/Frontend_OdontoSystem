@@ -192,7 +192,7 @@ function LoginScreen() {
 
         <header className="relative flex items-center gap-3">
           <div className="flex size-20 shrink-0 items-center justify-center rounded-full bg-white p-2.5 shadow-lg shadow-black/15 ring-1 ring-black/5">
-            <img src={logoAsset.url} alt="Logo de OdontoSystem" className="size-full object-contain" />
+            <img src="/odontosystem-logo.png" alt="Logo de OdontoSystem" className="size-full object-contain" />
           </div>
           <div>
             <p className="font-display text-xl font-bold leading-tight">
@@ -249,7 +249,7 @@ function LoginScreen() {
           {/* Marca compacta en móvil */}
           <div className="mb-6 flex items-center justify-center gap-3 lg:hidden">
             <div className="flex size-16 shrink-0 items-center justify-center rounded-full border border-border/60 bg-card p-2 shadow-md shadow-primary/10">
-              <img src={logoAsset.url} alt="Logo de OdontoSystem" className="size-full object-contain" />
+              <img src="/odontosystem-logo.png" alt="Logo de OdontoSystem" className="size-full object-contain" />
             </div>
             <div>
               <p className="font-display text-lg font-bold leading-tight">
