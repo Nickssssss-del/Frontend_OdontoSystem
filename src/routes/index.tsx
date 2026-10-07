@@ -32,6 +32,7 @@ import { Label } from "@/components/ui/label";
 import { ChatbotWidget } from "@/components/ChatbotWidget";
 import { useAppState } from "@/lib/app-state";
 import { cn } from "@/lib/utils";
+import logoAsset from "@/assets/odontosystem-logo.png.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -43,6 +44,8 @@ export const Route = createFileRoute("/")({
           "Inicia sesión o regístrate en OdontoSystem: pacientes y odontólogos independientes con colegiatura COP verificada en Ica, Perú.",
       },
       { property: "og:title", content: "OdontoSystem · Ingresar a tu cuenta" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       {
         property: "og:description",
         content:
@@ -118,9 +121,7 @@ function LoginScreen() {
         <div className="pointer-events-none absolute bottom-40 right-36 size-16 rounded-full bg-white/10" />
 
         <header className="relative flex items-center gap-3">
-          <div className="grid size-12 place-items-center rounded-2xl bg-white/15 backdrop-blur">
-            <Shield className="size-6" />
-          </div>
+          <img src={logoAsset.url} alt="Logo de OdontoSystem" className="size-20 shrink-0 object-contain" />
           <div>
             <p className="font-display text-xl font-bold leading-tight">
               OdontoSystem
@@ -175,9 +176,7 @@ function LoginScreen() {
         <div className="w-full max-w-md">
           {/* Marca compacta en móvil */}
           <div className="mb-6 flex items-center justify-center gap-3 lg:hidden">
-            <div className="hero-teal grid size-11 place-items-center rounded-2xl text-primary-foreground shadow-md">
-              <Shield className="size-5" />
-            </div>
+            <img src={logoAsset.url} alt="Logo de OdontoSystem" className="size-16 shrink-0 object-contain" />
             <div>
               <p className="font-display text-lg font-bold leading-tight">
                 OdontoSystem
