@@ -1,4 +1,4 @@
-import { Link, useLocation } from "@tanstack/react-router";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import {
   CalendarHeart,
@@ -30,11 +30,39 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+/** Iniciales para el avatar: "Nicole Ramírez" → "NR". */
+const iniciales = (nombre: string) =>
+  nombre
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]!.toUpperCase())
+    .join("");
+
+/** Nombre corto para la barra: "Nicole Ramírez Soto" → "Nicole R." */
+const nombreCorto = (nombre: string) => {
+  const [primero, segundo] = nombre.split(" ").filter(Boolean);
+  return segundo ? `${primero} ${segundo[0]}.` : (primero ?? nombre);
+};
+
+/** Cierra la sesión en el navegador y vuelve a la pantalla de ingreso. */
+function useCerrarSesion() {
+  const { cerrarSesion } = useAppState();
+  const navigate = useNavigate();
+  return () => {
+    cerrarSesion();
+    navigate({ to: "/" });
+  };
+}
+
 // ============================================================================
 // VISTA DEL PACIENTE: TopBar Navigation
 // ============================================================================
 function PatientHeader() {
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const { usuario } = useAppState();
+  const salir = useCerrarSesion();
+  const nombre = usuario?.nombre ?? "Nicole Ramírez";
 
   const navLinks = [
     { to: "/paciente/catalogo", label: "Buscar dentista", icon: Search },
@@ -96,9 +124,9 @@ function PatientHeader() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="gap-2">
                 <div className="size-8 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-sm font-semibold text-primary-foreground">
-                  NR
+                  {iniciales(nombre)}
                 </div>
-                <span className="hidden sm:inline text-sm">Nicole R.</span>
+                <span className="hidden sm:inline text-sm">{nombreCorto(nombre)}</span>
                 <ChevronDown className="size-4 opacity-50" />
               </Button>
             </DropdownMenuTrigger>
@@ -112,7 +140,7 @@ function PatientHeader() {
                 Configuración
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive">
+              <DropdownMenuItem className="text-destructive" onSelect={salir}>
                 <LogOut className="size-4 mr-2" />
                 Cerrar sesión
               </DropdownMenuItem>
@@ -157,6 +185,9 @@ function PatientHeader() {
 function DentistSidebar() {
   const location = useLocation();
   const [open, setOpen] = React.useState(true);
+  const { usuario } = useAppState();
+  const salir = useCerrarSesion();
+  const nombre = usuario?.nombre ?? "Dra. Claudia";
 
   const navItems = [
     { to: "/dentist/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -219,12 +250,12 @@ function DentistSidebar() {
           <DropdownMenuTrigger asChild>
             <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors">
               <div className="size-8 rounded-full bg-gradient-to-br from-accent to-accent/60 flex items-center justify-center text-xs font-semibold text-background flex-shrink-0">
-                CM
+                {iniciales(nombre)}
               </div>
               {open && (
                 <div className="flex-1 text-left min-w-0">
-                  <p className="text-sm font-medium truncate">Dra. Claudia</p>
-                  <p className="text-xs text-muted-foreground truncate">COP-24851</p>
+                  <p className="text-sm font-medium truncate">{nombre}</p>
+                  <p className="text-xs text-muted-foreground truncate">Odontólogo</p>
                 </div>
               )}
             </button>
@@ -239,7 +270,7 @@ function DentistSidebar() {
               Configuración
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">
+            <DropdownMenuItem className="text-destructive" onSelect={salir}>
               <LogOut className="size-4 mr-2" />
               Cerrar sesión
             </DropdownMenuItem>

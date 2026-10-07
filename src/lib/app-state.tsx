@@ -1,6 +1,10 @@
 import * as React from "react";
+import { alCambiarSesion, authApi, leerSesion, type Rol } from "@/lib/api";
 
 export type UserRole = "patient" | "dentist";
+
+/** Usuario con sesión iniciada en el backend (null = nadie inició sesión). */
+export type Usuario = { nombre: string; rol: Rol };
 
 export type DocumentType = "DNI" | "Título" | "Colegiatura" | "CV";
 export type DocumentStatus = "PENDIENTE" | "OBSERVADO" | "RECHAZADO" | "VERIFICADO";
@@ -244,6 +248,8 @@ const agendaHoy: Appointment[] = [
 ];
 
 type Ctx = {
+  usuario: Usuario | null;
+  cerrarSesion: () => void;
   userRole: UserRole;
   setUserRole: (role: UserRole) => void;
   patient: string;
@@ -286,6 +292,19 @@ const ahora = () =>
 
 export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [userRole, setUserRole] = React.useState<UserRole>("patient");
+  const [usuario, setUsuario] = React.useState<Usuario | null>(null);
+
+  // La sesión vive en el navegador (ver src/lib/api.ts). Se lee al cargar y cada vez que cambia
+  // (login, logout o token vencido), y el rol que manda el backend decide qué vista se muestra.
+  React.useEffect(() => {
+    const sincronizar = () => {
+      const sesion = leerSesion();
+      setUsuario(sesion ? { nombre: sesion.nombre_completo, rol: sesion.rol } : null);
+      if (sesion) setUserRole(sesion.rol === "ODONTOLOGO" ? "dentist" : "patient");
+    };
+    sincronizar();
+    return alCambiarSesion(sincronizar);
+  }, []);
   const [strikes, setStrikes] = React.useState(1);
   const [appointments, setAppointments] = React.useState<Appointment[]>(seed);
   const [agenda, setAgenda] = React.useState<Appointment[]>(agendaHoy);
@@ -317,9 +336,12 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   }, [agenda, appointments]);
 
   const value: Ctx = {
+    usuario,
+    cerrarSesion: () => authApi.cerrarSesion(),
     userRole,
     setUserRole,
-    patient: "Nicole Ramírez",
+    // Mientras no haya citas reales, el resto de pantallas sigue con los datos de ejemplo.
+    patient: usuario?.nombre ?? "Nicole Ramírez",
     strikes,
     isBanned: strikes >= STRIKE_LIMIT,
     appointments,

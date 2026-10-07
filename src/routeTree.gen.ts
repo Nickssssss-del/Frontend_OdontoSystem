@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OdontologoRouteImport } from './routes/odontologo'
-import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as DentistAgendaRouteImport } from './routes/dentist.agenda'
 import { Route as DentistDashboardRouteImport } from './routes/dentist.dashboard'
 import { Route as DentistHorariosRouteImport } from './routes/dentist.horarios'
@@ -30,11 +29,6 @@ const IndexRoute = IndexRouteImport.update({
 const OdontologoRoute = OdontologoRouteImport.update({
   id: '/odontologo',
   path: '/odontologo',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiChatRoute = ApiChatRouteImport.update({
-  id: '/api/chat',
-  path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DentistAgendaRoute = DentistAgendaRouteImport.update({
@@ -86,7 +80,6 @@ const PacienteDentistaIdRoute = PacienteDentistaIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/odontologo': typeof OdontologoRouteWithChildren
-  '/api/chat': typeof ApiChatRoute
   '/dentist/agenda': typeof DentistAgendaRoute
   '/dentist/dashboard': typeof DentistDashboardRoute
   '/dentist/horarios': typeof DentistHorariosRoute
@@ -100,7 +93,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/odontologo': typeof OdontologoRouteWithChildren
-  '/api/chat': typeof ApiChatRoute
   '/dentist/agenda': typeof DentistAgendaRoute
   '/dentist/dashboard': typeof DentistDashboardRoute
   '/dentist/horarios': typeof DentistHorariosRoute
@@ -115,7 +107,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/odontologo': typeof OdontologoRouteWithChildren
-  '/api/chat': typeof ApiChatRoute
   '/dentist/agenda': typeof DentistAgendaRoute
   '/dentist/dashboard': typeof DentistDashboardRoute
   '/dentist/horarios': typeof DentistHorariosRoute
@@ -131,7 +122,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/odontologo'
-    | '/api/chat'
     | '/dentist/agenda'
     | '/dentist/dashboard'
     | '/dentist/horarios'
@@ -145,7 +135,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/odontologo'
-    | '/api/chat'
     | '/dentist/agenda'
     | '/dentist/dashboard'
     | '/dentist/horarios'
@@ -159,7 +148,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/odontologo'
-    | '/api/chat'
     | '/dentist/agenda'
     | '/dentist/dashboard'
     | '/dentist/horarios'
@@ -174,7 +162,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   OdontologoRoute: typeof OdontologoRouteWithChildren
-  ApiChatRoute: typeof ApiChatRoute
   DentistAgendaRoute: typeof DentistAgendaRoute
   DentistDashboardRoute: typeof DentistDashboardRoute
   DentistHorariosRoute: typeof DentistHorariosRoute
@@ -199,13 +186,6 @@ declare module '@tanstack/react-router' {
       path: '/odontologo'
       fullPath: '/odontologo'
       preLoaderRoute: typeof OdontologoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/chat': {
-      id: '/api/chat'
-      path: '/api/chat'
-      fullPath: '/api/chat'
-      preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dentist/agenda': {
@@ -289,7 +269,6 @@ const OdontologoRouteWithChildren = OdontologoRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   OdontologoRoute: OdontologoRouteWithChildren,
-  ApiChatRoute: ApiChatRoute,
   DentistAgendaRoute: DentistAgendaRoute,
   DentistDashboardRoute: DentistDashboardRoute,
   DentistHorariosRoute: DentistHorariosRoute,

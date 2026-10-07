@@ -1,6 +1,8 @@
 // Login/Registro principal — pantalla dividida: panel teal de marca a la
 // izquierda y tarjeta de acceso a la derecha. Selector de rol con botones,
 // modo "Iniciar sesión" y enlace "Regístrate aquí" para alternar a registro.
+// Conectado al backend: POST /api/auth/login y POST /api/auth/register (ver src/lib/api.ts).
+// El rol con el que se entra lo decide el backend según la cuenta.
 
 import * as React from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -30,7 +32,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChatbotWidget } from "@/components/ChatbotWidget";
-import { useAppState } from "@/lib/app-state";
+import { ApiError, authApi, type Sesion } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import logoAsset from "@/assets/odontosystem-logo.png.asset.json";
 
@@ -65,37 +67,105 @@ const stats = [
   { value: "50 mil", label: "Citas" },
 ];
 
+const mensajeDeError = (error: unknown) =>
+  error instanceof ApiError ? error.message : "Ocurrió un error inesperado. Inténtalo de nuevo.";
+
+type DatosRegistro = {
+  nombre_completo: string;
+  tipo_documento: "DNI" | "CE";
+  numero_documento: string;
+  telefono: string;
+  correo: string;
+  password: string;
+  numero_colegiatura: string;
+};
+
+const registroVacio: DatosRegistro = {
+  nombre_completo: "",
+  tipo_documento: "DNI",
+  numero_documento: "",
+  telefono: "",
+  correo: "",
+  password: "",
+  numero_colegiatura: "",
+};
+
 function LoginScreen() {
   const navigate = useNavigate();
-  const { setUserRole } = useAppState();
   const [role, setRole] = React.useState<Role>("paciente");
   const [mode, setMode] = React.useState<Mode>("login");
   const [showPassword, setShowPassword] = React.useState(false);
+  const [enviando, setEnviando] = React.useState(false);
+  const [login, setLogin] = React.useState({ correo: "", password: "" });
+  const [registro, setRegistro] = React.useState<DatosRegistro>(registroVacio);
 
-  const go = () => {
-    setUserRole(role === "paciente" ? "patient" : "dentist");
-    toast.success(
-      mode === "login" ? "Sesión iniciada" : "Cuenta creada",
-      {
-        description:
-          role === "paciente"
-            ? "Bienvenida a tu panel de paciente."
-            : "Bienvenida a tu panel de odontólogo.",
-      },
-    );
+  const campoRegistro =
+    (campo: keyof DatosRegistro) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+      setRegistro((r) => ({ ...r, [campo]: e.target.value }));
+
+  const entrar = (sesion: Sesion, titulo: string, descripcion?: string) => {
+    toast.success(titulo, {
+      description: descripcion ?? `Hola, ${sesion.nombre_completo.split(" ")[0]}.`,
+    });
     navigate({
-      to: role === "paciente" ? "/paciente/catalogo" : "/dentist/dashboard",
+      to: sesion.rol === "ODONTOLOGO" ? "/dentist/dashboard" : "/paciente/catalogo",
     });
   };
 
-  const submit = (e: React.FormEvent) => {
+  const submitLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    go();
+    setEnviando(true);
+    try {
+      const sesion = await authApi.login(login.correo.trim(), login.password);
+      const esOdontologo = sesion.rol === "ODONTOLOGO";
+      if (esOdontologo !== (role === "odontologo")) {
+        toast.info(
+          `Tu cuenta está registrada como ${esOdontologo ? "odontólogo" : "paciente"}; te llevamos a ese panel.`,
+        );
+      }
+      entrar(sesion, "Sesión iniciada");
+    } catch (error) {
+      toast.error("No se pudo iniciar sesión", { description: mensajeDeError(error) });
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  const submitRegistro = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const esOdontologo = role === "odontologo";
+    setEnviando(true);
+    try {
+      const sesion = await authApi.registrar({
+        nombre_completo: registro.nombre_completo.trim(),
+        tipo_documento: registro.tipo_documento,
+        numero_documento: registro.numero_documento.trim(),
+        telefono: registro.telefono.trim(),
+        correo: registro.correo.trim(),
+        password: registro.password,
+        rol: esOdontologo ? "ODONTOLOGO" : "PACIENTE",
+        ...(esOdontologo ? { numero_colegiatura: registro.numero_colegiatura.trim() } : {}),
+      });
+      setRegistro(registroVacio);
+      entrar(
+        sesion,
+        "Cuenta creada",
+        esOdontologo
+          ? "Estamos verificando tu colegiatura con el COP. Te avisaremos el resultado."
+          : undefined,
+      );
+    } catch (error) {
+      toast.error("No se pudo crear la cuenta", { description: mensajeDeError(error) });
+    } finally {
+      setEnviando(false);
+    }
   };
 
   const googleLogin = () => {
-    toast.success("Continuando con Google");
-    go();
+    toast.info("El ingreso con Google estará disponible pronto.", {
+      description: "Por ahora usa tu correo y contraseña.",
+    });
   };
 
   const roles: { value: Role; label: string; icon: React.ReactNode }[] = [
@@ -122,7 +192,7 @@ function LoginScreen() {
 
         <header className="relative flex items-center gap-3">
           <div className="flex size-20 shrink-0 items-center justify-center rounded-full bg-white p-2.5 shadow-lg shadow-black/15 ring-1 ring-black/5">
-            <img src={logoAsset.url} alt="Logo de OdontoSystem" className="size-full object-contain" />
+            <img src="/odontosystem-logo.png" alt="Logo de OdontoSystem" className="size-full object-contain" />
           </div>
           <div>
             <p className="font-display text-xl font-bold leading-tight">
@@ -179,7 +249,7 @@ function LoginScreen() {
           {/* Marca compacta en móvil */}
           <div className="mb-6 flex items-center justify-center gap-3 lg:hidden">
             <div className="flex size-16 shrink-0 items-center justify-center rounded-full border border-border/60 bg-card p-2 shadow-md shadow-primary/10">
-              <img src={logoAsset.url} alt="Logo de OdontoSystem" className="size-full object-contain" />
+              <img src="/odontosystem-logo.png" alt="Logo de OdontoSystem" className="size-full object-contain" />
             </div>
             <div>
               <p className="font-display text-lg font-bold leading-tight">
@@ -232,12 +302,15 @@ function LoginScreen() {
                 </div>
 
                 {mode === "login" ? (
-                  <form onSubmit={submit} className="space-y-4">
+                  <form onSubmit={submitLogin} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="email">Correo electrónico</Label>
                       <Input
                         id="email"
                         type="email"
+                        autoComplete="email"
+                        value={login.correo}
+                        onChange={(e) => setLogin((l) => ({ ...l, correo: e.target.value }))}
                         placeholder={
                           role === "paciente"
                             ? "nombre@correo.com"
@@ -254,6 +327,9 @@ function LoginScreen() {
                         <Input
                           id="password"
                           type={showPassword ? "text" : "password"}
+                          autoComplete="current-password"
+                          value={login.password}
+                          onChange={(e) => setLogin((l) => ({ ...l, password: e.target.value }))}
                           placeholder="••••••••"
                           className="pl-9 pr-10"
                           required
@@ -271,24 +347,6 @@ function LoginScreen() {
                       </div>
                     </div>
 
-                    {role === "odontologo" && (
-                      <div className="space-y-2">
-                        <Label htmlFor="cop-login">N.º de Colegiatura COP</Label>
-                        <div className="relative">
-                          <Shield className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                          <Input
-                            id="cop-login"
-                            placeholder="COP-12345"
-                            className="pl-9"
-                            required
-                          />
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Verificamos en tiempo real con el registro oficial COP.
-                        </p>
-                      </div>
-                    )}
-
                     <div className="flex items-center justify-between">
                       <label className="flex cursor-pointer items-center gap-2 text-sm">
                         <Checkbox id="recordarme" />
@@ -297,7 +355,7 @@ function LoginScreen() {
                       <button
                         type="button"
                         onClick={() =>
-                          toast.info("Enviamos un enlace de recuperación a tu correo.")
+                          toast.info("La recuperación de contraseña estará disponible pronto.")
                         }
                         className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
                       >
@@ -305,20 +363,72 @@ function LoginScreen() {
                       </button>
                     </div>
 
-                    <Button type="submit" size="lg" className="w-full rounded-xl">
-                      Iniciar sesión
+                    <Button type="submit" size="lg" className="w-full rounded-xl" disabled={enviando}>
+                      {enviando ? "Ingresando…" : "Iniciar sesión"}
                       <ArrowRight className="ml-2 size-4" />
                     </Button>
                   </form>
                 ) : (
-                  <form onSubmit={submit} className="space-y-4">
+                  <form onSubmit={submitRegistro} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="nombre">
                         {role === "paciente" ? "Nombre completo" : "Nombre profesional"}
                       </Label>
                       <Input
                         id="nombre"
+                        autoComplete="name"
                         placeholder={role === "paciente" ? "Juan Pérez" : "Dra. Ana García"}
+                        value={registro.nombre_completo}
+                        onChange={campoRegistro("nombre_completo")}
+                        maxLength={150}
+                        required
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-[110px_1fr] gap-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="tipo-doc">Documento</Label>
+                        <select
+                          id="tipo-doc"
+                          value={registro.tipo_documento}
+                          onChange={campoRegistro("tipo_documento")}
+                          className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                        >
+                          <option value="DNI">DNI</option>
+                          <option value="CE">C.E.</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="num-doc">N.º de documento</Label>
+                        <Input
+                          id="num-doc"
+                          inputMode={registro.tipo_documento === "DNI" ? "numeric" : "text"}
+                          placeholder={registro.tipo_documento === "DNI" ? "12345678" : "001234567"}
+                          value={registro.numero_documento}
+                          onChange={campoRegistro("numero_documento")}
+                          pattern={
+                            registro.tipo_documento === "DNI" ? "[0-9]{8}" : "[A-Za-z0-9]{6,20}"
+                          }
+                          title={
+                            registro.tipo_documento === "DNI"
+                              ? "El DNI tiene 8 dígitos"
+                              : "Entre 6 y 20 letras o números"
+                          }
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="telefono">Celular</Label>
+                      <Input
+                        id="telefono"
+                        type="tel"
+                        autoComplete="tel"
+                        placeholder="987654321"
+                        value={registro.telefono}
+                        onChange={campoRegistro("telefono")}
+                        maxLength={20}
                         required
                       />
                     </div>
@@ -328,28 +438,55 @@ function LoginScreen() {
                       <Input
                         id="email-reg"
                         type="email"
+                        autoComplete="email"
                         placeholder={role === "paciente" ? "juan@correo.com" : "ana@correo.com"}
+                        value={registro.correo}
+                        onChange={campoRegistro("correo")}
+                        maxLength={150}
                         required
                       />
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="password-reg">Contraseña</Label>
-                      <Input id="password-reg" type="password" placeholder="••••••" required />
+                      <Input
+                        id="password-reg"
+                        type="password"
+                        autoComplete="new-password"
+                        placeholder="Mínimo 8 caracteres"
+                        value={registro.password}
+                        onChange={campoRegistro("password")}
+                        minLength={8}
+                        maxLength={100}
+                        required
+                      />
                     </div>
 
                     {role === "odontologo" && (
                       <div className="space-y-2">
                         <Label htmlFor="cop-reg">N.º de colegiatura COP</Label>
-                        <Input id="cop-reg" placeholder="COP-XXXXX" required />
+                        <div className="relative">
+                          <Shield className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            id="cop-reg"
+                            inputMode="numeric"
+                            placeholder="24851"
+                            className="pl-9"
+                            value={registro.numero_colegiatura}
+                            onChange={campoRegistro("numero_colegiatura")}
+                            pattern="[0-9]{1,30}"
+                            title="Solo el número, sin letras (ej. 24851)"
+                            required
+                          />
+                        </div>
                         <p className="text-xs text-muted-foreground">
                           Verificamos en tiempo real con el registro oficial COP.
                         </p>
                       </div>
                     )}
 
-                    <Button type="submit" size="lg" className="w-full rounded-xl">
-                      Crear cuenta
+                    <Button type="submit" size="lg" className="w-full rounded-xl" disabled={enviando}>
+                      {enviando ? "Creando cuenta…" : "Crear cuenta"}
                       <ArrowRight className="ml-2 size-4" />
                     </Button>
                   </form>
