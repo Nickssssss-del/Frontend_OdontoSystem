@@ -162,3 +162,14 @@
     radial-gradient(60% 50% at 15% 0%, color-mix(in oklab, var(--color-primary) 22%, transparent), transparent),
     radial-gradient(50% 45% at 95% 10%, color-mix(in oklab, var(--color-accent) 45%, transparent), transparent);
 }
+
+@utility hero-teal {
+  background-image:
+    radial-gradient(42% 38% at 82% 12%, rgb(255 255 255 / 0.12), transparent),
+    linear-gradient(
+      155deg,
+      color-mix(in oklab, var(--color-primary) 86%, black) 0%,
+      var(--color-primary) 52%,
+      color-mix(in oklab, var(--color-primary) 72%, var(--color-chart-2)) 100%
+    );
+}
