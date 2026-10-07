@@ -1,17 +1,19 @@
-// Login/Registro principal: selección de rol con botones, solo "Iniciar sesión"
-// y enlace "Regístrate aquí" abajo para alternar a registro.
+// Login/Registro principal — pantalla dividida: panel teal de marca a la
+// izquierda y tarjeta de acceso a la derecha. Selector de rol con botones,
+// modo "Iniciar sesión" y enlace "Regístrate aquí" para alternar a registro.
 
 import * as React from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import {
   ArrowRight,
-  CalendarHeart,
+  CreditCard,
   Eye,
   Lock,
   Mail,
   Shield,
   ShieldCheck,
+  Sparkles,
   Stethoscope,
   UserRound,
 } from "lucide-react";
@@ -54,6 +56,12 @@ export const Route = createFileRoute("/")({
 type Role = "paciente" | "odontologo";
 type Mode = "login" | "registro";
 
+const stats = [
+  { value: "2,400+", label: "Especialistas" },
+  { value: "98%", label: "Satisfacción" },
+  { value: "50 mil", label: "Citas" },
+];
+
 function LoginScreen() {
   const navigate = useNavigate();
   const { setUserRole } = useAppState();
@@ -90,242 +98,320 @@ function LoginScreen() {
   const roles: { value: Role; label: string; icon: React.ReactNode }[] = [
     {
       value: "paciente",
-      label: "Soy Paciente",
+      label: "Paciente",
       icon: <UserRound className="size-4" />,
     },
     {
       value: "odontologo",
-      label: "Soy Odontólogo",
+      label: "Odontólogo",
       icon: <Stethoscope className="size-4" />,
     },
   ];
 
   return (
-    <div className="relative min-h-screen overflow-hidden grid-aurora">
-      <div className="mx-auto grid min-h-screen max-w-6xl items-center gap-10 px-4 py-10 lg:grid-cols-2">
-        {/* Lado izquierdo — hero/marketing */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
+    <div className="min-h-screen lg:grid lg:grid-cols-[1.05fr_1fr]">
+      {/* Panel izquierdo — marca */}
+      <section className="hero-teal relative hidden overflow-hidden text-primary-foreground lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
+        <div className="pointer-events-none absolute -right-28 -top-28 size-[26rem] rounded-full bg-white/5" />
+        <div className="pointer-events-none absolute -bottom-36 -left-20 size-[30rem] rounded-full bg-white/5" />
+        <div className="pointer-events-none absolute bottom-24 right-16 size-44 rounded-full border border-white/15" />
+        <div className="pointer-events-none absolute bottom-40 right-36 size-16 rounded-full bg-white/10" />
+
+        <header className="relative flex items-center gap-3">
+          <div className="grid size-12 place-items-center rounded-2xl bg-white/15 backdrop-blur">
+            <Shield className="size-6" />
+          </div>
+          <div>
+            <p className="font-display text-xl font-bold leading-tight">
+              OdontoSystem
+            </p>
+            <p className="text-sm opacity-80">Plataforma dental verificada</p>
+          </div>
+        </header>
+
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ type: "spring", stiffness: 220, damping: 26 }}
-          className="hidden lg:block"
+          transition={{ type: "spring", stiffness: 200, damping: 26 }}
+          className="relative"
         >
-          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card/70 px-3 py-1.5 text-xs font-semibold backdrop-blur">
-            <CalendarHeart className="size-4 text-primary" /> OdontoSystem v4.3 · Ica, Perú
+          <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3.5 py-1.5 text-xs font-semibold backdrop-blur">
+            <Sparkles className="size-3.5" />
+            Red COP Verificada · Ica, Perú
           </span>
-          <h1 className="mt-6 font-display text-5xl font-semibold leading-[1.05]">
-            Tu próxima cita dental,
-            <span className="text-primary"> reservada en 3 toques.</span>
+          <h1 className="mt-6 max-w-lg font-display text-5xl font-bold leading-[1.05] xl:text-6xl">
+            Tu salud dental, en manos expertas.
           </h1>
-          <p className="mt-5 max-w-md text-lg text-muted-foreground">
-            Marketplace dental con odontólogos de colegiatura COP verificada, cupos apartados con
-            temporizador y anticipo por Yape o Plin.
+          <p className="mt-5 max-w-md text-lg leading-relaxed opacity-85">
+            Agenda con especialistas verificados por el Colegio Odontológico del
+            Perú. Pagos seguros, citas sin complicaciones.
           </p>
-          <ul className="mt-8 space-y-3 text-sm">
-            {[
-              "Colegiatura COP verificada antes de publicar cualquier perfil",
-              "Cupo apartado 10 minutos mientras completas tu Yape",
-              "Historial clínico cifrado con AES-256, disponible cuando lo pidas",
-            ].map((t, i) => (
-              <motion.li
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.1 * i }}
-                key={i}
-                className="flex items-start gap-3"
-              >
-                <ShieldCheck className="size-5 flex-shrink-0 text-primary mt-0.5" />
-                {t}
-              </motion.li>
-            ))}
-          </ul>
-        </motion.section>
-
-        {/* Lado derecho — form */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: "spring", stiffness: 220, damping: 26, delay: 0.1 }}
-        >
-          <Card className="border-border/70 shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-2xl font-bold">
-                {mode === "login" ? "Inicia sesión" : "Crear cuenta"}
-              </CardTitle>
-              <CardDescription>
-                {mode === "login"
-                  ? "Ingresa tus credenciales para continuar"
-                  : "Únete a OdontoSystem en menos de un minuto"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Selector de rol con botones */}
-              <div className="rounded-xl border border-border/60 bg-muted/40 p-1.5">
-                <div className="grid grid-cols-2 gap-1.5">
-                  {roles.map((r) => (
-                    <button
-                      key={r.value}
-                      type="button"
-                      onClick={() => setRole(r.value)}
-                      aria-pressed={role === r.value}
-                      className={cn(
-                        "inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition-all",
-                        role === r.value
-                          ? "border-2 border-primary bg-card text-foreground shadow-sm"
-                          : "border-2 border-transparent text-muted-foreground hover:text-foreground",
-                      )}
-                    >
-                      {r.icon}
-                      {r.label}
-                    </button>
-                  ))}
-                </div>
+          <dl className="mt-12 grid max-w-lg grid-cols-3 gap-6 border-t border-white/20 pt-8">
+            {stats.map((s) => (
+              <div key={s.label}>
+                <dt className="sr-only">{s.label}</dt>
+                <dd className="font-display text-3xl font-bold">{s.value}</dd>
+                <dd className="mt-1 text-sm opacity-80">{s.label}</dd>
               </div>
+            ))}
+          </dl>
+        </motion.div>
 
-              {mode === "login" ? (
-                <form onSubmit={submit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Correo electrónico</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder={
-                        role === "paciente" ? "paciente@example.com" : "dentista@example.com"
-                      }
-                      required
-                    />
+        <footer className="relative flex flex-wrap items-center gap-x-7 gap-y-2 text-sm font-medium opacity-90">
+          <span className="inline-flex items-center gap-2">
+            <Lock className="size-4" /> SSL Seguro
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <ShieldCheck className="size-4" /> COP Verificado
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <CreditCard className="size-4" /> PCI Compliant
+          </span>
+        </footer>
+      </section>
+
+      {/* Panel derecho — acceso */}
+      <section className="flex min-h-screen items-center justify-center px-4 py-10 sm:px-8">
+        <div className="w-full max-w-md">
+          {/* Marca compacta en móvil */}
+          <div className="mb-6 flex items-center justify-center gap-3 lg:hidden">
+            <div className="hero-teal grid size-11 place-items-center rounded-2xl text-primary-foreground shadow-md">
+              <Shield className="size-5" />
+            </div>
+            <div>
+              <p className="font-display text-lg font-bold leading-tight">
+                OdontoSystem
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Plataforma dental verificada
+              </p>
+            </div>
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 220, damping: 26 }}
+          >
+            <Card className="rounded-3xl border-border/60 shadow-xl shadow-primary/10">
+              <CardHeader>
+                <CardTitle className="text-2xl font-bold">
+                  {mode === "login" ? "Bienvenido de vuelta" : "Crea tu cuenta"}
+                </CardTitle>
+                <CardDescription>
+                  {mode === "login"
+                    ? "Selecciona tu perfil para ingresar"
+                    : "Únete a OdontoSystem en menos de un minuto"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Selector de perfil */}
+                <div className="rounded-2xl border border-border/60 bg-muted/40 p-1.5">
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {roles.map((r) => (
+                      <button
+                        key={r.value}
+                        type="button"
+                        onClick={() => setRole(r.value)}
+                        aria-pressed={role === r.value}
+                        className={cn(
+                          "inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all",
+                          role === r.value
+                            ? "border-2 border-primary bg-card text-primary shadow-sm"
+                            : "border-2 border-transparent text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        {r.icon}
+                        {r.label}
+                      </button>
+                    ))}
                   </div>
+                </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Contraseña</Label>
-                    <div className="relative">
-                      <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                {mode === "login" ? (
+                  <form onSubmit={submit} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Correo electrónico</Label>
                       <Input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="••••••••"
-                        className="pl-9 pr-10"
+                        id="email"
+                        type="email"
+                        placeholder={
+                          role === "paciente"
+                            ? "nombre@correo.com"
+                            : "dentista@correo.com"
+                        }
                         required
                       />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword((v) => !v)}
-                        aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
-                      >
-                        <Eye className="size-4" />
-                      </button>
                     </div>
-                  </div>
 
-                  {role === "odontologo" && (
                     <div className="space-y-2">
-                      <Label htmlFor="cop-login">N.º de Colegiatura COP</Label>
+                      <Label htmlFor="password">Contraseña</Label>
                       <div className="relative">
-                        <Shield className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                        <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
-                          id="cop-login"
-                          placeholder="COP-12345"
-                          className="pl-9"
+                          id="password"
+                          type={showPassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          className="pl-9 pr-10"
                           required
                         />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((v) => !v)}
+                          aria-label={
+                            showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                          }
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                        >
+                          <Eye className="size-4" />
+                        </button>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        Verificamos en tiempo real con el registro oficial COP.
-                      </p>
                     </div>
-                  )}
 
-                  <div className="flex items-center justify-between">
-                    <label className="flex cursor-pointer items-center gap-2 text-sm">
-                      <Checkbox id="recordarme" />
-                      Recordarme
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => toast.info("Enviamos un enlace de recuperación a tu correo.")}
-                      className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
-                    >
-                      ¿Olvidaste tu contraseña?
-                    </button>
-                  </div>
+                    {role === "odontologo" && (
+                      <div className="space-y-2">
+                        <Label htmlFor="cop-login">N.º de Colegiatura COP</Label>
+                        <div className="relative">
+                          <Shield className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            id="cop-login"
+                            placeholder="COP-12345"
+                            className="pl-9"
+                            required
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Verificamos en tiempo real con el registro oficial COP.
+                        </p>
+                      </div>
+                    )}
 
-                  <Button type="submit" className="w-full">
-                    Iniciar sesión
-                    <ArrowRight className="size-4 ml-2" />
-                  </Button>
-
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-border/50" />
+                    <div className="flex items-center justify-between">
+                      <label className="flex cursor-pointer items-center gap-2 text-sm">
+                        <Checkbox id="recordarme" />
+                        Recordarme
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          toast.info("Enviamos un enlace de recuperación a tu correo.")
+                        }
+                        className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
+                      >
+                        ¿Olvidaste tu contraseña?
+                      </button>
                     </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-background px-2 text-muted-foreground">O continúa con</span>
-                    </div>
-                  </div>
 
-                  <Button onClick={googleLogin} variant="outline" className="w-full" type="button">
-                    <Mail className="size-4 mr-2" />
-                    Google
-                  </Button>
-                </form>
-              ) : (
-                <form onSubmit={submit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="nombre">
-                      {role === "paciente" ? "Nombre completo" : "Nombre profesional"}
-                    </Label>
-                    <Input
-                      id="nombre"
-                      placeholder={role === "paciente" ? "Juan Pérez" : "Dra. Ana García"}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="email-reg">Correo electrónico</Label>
-                    <Input
-                      id="email-reg"
-                      type="email"
-                      placeholder={role === "paciente" ? "juan@example.com" : "ana@example.com"}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="password-reg">Contraseña</Label>
-                    <Input id="password-reg" type="password" placeholder="••••••" required />
-                  </div>
-
-                  {role === "odontologo" && (
+                    <Button type="submit" size="lg" className="w-full rounded-xl">
+                      Iniciar sesión
+                      <ArrowRight className="ml-2 size-4" />
+                    </Button>
+                  </form>
+                ) : (
+                  <form onSubmit={submit} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="cop-reg">N.º de colegiatura COP</Label>
-                      <Input id="cop-reg" placeholder="COP-XXXXX" required />
+                      <Label htmlFor="nombre">
+                        {role === "paciente" ? "Nombre completo" : "Nombre profesional"}
+                      </Label>
+                      <Input
+                        id="nombre"
+                        placeholder={role === "paciente" ? "Juan Pérez" : "Dra. Ana García"}
+                        required
+                      />
                     </div>
-                  )}
 
-                  <Button type="submit" className="w-full">
-                    Crear cuenta
-                    <ArrowRight className="size-4 ml-2" />
-                  </Button>
-                </form>
-              )}
+                    <div className="space-y-2">
+                      <Label htmlFor="email-reg">Correo electrónico</Label>
+                      <Input
+                        id="email-reg"
+                        type="email"
+                        placeholder={role === "paciente" ? "juan@correo.com" : "ana@correo.com"}
+                        required
+                      />
+                    </div>
 
-              {/* Alternar entre login y registro */}
-              <p className="text-center text-sm text-muted-foreground">
-                {mode === "login" ? "¿No tienes cuenta? " : "¿Ya tienes cuenta? "}
-                <button
-                  type="button"
-                  onClick={() => setMode(mode === "login" ? "registro" : "login")}
-                  className="font-semibold text-primary underline-offset-4 hover:underline"
-                >
-                  {mode === "login" ? "Regístrate aquí" : "Inicia sesión"}
-                </button>
-              </p>
-            </CardContent>
-          </Card>
-        </motion.section>
-      </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="password-reg">Contraseña</Label>
+                      <Input id="password-reg" type="password" placeholder="••••••" required />
+                    </div>
+
+                    {role === "odontologo" && (
+                      <div className="space-y-2">
+                        <Label htmlFor="cop-reg">N.º de colegiatura COP</Label>
+                        <Input id="cop-reg" placeholder="COP-XXXXX" required />
+                        <p className="text-xs text-muted-foreground">
+                          Verificamos en tiempo real con el registro oficial COP.
+                        </p>
+                      </div>
+                    )}
+
+                    <Button type="submit" size="lg" className="w-full rounded-xl">
+                      Crear cuenta
+                      <ArrowRight className="ml-2 size-4" />
+                    </Button>
+                  </form>
+                )}
+
+                {mode === "login" && (
+                  <>
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-border/50" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-card px-2 text-muted-foreground">
+                          O continúa con
+                        </span>
+                      </div>
+                    </div>
+
+                    <Button
+                      onClick={googleLogin}
+                      variant="outline"
+                      className="w-full rounded-xl"
+                      type="button"
+                    >
+                      <Mail className="mr-2 size-4" />
+                      Google
+                    </Button>
+                  </>
+                )}
+
+                {/* Alternar entre login y registro */}
+                <p className="text-center text-sm text-muted-foreground">
+                  {mode === "login" ? "¿Sin cuenta? " : "¿Ya tienes cuenta? "}
+                  <button
+                    type="button"
+                    onClick={() => setMode(mode === "login" ? "registro" : "login")}
+                    className="font-semibold text-primary underline-offset-4 hover:underline"
+                  >
+                    {mode === "login" ? "Regístrate gratis" : "Inicia sesión"}
+                  </button>
+                </p>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <p className="mt-6 text-center text-xs text-muted-foreground">
+            Al continuar aceptas los{" "}
+            <button
+              type="button"
+              onClick={() => toast.info("Términos y condiciones próximamente.")}
+              className="font-semibold text-foreground underline-offset-4 hover:underline"
+            >
+              Términos
+            </button>{" "}
+            y la{" "}
+            <button
+              type="button"
+              onClick={() => toast.info("Política de privacidad próximamente.")}
+              className="font-semibold text-foreground underline-offset-4 hover:underline"
+            >
+              Privacidad
+            </button>
+          </p>
+        </div>
+      </section>
 
       <ChatbotWidget />
     </div>
