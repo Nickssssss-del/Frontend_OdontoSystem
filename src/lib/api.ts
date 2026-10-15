@@ -36,6 +36,8 @@ export type RegistroRequest = {
   password: string;
   rol: Rol;
   numero_colegiatura?: string;
+  /** RNF07 / Ley 29733: el backend rechaza el registro si no llega en true. */
+  acepta_privacidad: boolean;
 };
 
 export type TipoRespuestaChatbot =
