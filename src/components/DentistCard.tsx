@@ -23,9 +23,18 @@ export function DentistCard({ dentist, index = 0 }: { dentist: Dentist; index?: 
           dentist.tint,
         )}
       >
-        <span className="flex size-16 items-center justify-center rounded-full bg-card/80 font-display text-2xl font-semibold text-foreground/80 shadow-sm backdrop-blur">
-          {dentist.initials}
-        </span>
+        {dentist.fotoUrl ? (
+          <img
+            src={dentist.fotoUrl}
+            alt={`Foto de ${dentist.name}`}
+            loading="lazy"
+            className="size-16 rounded-full border-2 border-card object-cover shadow-sm"
+          />
+        ) : (
+          <span className="flex size-16 items-center justify-center rounded-full bg-card/80 font-display text-2xl font-semibold text-foreground/80 shadow-sm backdrop-blur">
+            {dentist.initials}
+          </span>
+        )}
         {dentist.verified ? (
           <span className="absolute left-3 top-3 flex items-center gap-1 rounded-full bg-success/15 px-2.5 py-1 text-[11px] font-semibold text-success-foreground backdrop-blur">
             <BadgeCheck className="size-3.5" /> COP Verificado
@@ -37,7 +46,7 @@ export function DentistCard({ dentist, index = 0 }: { dentist: Dentist; index?: 
         )}
         <span className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-card/80 px-2 py-1 text-[11px] font-semibold text-foreground backdrop-blur">
           <Star className="size-3 fill-warning text-warning" />
-          {dentist.rating > 0 ? dentist.rating.toFixed(1) : "—"}
+          {dentist.rating > 0 ? dentist.rating.toFixed(1) : "Nuevo"}
         </span>
       </div>
 
@@ -50,8 +59,8 @@ export function DentistCard({ dentist, index = 0 }: { dentist: Dentist; index?: 
         </div>
 
         <p className="flex items-center gap-1 text-sm text-muted-foreground">
-          <MapPin className="size-4 shrink-0 text-primary" /> {dentist.district} ·{" "}
-          {dentist.distanceKm} km
+          <MapPin className="size-4 shrink-0 text-primary" /> {dentist.district}
+          {dentist.distanceKm > 0 ? ` · ${dentist.distanceKm.toFixed(1)} km` : ""}
         </p>
 
         <div className="mt-auto flex items-center justify-between border-t border-border pt-3">

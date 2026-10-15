@@ -245,3 +245,205 @@ export const chatbotApi = {
     return llamar<MensajeHistorial[]>(`/api/chatbot/sesiones/${sesionId}/mensajes`);
   },
 };
+
+// ---------------------------------------------------------------------------
+// Odontólogos: buscador, perfil público, turnos libres y reseñas (públicos, sin login)
+// ---------------------------------------------------------------------------
+export type OdontologoTarjeta = {
+  id: string;
+  nombre: string;
+  foto_url: string | null;
+  consultorio: string | null;
+  distrito: string | null;
+  calificacion: number | null;
+  total_resenas: number | null;
+  especialidades: string[];
+  precio_desde: number | null;
+  /** Solo viene cuando se busca "cerca de mí" (lat + lng). */
+  distancia_km: number | null;
+};
+
+export type Pagina<T> = {
+  contenido: T[];
+  pagina: number;
+  tamano: number;
+  total_elementos: number;
+  total_paginas: number;
+};
+
+export type FiltrosBusqueda = {
+  distrito?: string;
+  especialidad_id?: number;
+  q?: string;
+  lat?: number;
+  lng?: number;
+  radio_km?: number;
+  orden?: "calificacion" | "precio" | "distancia";
+  pagina?: number;
+  tamano?: number;
+};
+
+export type ServicioOdontologo = {
+  id: string;
+  categoria_id: number;
+  categoria: string;
+  titulo: string;
+  descripcion: string | null;
+  precio_total: number;
+  monto_deposito: number;
+  duracion_minutos: number;
+  activo: boolean;
+};
+
+export type PerfilOdontologo = {
+  id: string;
+  nombre: string;
+  foto_url: string | null;
+  consultorio: string | null;
+  direccion: string | null;
+  distrito: string | null;
+  latitud: number | null;
+  longitud: number | null;
+  numero_colegiatura: string | null;
+  colegiatura_verificada: boolean;
+  calificacion: number | null;
+  total_resenas: number | null;
+  requiere_confirmacion_manual: boolean;
+  especialidades: { id: number; nombre: string }[];
+  servicios: ServicioOdontologo[];
+  horarios: {
+    dia_semana: string;
+    hora_inicio: string;
+    hora_fin: string;
+    intervalo_minutos: number | null;
+  }[];
+  fotos: { id: string; url: string; descripcion: string | null; orden: number }[];
+};
+
+export type Turno = { inicio: string; fin: string };
+
+export type Disponibilidad = {
+  odontologo_id: string;
+  servicio_id: string;
+  fecha: string;
+  zona_horaria: string;
+  duracion_minutos: number;
+  turnos: Turno[];
+};
+
+export type ResenaPublica = {
+  id: number;
+  paciente: string;
+  calificacion: number;
+  comentario: string | null;
+  creado_en: string;
+};
+
+export type ResenasOdontologo = {
+  odontologo_id: string;
+  calificacion: number;
+  total_resenas: number;
+  distribucion: Record<string, number>;
+  resenas: ResenaPublica[];
+};
+
+function consulta(parametros: Record<string, string | number | undefined>): string {
+  const p = new URLSearchParams();
+  for (const [clave, valor] of Object.entries(parametros)) {
+    if (valor !== undefined && valor !== "") p.set(clave, String(valor));
+  }
+  const texto = p.toString();
+  return texto ? `?${texto}` : "";
+}
+
+export const odontologosApi = {
+  buscar(filtros: FiltrosBusqueda = {}): Promise<Pagina<OdontologoTarjeta>> {
+    return llamar<Pagina<OdontologoTarjeta>>(`/api/odontologos${consulta(filtros)}`, {
+      conToken: false,
+    });
+  },
+
+  perfil(id: string): Promise<PerfilOdontologo> {
+    return llamar<PerfilOdontologo>(`/api/odontologos/${id}`, { conToken: false });
+  },
+
+  /** fecha en formato YYYY-MM-DD (hora de Lima). */
+  disponibilidad(id: string, servicioId: string, fecha: string): Promise<Disponibilidad> {
+    return llamar<Disponibilidad>(
+      `/api/odontologos/${id}/disponibilidad${consulta({ servicio_id: servicioId, fecha })}`,
+      { conToken: false },
+    );
+  },
+
+  resenas(id: string, tamano = 5): Promise<ResenasOdontologo> {
+    return llamar<ResenasOdontologo>(
+      `/api/odontologos/${id}/resenas${consulta({ pagina: 0, tamano })}`,
+      {
+        conToken: false,
+      },
+    );
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Citas: reservar y pagar el depósito (paciente con sesión)
+// ---------------------------------------------------------------------------
+export type EstadoCita =
+  | "PENDIENTE_PAGO"
+  | "PENDIENTE_CONFIRMACION"
+  | "CONFIRMADA"
+  | "COMPLETADA"
+  | "CANCELADA_CON_REEMBOLSO"
+  | "CANCELADA_SIN_REEMBOLSO"
+  | "INASISTENCIA_PENALIZADA"
+  | "REPROGRAMADA";
+
+export type Cita = {
+  id: string;
+  estado: EstadoCita;
+  inicio: string;
+  fin: string;
+  zona_horaria: string;
+  precio: number;
+  deposito_requerido: number;
+  pagar_antes_de: string | null;
+  odontologo: {
+    id: string;
+    nombre: string;
+    consultorio: string | null;
+    direccion: string | null;
+    distrito: string | null;
+  };
+  servicio: { id: string; titulo: string };
+};
+
+export type MetodoPago = "TARJETA" | "YAPE" | "PLIN";
+
+export type Pago = {
+  pago_id: string;
+  estado: "PENDIENTE" | "VERIFICADO" | "RECHAZADO" | "REEMBOLSADO";
+  metodo: MetodoPago;
+  monto: number;
+  numero_operacion: string | null;
+  simulado: boolean;
+  cita: Cita;
+};
+
+export const citasApi = {
+  /** inicio: el valor exacto de un turno de disponibilidad (con zona horaria). Queda PENDIENTE_PAGO 15 minutos. */
+  reservar(odontologoId: string, servicioId: string, inicio: string): Promise<Cita> {
+    return llamar<Cita>("/api/citas", {
+      method: "POST",
+      body: { odontologo_id: odontologoId, servicio_id: servicioId, inicio },
+    });
+  },
+
+  /** Pasarela simulada (sandbox): aprueba el pago y la cita queda CONFIRMADA (o PENDIENTE_CONFIRMACION). */
+  pagar(citaId: string, metodo: MetodoPago): Promise<Pago> {
+    return llamar<Pago>(`/api/citas/${citaId}/pagar`, { method: "POST", body: { metodo } });
+  },
+
+  mias(): Promise<Cita[]> {
+    return llamar<Cita[]>("/api/citas/mias");
+  },
+};
