@@ -446,4 +446,36 @@ export const citasApi = {
   mias(): Promise<Cita[]> {
     return llamar<Cita[]>("/api/citas/mias");
   },
+
+  /** Con 12 h o más de anticipación se devuelve el depósito (CANCELADA_CON_REEMBOLSO); si no, se pierde. */
+  cancelar(citaId: string, motivo?: string): Promise<Cita> {
+    return llamar<Cita>(`/api/citas/${citaId}/cancelar`, {
+      method: "PATCH",
+      body: motivo ? { motivo } : {},
+    });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Reseñas del paciente (solo citas atendidas, una por cita)
+// ---------------------------------------------------------------------------
+export type CitaPorResenar = {
+  cita_id: string;
+  odontologo_id: string;
+  odontologo: string;
+  servicio: string;
+  atendida_el: string;
+};
+
+export const resenasApi = {
+  porResenar(): Promise<CitaPorResenar[]> {
+    return llamar<CitaPorResenar[]>("/api/citas/por-resenar");
+  },
+
+  calificar(citaId: string, calificacion: number, comentario?: string): Promise<unknown> {
+    return llamar(`/api/citas/${citaId}/resena`, {
+      method: "POST",
+      body: { calificacion, ...(comentario?.trim() ? { comentario: comentario.trim() } : {}) },
+    });
+  },
 };
