@@ -98,6 +98,7 @@ function LoginScreen() {
   const [enviando, setEnviando] = React.useState(false);
   const [login, setLogin] = React.useState({ correo: "", password: "" });
   const [registro, setRegistro] = React.useState<DatosRegistro>(registroVacio);
+  const [aceptaPrivacidad, setAceptaPrivacidad] = React.useState(false);
 
   const campoRegistro =
     (campo: keyof DatosRegistro) =>
@@ -146,8 +147,10 @@ function LoginScreen() {
         password: registro.password,
         rol: esOdontologo ? "ODONTOLOGO" : "PACIENTE",
         ...(esOdontologo ? { numero_colegiatura: registro.numero_colegiatura.trim() } : {}),
+        acepta_privacidad: aceptaPrivacidad,
       });
       setRegistro(registroVacio);
+      setAceptaPrivacidad(false);
       entrar(
         sesion,
         "Cuenta creada",
@@ -485,7 +488,26 @@ function LoginScreen() {
                       </div>
                     )}
 
-                    <Button type="submit" size="lg" className="w-full rounded-xl" disabled={enviando}>
+                    <label className="flex cursor-pointer items-start gap-2 text-sm leading-snug">
+                      <Checkbox
+                        id="acepta-privacidad"
+                        className="mt-0.5"
+                        checked={aceptaPrivacidad}
+                        onCheckedChange={(v) => setAceptaPrivacidad(v === true)}
+                      />
+                      <span>
+                        Acepto la{" "}
+                        <span className="font-semibold text-foreground">política de privacidad</span> y el
+                        tratamiento de mis datos personales (Ley N.º 29733).
+                      </span>
+                    </label>
+
+                    <Button
+                      type="submit"
+                      size="lg"
+                      className="w-full rounded-xl"
+                      disabled={enviando || !aceptaPrivacidad}
+                    >
                       {enviando ? "Creando cuenta…" : "Crear cuenta"}
                       <ArrowRight className="ml-2 size-4" />
                     </Button>
