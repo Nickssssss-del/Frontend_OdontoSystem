@@ -5,26 +5,28 @@ import { ArrowLeft, BadgeCheck, CalendarClock, Lock, MapPin, Star } from "lucide
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  busyBlocks,
-  diaCorto,
-  getDentist,
-  mesCorto,
-  nextDays,
-  soles,
-  timeBlocks,
-} from "@/lib/mock-data";
+import { soles } from "@/lib/mock-data";
+import { ApiError, odontologosApi, type ResenasOdontologo } from "@/lib/api";
+import { fechaDe, horaDe, iniciales, partesDia } from "@/lib/odontologos";
+import { SelectorTurnos } from "@/components/SelectorTurnos";
 import { useAppState } from "@/lib/app-state";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/paciente/dentista/$id")({
-  loader: ({ params }) => {
-    const dentist = getDentist(params.id);
-    if (!dentist) throw notFound();
-    return { dentist };
+  loader: async ({ params }) => {
+    try {
+      const [perfil, resenas] = await Promise.all([
+        odontologosApi.perfil(params.id),
+        odontologosApi.resenas(params.id).catch((): ResenasOdontologo | null => null),
+      ]);
+      return { perfil, resenas };
+    } catch (e) {
+      if (e instanceof ApiError && (e.status === 404 || e.status === 400)) throw notFound();
+      throw e;
+    }
   },
   head: ({ loaderData }) => {
-    const name = loaderData?.dentist.name ?? "Odontólogo";
+    const name = loaderData?.perfil.nombre ?? "Odontólogo";
     const desc = `Perfil de ${name} en OdontoSystem: colegiatura COP verificada, servicios, precios en soles y horarios disponibles en Ica.`;
     return {
       meta: [
@@ -38,31 +40,19 @@ export const Route = createFileRoute("/paciente/dentista/$id")({
   component: PerfilDentista,
 });
 
-const reseñas = [
-  { autor: "Marco A.", puntaje: 5, texto: "Puntual y explica cada paso del tratamiento." },
-  { autor: "Lucía T.", puntaje: 5, texto: "El consultorio es impecable y la atención rapidísima." },
-  { autor: "Jorge B.", puntaje: 4, texto: "Buen trato, la sala de espera se llena a mediodía." },
-];
-
 function PerfilDentista() {
-  const { dentist } = Route.useLoaderData();
-  const { isBanned, appointments } = useAppState();
+  const { perfil, resenas } = Route.useLoaderData();
+  const { isBanned } = useAppState();
 
-  const days = React.useMemo(() => nextDays(7), []);
-  const [dayIndex, setDayIndex] = React.useState(0);
-  const [hora, setHora] = React.useState<string | null>(null);
+  const servicios = perfil.servicios.filter((s) => s.activo);
+  const [servicioId, setServicioId] = React.useState(servicios[0]?.id ?? "");
+  const [inicio, setInicio] = React.useState<string | null>(null);
 
-  const selectedDay = days[dayIndex]!;
-  const fechaISO = selectedDay.toISOString().slice(0, 10);
-  const busy = [
-    ...(busyBlocks[dentist.id] ?? []),
-    ...appointments
-      .filter((a) => a.dentistId === dentist.id && a.date === fechaISO)
-      .map((a) => a.time),
-  ];
-  const fechaLarga = `${diaCorto[selectedDay.getDay()]} ${selectedDay.getDate()} ${
-    mesCorto[selectedDay.getMonth()]
-  }`;
+  const servicio = servicios.find((s) => s.id === servicioId);
+  const precioDesde = servicios.length
+    ? Math.min(...servicios.map((s) => Number(s.precio_total)))
+    : 0;
+  const calificacion = Number(perfil.calificacion ?? 0);
 
   return (
     <AppShell>
@@ -80,15 +70,23 @@ function PerfilDentista() {
         transition={{ type: "spring", stiffness: 240, damping: 26 }}
       >
         <Card className="mt-4 overflow-hidden rounded-3xl border-emerald-100 shadow-sm transition-all hover:shadow-md">
-          <div className={cn("flex h-36 items-center justify-center bg-gradient-to-br", dentist.tint)}>
-            <span className="flex size-20 items-center justify-center rounded-full bg-white/80 font-display text-3xl font-semibold text-foreground/80 shadow-sm">
-              {dentist.initials}
-            </span>
+          <div className="flex h-36 items-center justify-center bg-gradient-to-br from-primary/25 to-accent/40">
+            {perfil.foto_url ? (
+              <img
+                src={perfil.foto_url}
+                alt={`Foto de ${perfil.nombre}`}
+                className="size-24 rounded-full border-4 border-white/80 object-cover shadow-sm"
+              />
+            ) : (
+              <span className="flex size-20 items-center justify-center rounded-full bg-white/80 font-display text-3xl font-semibold text-foreground/80 shadow-sm">
+                {iniciales(perfil.nombre)}
+              </span>
+            )}
           </div>
           <CardContent className="space-y-3 p-6">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="font-display text-2xl font-semibold">{dentist.name}</h1>
-              {dentist.verified ? (
+              <h1 className="font-display text-2xl font-semibold">{perfil.nombre}</h1>
+              {perfil.colegiatura_verificada ? (
                 <span className="flex items-center gap-1 rounded-full bg-primary/12 px-2.5 py-1 text-xs font-semibold text-primary">
                   <BadgeCheck className="size-3.5" /> COP Verificado ✓
                 </span>
@@ -99,23 +97,44 @@ function PerfilDentista() {
               )}
             </div>
             <p className="text-sm text-muted-foreground">
-              {dentist.specialty} · Colegiatura {dentist.cop}
+              {perfil.especialidades.map((e) => e.nombre).join(" · ") || "Odontología general"}
+              {perfil.numero_colegiatura ? ` · Colegiatura ${perfil.numero_colegiatura}` : ""}
             </p>
             <p className="flex flex-wrap items-center gap-4 text-sm">
               <span className="flex items-center gap-1 font-semibold">
-                <Star className="size-4 fill-warning text-warning" /> {dentist.rating.toFixed(1)}
+                <Star className="size-4 fill-warning text-warning" />
+                {calificacion > 0 ? calificacion.toFixed(1) : "Nuevo"}
                 <span className="font-normal text-muted-foreground">
-                  ({dentist.reviews} reseñas)
+                  ({perfil.total_resenas ?? 0} reseñas)
                 </span>
               </span>
               <span className="flex items-center gap-1 text-muted-foreground">
-                <MapPin className="size-4" /> {dentist.district}
+                <MapPin className="size-4" /> {perfil.distrito ?? "Ica"}
               </span>
-              <span className="flex items-center gap-1 font-semibold text-primary">
-                desde {soles(dentist.price)}
-              </span>
+              {precioDesde > 0 && (
+                <span className="flex items-center gap-1 font-semibold text-primary">
+                  desde {soles(precioDesde)}
+                </span>
+              )}
             </p>
-            <p className="text-sm leading-relaxed text-muted-foreground">{dentist.bio}</p>
+            {(perfil.consultorio || perfil.direccion) && (
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {[perfil.consultorio, perfil.direccion].filter(Boolean).join(" · ")}
+              </p>
+            )}
+            {perfil.fotos.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto pt-2">
+                {perfil.fotos.map((f) => (
+                  <img
+                    key={f.id}
+                    src={f.url}
+                    alt={f.descripcion ?? "Foto del consultorio"}
+                    loading="lazy"
+                    className="h-24 w-36 shrink-0 rounded-xl object-cover"
+                  />
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>
@@ -130,115 +149,92 @@ function PerfilDentista() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-2 overflow-x-auto pb-2">
-                {days.map((d, i) => (
-                  <button
-                    key={i}
-                    onClick={() => {
-                      setDayIndex(i);
-                      setHora(null);
-                    }}
-                    className={cn(
-                      "flex w-16 shrink-0 flex-col items-center rounded-2xl border py-2.5 text-sm transition-colors",
-                      i === dayIndex
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border hover:border-primary/50",
-                    )}
-                  >
-                    <span className="text-[11px] uppercase">{diaCorto[d.getDay()]}</span>
-                    <span className="font-display text-lg font-semibold">{d.getDate()}</span>
-                    <span className="text-[11px]">{mesCorto[d.getMonth()]}</span>
-                  </button>
-                ))}
-              </div>
-
-              <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-5">
-                {timeBlocks.map((t, i) => {
-                  const disabled = busy.includes(t);
-                  return (
-                    <motion.button
-                      key={t}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.02 * i }}
-                      whileTap={{ scale: disabled ? 1 : 0.94 }}
-                      disabled={disabled}
-                      onClick={() => setHora(t)}
-                      className={cn(
-                        "rounded-xl border py-2.5 text-sm font-medium transition-colors",
-                        disabled
-                          ? "cursor-not-allowed border-dashed border-border bg-muted/60 text-muted-foreground/60 line-through"
-                          : t === hora
-                            ? "border-primary bg-primary text-primary-foreground"
-                            : "border-border hover:border-primary/60",
-                      )}
-                    >
-                      {t}
-                    </motion.button>
-                  );
-                })}
-              </div>
-
-              {isBanned ? (
-                <div className="mt-6 space-y-2 rounded-2xl border border-destructive/40 bg-destructive/10 p-4">
-                  <Button disabled className="w-full rounded-full">
-                    <Lock className="size-4" /> Reservar cita y pagar
-                  </Button>
-                  <p className="text-center text-xs font-semibold text-destructive">
-                    Cuenta suspendida temporalmente por inasistencias
-                  </p>
-                </div>
+              {servicios.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Este odontólogo todavía no publicó servicios.
+                </p>
               ) : (
-                <Button
-                  asChild={!!hora}
-                  disabled={!hora}
-                  className="mt-6 w-full rounded-full"
-                  size="lg"
-                >
-                  {hora ? (
-                    <Link
-                      to="/paciente/agendar/$id"
-                      params={{ id: dentist.id }}
-                      search={{ fecha: fechaISO, hora }}
-                    >
-                      Reservar cita y pagar · {fechaLarga} {hora}
-                    </Link>
+                <>
+                  <SelectorTurnos
+                    odontologoId={perfil.id}
+                    servicios={servicios}
+                    servicioId={servicioId}
+                    onServicio={setServicioId}
+                    inicio={inicio}
+                    onInicio={setInicio}
+                  />
+
+                  {isBanned ? (
+                    <div className="mt-6 space-y-2 rounded-2xl border border-destructive/40 bg-destructive/10 p-4">
+                      <Button disabled className="w-full rounded-full">
+                        <Lock className="size-4" /> Reservar cita y pagar
+                      </Button>
+                      <p className="text-center text-xs font-semibold text-destructive">
+                        Cuenta suspendida temporalmente por inasistencias
+                      </p>
+                    </div>
                   ) : (
-                    <span>Selecciona un horario para reservar</span>
+                    <Button
+                      asChild={!!inicio}
+                      disabled={!inicio}
+                      className="mt-6 w-full rounded-full"
+                      size="lg"
+                    >
+                      {inicio ? (
+                        <Link
+                          to="/paciente/agendar/$id"
+                          params={{ id: perfil.id }}
+                          search={{ servicio: servicioId, inicio }}
+                        >
+                          Reservar {servicio?.titulo ?? "cita"} · {partesDia(fechaDe(inicio)).dia}{" "}
+                          {partesDia(fechaDe(inicio)).numero} {horaDe(inicio)}
+                        </Link>
+                      ) : (
+                        <span>Selecciona un horario para reservar</span>
+                      )}
+                    </Button>
                   )}
-                </Button>
+                  <p className="mt-3 text-center text-xs text-muted-foreground">
+                    Al reservar, el turno queda apartado 15 minutos mientras pagas el depósito.
+                  </p>
+                </>
               )}
-              <p className="mt-3 text-center text-xs text-muted-foreground">
-                El cupo se aparta 10 minutos mientras completas el pago de garantía.
-              </p>
             </CardContent>
           </Card>
 
-          {/* Reseñas */}
+          {/* Reseñas reales */}
           <Card className="rounded-3xl border-emerald-100 shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="font-display text-lg">Reseñas verificadas</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {reseñas.map((r, i) => (
-                <motion.div
-                  key={r.autor}
-                  initial={{ opacity: 0, x: -12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.1 + i * 0.08 }}
-                  className="rounded-2xl border border-border bg-background p-4"
-                >
-                  <p className="flex items-center gap-2 text-sm font-semibold">
-                    {r.autor}
-                    <span className="flex">
-                      {Array.from({ length: r.puntaje }, (_, k) => (
-                        <Star key={k} className="size-3.5 fill-warning text-warning" />
-                      ))}
-                    </span>
-                  </p>
-                  <p className="mt-1 text-sm text-muted-foreground">{r.texto}</p>
-                </motion.div>
-              ))}
+              {!resenas || resenas.resenas.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Aún no tiene reseñas. Solo pueden calificar los pacientes que ya fueron atendidos.
+                </p>
+              ) : (
+                resenas.resenas.map((r, i) => (
+                  <motion.div
+                    key={r.id}
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 + i * 0.08 }}
+                    className="rounded-2xl border border-border bg-background p-4"
+                  >
+                    <p className="flex items-center gap-2 text-sm font-semibold">
+                      {r.paciente}
+                      <span className="flex">
+                        {Array.from({ length: r.calificacion }, (_, k) => (
+                          <Star key={k} className="size-3.5 fill-warning text-warning" />
+                        ))}
+                      </span>
+                    </p>
+                    {r.comentario && (
+                      <p className="mt-1 text-sm text-muted-foreground">{r.comentario}</p>
+                    )}
+                  </motion.div>
+                ))
+              )}
             </CardContent>
           </Card>
         </div>
@@ -251,19 +247,25 @@ function PerfilDentista() {
             </CardHeader>
             <CardContent>
               <ul className="space-y-2">
-                {dentist.services.map((s) => (
-                  <li
-                    key={s.name}
-                    className="flex items-center justify-between rounded-xl bg-muted/60 px-3 py-2.5 text-sm"
-                  >
-                    <span>{s.name}</span>
-                    <span className="font-semibold text-primary">{soles(s.price)}</span>
+                {servicios.map((s) => (
+                  <li key={s.id} className="rounded-xl bg-muted/60 px-3 py-2.5 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <span>{s.titulo}</span>
+                      <span className="font-semibold text-primary">
+                        {soles(Number(s.precio_total))}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {s.duracion_minutos} min · depósito {soles(Number(s.monto_deposito))}
+                    </p>
                   </li>
                 ))}
               </ul>
               <p className="mt-4 rounded-xl bg-primary/8 p-3 text-xs text-muted-foreground">
-                La reserva requiere un pago de garantía del 20% (mínimo {soles(20)}), descontable
-                de tu tratamiento.
+                Para reservar pagas un depósito que se descuenta del total en tu consulta.
+                {perfil.requiere_confirmacion_manual
+                  ? " Este odontólogo confirma cada cita después del pago."
+                  : " La cita se confirma apenas se verifica el pago."}
               </p>
             </CardContent>
           </Card>

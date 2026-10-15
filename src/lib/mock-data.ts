@@ -16,6 +16,8 @@ export type Dentist = {
   bio: string;
   /** Posición relativa (0-100) dentro del mapa estilizado de Ica */
   pin: { x: number; y: number };
+  /** Foto de perfil real (Cloudinary); si no hay, se muestran las iniciales. */
+  fotoUrl?: string | null;
 };
 
 export const especialidades = [

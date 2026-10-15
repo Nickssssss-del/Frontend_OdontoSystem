@@ -2,11 +2,22 @@ import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "motion/react";
-import { AlertTriangle, Info, Search, SlidersHorizontal, LayoutGrid, List, X } from "lucide-react";
+import {
+  AlertTriangle,
+  Info,
+  Loader2,
+  Search,
+  SlidersHorizontal,
+  LayoutGrid,
+  List,
+  X,
+} from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { DentistCard } from "@/components/DentistCard";
 import { DentistMap } from "@/components/DentistMap";
-import { dentists, especialidades } from "@/lib/mock-data";
+import type { Dentist } from "@/lib/mock-data";
+import { odontologosApi, ApiError } from "@/lib/api";
+import { sinTildes, tarjetaADentist } from "@/lib/odontologos";
 import { useAppState } from "@/lib/app-state";
 import {
   Select,
@@ -41,7 +52,6 @@ export const Route = createFileRoute("/paciente/catalogo")({
   component: Catalogo,
 });
 
-const distritos = ["Todos", "Ica", "La Tinguiña", "Parcona", "Subtanjalla"] as const;
 const ordenes = [
   { id: "rating", label: "Mejor calificados" },
   { id: "precio", label: "Menor precio" },
@@ -54,22 +64,70 @@ function Catalogo() {
   const [chips, setChips] = React.useState<string[]>([]);
   const [distrito, setDistrito] = React.useState<string>("Todos");
   const [especialidad, setEspecialidad] = React.useState<string>("Todas");
-  const [maxPrecio, setMaxPrecio] = React.useState([100]);
+  const [maxPrecio, setMaxPrecio] = React.useState([1000]);
   const [orden, setOrden] = React.useState<(typeof ordenes)[number]["id"]>("rating");
   const [viewMode, setViewMode] = React.useState<"grid" | "list">("grid");
   const [filtersOpen, setFiltersOpen] = React.useState(true);
+
+  // Odontólogos reales del backend (GET /api/odontologos: solo verificados y con servicios activos)
+  const [dentists, setDentists] = React.useState<Dentist[]>([]);
+  const [cargando, setCargando] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [intento, setIntento] = React.useState(0);
+
+  React.useEffect(() => {
+    let vigente = true;
+    setCargando(true);
+    setError(null);
+    odontologosApi
+      .buscar({ tamano: 50 })
+      .then((pagina) => {
+        if (!vigente) return;
+        const lista = pagina.contenido.map(tarjetaADentist);
+        setDentists(lista);
+        setMaxPrecio([precioTope(lista)]);
+      })
+      .catch((e: unknown) => {
+        if (vigente) setError(e instanceof ApiError ? e.message : "No se pudo cargar el catálogo.");
+      })
+      .finally(() => {
+        if (vigente) setCargando(false);
+      });
+    return () => {
+      vigente = false;
+    };
+  }, [intento]);
+
+  // Filtros armados con lo que realmente hay en el catálogo
+  const especialidades = React.useMemo(
+    () =>
+      [...new Set(dentists.flatMap((d) => d.specialties))].sort((a, b) => a.localeCompare(b, "es")),
+    [dentists],
+  );
+  const distritos = React.useMemo(
+    () => [
+      "Todos",
+      ...[...new Set(dentists.map((d) => d.district))].sort((a, b) => a.localeCompare(b, "es")),
+    ],
+    [dentists],
+  );
+  const tope = React.useMemo(() => precioTope(dentists), [dentists]);
+  const filtroPrecioActivo = (maxPrecio[0] ?? tope) < tope;
 
   const toggleChip = (c: string) =>
     setChips((prev) => (prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]));
 
   const results = React.useMemo(() => {
+    const texto = sinTildes(query);
     const list = dentists
       .filter((d) => d.verified)
-      .filter((d) => d.name.toLowerCase().includes(query.toLowerCase()))
+      .filter(
+        (d) => !texto || sinTildes(`${d.name} ${d.bio} ${d.specialties.join(" ")}`).includes(texto),
+      )
       .filter((d) => (chips.length ? chips.some((c) => d.specialties.includes(c)) : true))
       .filter((d) => (especialidad === "Todas" ? true : d.specialties.includes(especialidad)))
       .filter((d) => (distrito === "Todos" ? true : d.district === distrito))
-      .filter((d) => d.price <= (maxPrecio[0] ?? 100));
+      .filter((d) => d.price <= (maxPrecio[0] ?? tope));
     return [...list].sort((a, b) =>
       orden === "precio"
         ? a.price - b.price
@@ -77,7 +135,7 @@ function Catalogo() {
           ? a.distanceKm - b.distanceKm
           : b.rating - a.rating,
     );
-  }, [query, chips, distrito, especialidad, maxPrecio, orden]);
+  }, [dentists, query, chips, distrito, especialidad, maxPrecio, orden, tope]);
 
   if (isBanned) {
     return (
@@ -121,7 +179,7 @@ function Catalogo() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
               <Input
                 id="search"
-                placeholder="Ej: Claudia, Manrique..."
+                placeholder="Nombre, consultorio o especialidad"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 className="pl-10"
@@ -136,7 +194,9 @@ function Catalogo() {
                 onClick={() => setViewMode("grid")}
                 className={cn(
                   "p-2 transition-colors",
-                  viewMode === "grid" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                  viewMode === "grid"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground",
                 )}
               >
                 <LayoutGrid className="size-4" />
@@ -145,7 +205,9 @@ function Catalogo() {
                 onClick={() => setViewMode("list")}
                 className={cn(
                   "p-2 transition-colors border-l border-border",
-                  viewMode === "list" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                  viewMode === "list"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground",
                 )}
               >
                 <List className="size-4" />
@@ -200,11 +262,11 @@ function Catalogo() {
                       value={maxPrecio}
                       onValueChange={setMaxPrecio}
                       min={0}
-                      max={300}
+                      max={tope}
                       step={10}
                       className="mb-2"
                     />
-                    <p className="text-xs text-muted-foreground">Hasta S/ {(maxPrecio[0] ?? 100)}</p>
+                    <p className="text-xs text-muted-foreground">Hasta S/ {maxPrecio[0] ?? tope}</p>
                   </div>
 
                   {/* Distrito */}
@@ -274,7 +336,11 @@ function Catalogo() {
           {/* Resultados */}
           <div>
             {/* Chips de filtros activos */}
-            {(query || chips.length > 0 || distrito !== "Todos" || especialidad !== "Todas" || (maxPrecio[0] ?? 100) < 100) && (
+            {(query ||
+              chips.length > 0 ||
+              distrito !== "Todos" ||
+              especialidad !== "Todas" ||
+              filtroPrecioActivo) && (
               <div className="mb-6 flex flex-wrap gap-2">
                 {query && (
                   <Badge variant="secondary" className="gap-1">
@@ -308,10 +374,10 @@ function Catalogo() {
                     </button>
                   </Badge>
                 )}
-                {(maxPrecio[0] ?? 100) < 100 && (
+                {filtroPrecioActivo && (
                   <Badge variant="secondary" className="gap-1">
-                    Máx S/ {(maxPrecio[0] ?? 100)}
-                    <button onClick={() => setMaxPrecio([100])} className="hover:opacity-75">
+                    Máx S/ {maxPrecio[0] ?? tope}
+                    <button onClick={() => setMaxPrecio([tope])} className="hover:opacity-75">
                       <X className="size-3" />
                     </button>
                   </Badge>
@@ -319,8 +385,27 @@ function Catalogo() {
               </div>
             )}
 
+            {cargando && (
+              <div className="flex items-center justify-center gap-2 py-16 text-muted-foreground">
+                <Loader2 className="size-5 animate-spin" /> Cargando odontólogos…
+              </div>
+            )}
+            {!cargando && error && (
+              <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-6 text-center">
+                <p className="font-semibold text-destructive">{error}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => setIntento((n) => n + 1)}
+                >
+                  Reintentar
+                </Button>
+              </div>
+            )}
+
             {/* View Mode: Grid */}
-            {viewMode === "grid" && (
+            {!cargando && !error && viewMode === "grid" && (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <AnimatePresence>
                   {results.length > 0 ? (
@@ -337,7 +422,9 @@ function Catalogo() {
                   ) : (
                     <div className="col-span-full py-12 text-center">
                       <Info className="size-8 mx-auto mb-3 text-muted-foreground" />
-                      <p className="text-muted-foreground">No hay odontólogos que coincidan con tus filtros.</p>
+                      <p className="text-muted-foreground">
+                        No hay odontólogos que coincidan con tus filtros.
+                      </p>
                     </div>
                   )}
                 </AnimatePresence>
@@ -345,7 +432,7 @@ function Catalogo() {
             )}
 
             {/* View Mode: List */}
-            {viewMode === "list" && (
+            {!cargando && !error && viewMode === "list" && (
               <div className="space-y-3">
                 <AnimatePresence>
                   {results.length > 0 ? (
@@ -357,12 +444,28 @@ function Catalogo() {
                         exit={{ opacity: 0, x: -10 }}
                         className="flex items-start gap-4 rounded-lg border border-border/70 bg-card p-4 hover:shadow-md transition-shadow"
                       >
-                        <div className={cn("size-16 rounded-lg bg-gradient-to-br flex items-center justify-center text-lg font-semibold text-white", d.tint)}>
-                          {d.initials}
-                        </div>
+                        {d.fotoUrl ? (
+                          <img
+                            src={d.fotoUrl}
+                            alt={`Foto de ${d.name}`}
+                            loading="lazy"
+                            className="size-16 rounded-lg object-cover"
+                          />
+                        ) : (
+                          <div
+                            className={cn(
+                              "size-16 rounded-lg bg-gradient-to-br flex items-center justify-center text-lg font-semibold text-white",
+                              d.tint,
+                            )}
+                          >
+                            {d.initials}
+                          </div>
+                        )}
                         <div className="flex-1 min-w-0">
                           <h3 className="font-semibold">{d.name}</h3>
-                          <p className="text-xs text-muted-foreground mb-2">{d.specialty} • {d.district}</p>
+                          <p className="text-xs text-muted-foreground mb-2">
+                            {d.specialty} • {d.district}
+                          </p>
                           <div className="flex flex-wrap gap-1 mb-2">
                             {d.specialties.map((s) => (
                               <Badge key={s} variant="outline" className="text-xs">
@@ -370,18 +473,28 @@ function Catalogo() {
                               </Badge>
                             ))}
                           </div>
-                          <p className="text-sm text-muted-foreground">{d.reviews} opiniones • Desde S/ {d.price}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {d.reviews} opiniones • Desde S/ {d.price.toFixed(2)}
+                          </p>
                         </div>
                         <div className="text-right">
-                          <div className="text-2xl font-bold text-primary">{d.rating.toFixed(1)}</div>
-                          <p className="text-xs text-muted-foreground">{d.distanceKm} km</p>
+                          <div className="text-2xl font-bold text-primary">
+                            {d.rating > 0 ? d.rating.toFixed(1) : "—"}
+                          </div>
+                          {d.distanceKm > 0 && (
+                            <p className="text-xs text-muted-foreground">
+                              {d.distanceKm.toFixed(1)} km
+                            </p>
+                          )}
                         </div>
                       </motion.div>
                     ))
                   ) : (
                     <div className="py-12 text-center">
                       <Info className="size-8 mx-auto mb-3 text-muted-foreground" />
-                      <p className="text-muted-foreground">No hay odontólogos que coincidan con tus filtros.</p>
+                      <p className="text-muted-foreground">
+                        No hay odontólogos que coincidan con tus filtros.
+                      </p>
                     </div>
                   )}
                 </AnimatePresence>
@@ -389,7 +502,7 @@ function Catalogo() {
             )}
 
             {/* Resultados Info */}
-            {results.length > 0 && (
+            {!cargando && !error && results.length > 0 && (
               <div className="mt-6 text-xs text-muted-foreground border-t border-border/70 pt-4">
                 Mostrando {results.length} de {dentists.length} odontólogos verificados en Ica
               </div>
@@ -399,4 +512,10 @@ function Catalogo() {
       </motion.div>
     </AppShell>
   );
+}
+
+/** Precio máximo del filtro: el mayor "desde" redondeado a la decena (mínimo S/ 100). */
+function precioTope(lista: Dentist[]): number {
+  const mayor = Math.max(100, ...lista.map((d) => d.price));
+  return Math.ceil(mayor / 10) * 10;
 }

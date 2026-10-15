@@ -7,51 +7,56 @@ import {
   Clock,
   CreditCard,
   FlaskConical,
-  ImagePlus,
   Loader2,
+  LogIn,
   ShieldCheck,
   Smartphone,
   TimerOff,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { QrArt } from "@/components/ChatbotWidget";
+import { SelectorTurnos } from "@/components/SelectorTurnos";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { soles } from "@/lib/mock-data";
 import {
-  busyBlocks,
-  diaCorto,
-  getDentist,
-  mesCorto,
-  nextDays,
-  soles,
-  timeBlocks,
-} from "@/lib/mock-data";
+  ApiError,
+  citasApi,
+  odontologosApi,
+  type Cita,
+  type MetodoPago,
+  type Pago,
+} from "@/lib/api";
+import { fechaDe, fechaLarga, horaDe } from "@/lib/odontologos";
 import { useAppState } from "@/lib/app-state";
 import { cn } from "@/lib/utils";
 
-type AgendarSearch = { fecha?: string | undefined; hora?: string | undefined };
+type AgendarSearch = { servicio?: string | undefined; inicio?: string | undefined };
 
 export const Route = createFileRoute("/paciente/agendar/$id")({
   validateSearch: (search: Record<string, unknown>): AgendarSearch => ({
-    fecha: typeof search["fecha"] === "string" ? search["fecha"] : undefined,
-    hora: typeof search["hora"] === "string" ? search["hora"] : undefined,
+    servicio: typeof search["servicio"] === "string" ? search["servicio"] : undefined,
+    inicio: typeof search["inicio"] === "string" ? search["inicio"] : undefined,
   }),
-  loader: ({ params }) => {
-    const dentist = getDentist(params.id);
-    if (!dentist) throw notFound();
-    return { dentist };
+  loader: async ({ params }) => {
+    try {
+      return { perfil: await odontologosApi.perfil(params.id) };
+    } catch (e) {
+      if (e instanceof ApiError && (e.status === 404 || e.status === 400)) throw notFound();
+      throw e;
+    }
   },
   head: ({ loaderData }) => {
-    const name = loaderData?.dentist.name ?? "tu odontólogo";
-    const desc = `Checkout sandbox con ${name}: pago de garantía del 20% con tarjeta (Culqi/Niubiz) o billetera digital (Yape/Plin). La agenda se bloquea automáticamente.`;
+    const name = loaderData?.perfil.nombre ?? "tu odontólogo";
+    const desc = `Reserva con ${name}: aparta el turno y paga el depósito con tarjeta, Yape o Plin (sandbox).`;
     return {
       meta: [
-        { title: `Checkout — cita con ${name} | OdontoSystem` },
+        { title: `Reservar cita con ${name} | OdontoSystem` },
         { name: "description", content: desc },
-        { property: "og:title", content: `Checkout — cita con ${name} | OdontoSystem` },
+        { property: "og:title", content: `Reservar cita con ${name} | OdontoSystem` },
         { property: "og:description", content: desc },
       ],
     };
@@ -59,135 +64,107 @@ export const Route = createFileRoute("/paciente/agendar/$id")({
   component: Agendar,
 });
 
-const HOLD_SECONDS = 600;
-const pasos = ["Horario", "Pago de garantía", "Comprobante"];
+const pasos = ["Horario", "Pago del depósito", "Confirmación"];
 
 function Agendar() {
-  const { dentist } = Route.useLoaderData();
+  const { perfil } = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = useNavigate();
-  const { addAppointment, appointments } = useAppState();
+  const { usuario } = useAppState();
 
-  const days = React.useMemo(() => nextDays(7), []);
-  const initialDay = React.useMemo(() => {
-    const idx = days.findIndex((d) => d.toISOString().slice(0, 10) === search.fecha);
-    return idx >= 0 ? idx : 0;
-  }, [days, search.fecha]);
+  const servicios = perfil.servicios.filter((s) => s.activo);
+  const [servicioId, setServicioId] = React.useState(
+    servicios.some((s) => s.id === search.servicio) ? search.servicio! : (servicios[0]?.id ?? ""),
+  );
+  const [inicio, setInicio] = React.useState<string | null>(search.inicio ?? null);
+  const [recargar, setRecargar] = React.useState(0);
 
-  const [dayIndex, setDayIndex] = React.useState(initialDay);
-  const [time, setTime] = React.useState<string | null>(search.hora ?? null);
-  const [service, setService] = React.useState(dentist.services[0]?.name ?? "Evaluación");
-  const preseleccionado = Boolean(search.fecha && search.hora);
-  const [step, setStep] = React.useState(preseleccionado ? 2 : 1);
-  const [secondsLeft, setSecondsLeft] = React.useState(HOLD_SECONDS);
+  const [cita, setCita] = React.useState<Cita | null>(null);
+  const [pago, setPago] = React.useState<Pago | null>(null);
+  const [enviando, setEnviando] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
   const [expired, setExpired] = React.useState(false);
+  const [segundos, setSegundos] = React.useState(0);
   const [metodoPago, setMetodoPago] = React.useState<"billetera" | "tarjeta">("billetera");
   const [billetera, setBilletera] = React.useState<"yape" | "plin">("yape");
-  const [preview, setPreview] = React.useState<string | null>(null);
-  const [enviando, setEnviando] = React.useState(false);
-  const [done, setDone] = React.useState(false);
 
-  const holdActive = step >= 2 && !done && !expired;
+  const servicio = servicios.find((s) => s.id === servicioId);
+  const step = pago ? 3 : cita ? 2 : 1;
+  const esPaciente = usuario?.rol === "PACIENTE";
+  const deposito = Number(cita?.deposito_requerido ?? servicio?.monto_deposito ?? 0);
+  const precio = Number(cita?.precio ?? servicio?.precio_total ?? 0);
+  const inicioCita = cita?.inicio ?? inicio;
 
+  // Cuenta regresiva hasta "pagar_antes_de": después el backend libera el turno solo
   React.useEffect(() => {
-    if (!holdActive) return;
-    const t = window.setInterval(() => {
-      setSecondsLeft((s) => {
-        if (s <= 1) {
-          setExpired(true);
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
+    if (!cita?.pagar_antes_de || pago) return;
+    const limite = new Date(cita.pagar_antes_de).getTime();
+    const tic = () => {
+      const quedan = Math.max(0, Math.round((limite - Date.now()) / 1000));
+      setSegundos(quedan);
+      if (quedan === 0) setExpired(true);
+    };
+    tic();
+    const t = window.setInterval(tic, 1000);
     return () => window.clearInterval(t);
-  }, [holdActive]);
+  }, [cita, pago]);
 
-  const mmss = `${String(Math.floor(secondsLeft / 60)).padStart(2, "0")}:${String(
-    secondsLeft % 60,
-  ).padStart(2, "0")}`;
-  const pct = (secondsLeft / HOLD_SECONDS) * 100;
-  const selectedDay = days[dayIndex]!;
-  const fechaISO = selectedDay.toISOString().slice(0, 10);
-  const busy = [
-    ...(busyBlocks[dentist.id] ?? []),
-    ...appointments
-      .filter((a) => a.dentistId === dentist.id && a.date === fechaISO)
-      .map((a) => a.time),
-  ];
-  const fechaLarga = `${diaCorto[selectedDay.getDay()]} ${selectedDay.getDate()} ${
-    mesCorto[selectedDay.getMonth()]
-  }`;
-  const precioServicio =
-    dentist.services.find((s) => s.name === service)?.price ?? dentist.price;
-  const garantia = Math.max(20, Math.round(precioServicio * 0.2));
+  const holdActive = step === 2 && !expired;
+  const total = 15 * 60;
+  const mmss = `${String(Math.floor(segundos / 60)).padStart(2, "0")}:${String(segundos % 60).padStart(2, "0")}`;
+  const pct = Math.min(100, (segundos / total) * 100);
 
-  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) setPreview(URL.createObjectURL(file));
+  const mensajeError = (e: unknown, porDefecto: string) => {
+    if (e instanceof ApiError && (e.status === 401 || e.status === 403))
+      return "Tu sesión expiró o no es de paciente. Vuelve a iniciar sesión.";
+    return e instanceof ApiError ? e.message : porDefecto;
   };
 
-  const confirmarBilletera = () => {
+  const bloquearCupo = async () => {
+    if (!inicio || !servicioId) return;
     setEnviando(true);
-    window.setTimeout(() => {
-      addAppointment({
-        id: `n${Date.now()}`,
-        dentistId: dentist.id,
-        patient: "Nicole Ramírez",
-        date: fechaISO,
-        time: time ?? "09:00",
-        service,
-        amount: precioServicio,
-        status: "VERIFYING",
-        voucher: {
-          method: billetera,
-          reference: `OP ${Math.floor(1000000 + Math.random() * 8999999)}`,
-          amount: garantia,
-          uploadedAt: new Date().toLocaleString("es-PE", {
-            day: "2-digit",
-            month: "short",
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          ...(preview ? { imageUrl: preview } : {}),
-          status: "EN_REVISION",
-          attempt: 1,
-        },
-      });
+    setError(null);
+    try {
+      setCita(await citasApi.reservar(perfil.id, servicioId, inicio));
+    } catch (e) {
+      setError(mensajeError(e, "No se pudo reservar el turno."));
+      if (e instanceof ApiError && e.status === 409) {
+        // Otro paciente lo tomó: se vuelve a pedir la lista de turnos
+        setInicio(null);
+        setRecargar((n) => n + 1);
+      }
+    } finally {
       setEnviando(false);
-      setDone(true);
-    }, 1400);
+    }
   };
 
-  const confirmarTarjeta = () => {
+  const pagar = async (metodo: MetodoPago) => {
+    if (!cita) return;
     setEnviando(true);
-    window.setTimeout(() => {
-      addAppointment({
-        id: `n${Date.now()}`,
-        dentistId: dentist.id,
-        patient: "Nicole Ramírez",
-        date: fechaISO,
-        time: time ?? "09:00",
-        service,
-        amount: precioServicio,
-        status: "CONFIRMED",
-      });
+    setError(null);
+    try {
+      setPago(await citasApi.pagar(cita.id, metodo));
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 409) setExpired(true);
+      setError(mensajeError(e, "No se pudo procesar el pago."));
+    } finally {
       setEnviando(false);
-      setDone(true);
-    }, 1600);
+    }
   };
+
+  const confirmada = pago?.cita.estado === "CONFIRMADA";
 
   return (
     <AppShell>
       <Link
         to="/paciente/dentista/$id"
-        params={{ id: dentist.id }}
+        params={{ id: perfil.id }}
         className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="size-4" /> Volver al perfil
       </Link>
 
-      <h1 className="mt-4 font-display text-3xl font-semibold">Checkout — {dentist.name}</h1>
+      <h1 className="mt-4 font-display text-3xl font-semibold">Reservar con {perfil.nombre}</h1>
 
       {/* Alerta Sandbox */}
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
@@ -195,9 +172,9 @@ function Agendar() {
           <FlaskConical className="size-4" />
           <AlertTitle className="font-semibold">Entorno Sandbox</AlertTitle>
           <AlertDescription>
-            No se realizarán cargos reales. Al confirmar el pago de garantía, la agenda del
-            especialista se bloqueará de forma automática (modelo Admin-less, sin intervención
-            de un administrador).
+            No se realizarán cargos reales: el pago lo aprueba una pasarela simulada. Al pagar el
+            depósito, el turno queda bloqueado en la agenda del especialista sin intervención de un
+            administrador.
           </AlertDescription>
         </Alert>
       </motion.div>
@@ -264,9 +241,9 @@ function Agendar() {
                   <Clock className="size-5" />
                 </motion.span>
                 <p className="flex-1 text-sm font-medium text-warning-foreground">
-                  Tu cupo está bloqueado por{" "}
+                  Tu turno está apartado por{" "}
                   <span className="font-display text-lg font-bold tabular-nums">{mmss}</span>{" "}
-                  mientras completas el pago.
+                  mientras pagas el depósito.
                 </p>
               </div>
               <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-warning/20">
@@ -283,8 +260,35 @@ function Agendar() {
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.5fr_1fr]">
         <div className="rounded-3xl border border-emerald-100 bg-card p-6 shadow-sm">
+          {error && !expired && (
+            <p className="mb-4 rounded-xl border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+              {error}
+            </p>
+          )}
           <AnimatePresence mode="wait">
-            {expired ? (
+            {!esPaciente ? (
+              <motion.div
+                key="login"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="py-8 text-center"
+              >
+                <span className="mx-auto flex size-16 items-center justify-center rounded-full bg-primary/15 text-primary">
+                  <LogIn className="size-8" />
+                </span>
+                <h2 className="mt-4 font-display text-xl font-semibold">
+                  Inicia sesión como paciente para reservar
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {usuario
+                    ? "Tu cuenta es de odontólogo: las reservas se hacen con una cuenta de paciente."
+                    : "Necesitamos saber quién reserva para enviarte la confirmación y los recordatorios."}
+                </p>
+                <Button asChild className="mt-6 rounded-full">
+                  <Link to="/">Ir a iniciar sesión</Link>
+                </Button>
+              </motion.div>
+            ) : expired ? (
               <motion.div
                 key="expired"
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -298,16 +302,18 @@ function Agendar() {
                   Tu tiempo de reserva venció
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  El cupo se liberó automáticamente. Selecciona nuevamente tu horario.
+                  El turno se liberó automáticamente. Elige nuevamente tu horario.
                 </p>
                 <Button
-                  onClick={() => navigate({ to: "/paciente/catalogo" })}
+                  onClick={() =>
+                    navigate({ to: "/paciente/dentista/$id", params: { id: perfil.id } })
+                  }
                   className="mt-6 rounded-full"
                 >
-                  Volver al catálogo
+                  Elegir otro horario
                 </Button>
               </motion.div>
-            ) : done ? (
+            ) : pago ? (
               <motion.div
                 key="done"
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -323,104 +329,71 @@ function Agendar() {
                   <CheckCircle2 className="size-9" />
                 </motion.span>
                 <h2 className="mt-4 font-display text-xl font-semibold">
-                  {metodoPago === "tarjeta" ? "Pago aprobado (Sandbox)" : "Comprobante recibido"}
+                  {confirmada ? "¡Cita confirmada!" : "Pago recibido"}
                 </h2>
                 <span
                   className={cn(
                     "mt-3 inline-block rounded-full border px-3 py-1 text-xs font-semibold",
-                    metodoPago === "tarjeta"
+                    confirmada
                       ? "border-primary/40 bg-primary/15 text-primary"
                       : "border-warning/40 bg-warning/15 text-warning-foreground",
                   )}
                 >
-                  {metodoPago === "tarjeta" ? "CONFIRMED · Agenda bloqueada" : "Verificando pago"}
+                  {confirmada
+                    ? "CONFIRMADA · Agenda bloqueada"
+                    : "Esperando confirmación del odontólogo"}
                 </span>
                 <p className="mt-3 text-sm text-muted-foreground">
-                  {fechaLarga} · {time} con {dentist.name}.
-                  {metodoPago === "tarjeta"
-                    ? " El bloque horario quedó reservado automáticamente."
-                    : " Al validarse tu comprobante la cita pasa a CONFIRMED."}
+                  {fechaLarga(fechaDe(pago.cita.inicio))} · {horaDe(pago.cita.inicio)} con{" "}
+                  {perfil.nombre}.
+                  {confirmada
+                    ? " Te enviamos la confirmación por correo y te recordaremos la cita antes."
+                    : " Te avisaremos por correo cuando el odontólogo la confirme."}
                 </p>
+                {pago.numero_operacion && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Operación {pago.numero_operacion}
+                  </p>
+                )}
                 <Button asChild className="mt-6 rounded-full">
                   <Link to="/paciente/panel">Ir a mi panel</Link>
                 </Button>
               </motion.div>
             ) : step === 1 ? (
               <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-                <h2 className="font-display text-lg font-semibold">1. Elige fecha y hora</h2>
-                <div className="mt-4 flex gap-2 overflow-x-auto pb-2">
-                  {days.map((d, i) => (
-                    <button
-                      key={i}
-                      onClick={() => {
-                        setDayIndex(i);
-                        setTime(null);
-                      }}
-                      className={cn(
-                        "flex w-16 shrink-0 flex-col items-center rounded-2xl border py-3 text-sm transition-colors",
-                        i === dayIndex
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border hover:border-primary/50",
-                      )}
-                    >
-                      <span className="text-[11px] uppercase">{diaCorto[d.getDay()]}</span>
-                      <span className="font-display text-lg font-semibold">{d.getDate()}</span>
-                      <span className="text-[11px]">{mesCorto[d.getMonth()]}</span>
-                    </button>
-                  ))}
-                </div>
-
-                <div className="mt-5 grid grid-cols-3 gap-2 sm:grid-cols-5">
-                  {timeBlocks.map((t) => {
-                    const disabled = busy.includes(t);
-                    return (
-                      <motion.button
-                        key={t}
-                        whileTap={{ scale: disabled ? 1 : 0.94 }}
-                        disabled={disabled}
-                        onClick={() => setTime(t)}
-                        className={cn(
-                          "rounded-xl border py-2.5 text-sm font-medium transition-colors",
-                          disabled
-                            ? "cursor-not-allowed border-dashed border-border bg-muted/60 text-muted-foreground/60 line-through"
-                            : t === time
-                              ? "border-primary bg-primary text-primary-foreground"
-                              : "border-border hover:border-primary/60",
-                        )}
-                      >
-                        {t}
-                      </motion.button>
-                    );
-                  })}
-                </div>
-
-                <Label className="mt-5 block text-sm">
-                  <span className="mb-1.5 block font-medium text-muted-foreground">Servicio</span>
-                  <select
-                    value={service}
-                    onChange={(e) => setService(e.target.value)}
-                    className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-primary"
-                  >
-                    {dentist.services.map((s) => (
-                      <option key={s.name}>{s.name}</option>
-                    ))}
-                  </select>
-                </Label>
-
+                <h2 className="mb-4 font-display text-lg font-semibold">
+                  1. Elige servicio, fecha y hora
+                </h2>
+                {servicios.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Este odontólogo todavía no publicó servicios.
+                  </p>
+                ) : (
+                  <SelectorTurnos
+                    odontologoId={perfil.id}
+                    servicios={servicios}
+                    servicioId={servicioId}
+                    onServicio={setServicioId}
+                    inicio={inicio}
+                    onInicio={setInicio}
+                    recargar={recargar}
+                  />
+                )}
                 <Button
-                  disabled={!time}
-                  onClick={() => setStep(2)}
+                  disabled={!inicio || enviando}
+                  onClick={bloquearCupo}
                   className="mt-6 w-full rounded-full"
                 >
-                  Bloquear cupo y continuar al pago
+                  {enviando && <Loader2 className="size-4 animate-spin" />}
+                  {enviando ? "Apartando turno…" : "Apartar turno y continuar al pago"}
                 </Button>
               </motion.div>
-            ) : step === 2 ? (
+            ) : (
               <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
                 <h2 className="font-display text-lg font-semibold">
-                  2. Pago de garantía · {soles(garantia)}{" "}
+                  2. Depósito · {soles(deposito)}{" "}
                   <span className="text-sm font-normal text-muted-foreground">
-                    (20% de {soles(precioServicio)})
+                    (del total de {soles(precio)})
                   </span>
                 </h2>
 
@@ -444,7 +417,7 @@ function Agendar() {
                         <Smartphone className="size-4 text-primary" /> Billetera Digital
                       </span>
                       <span className="mt-0.5 block text-xs text-muted-foreground">
-                        Yape o Plin con comprobante (QR)
+                        Yape o Plin
                       </span>
                     </span>
                   </Label>
@@ -463,7 +436,7 @@ function Agendar() {
                         <CreditCard className="size-4 text-primary" /> Tarjeta
                       </span>
                       <span className="mt-0.5 block text-xs text-muted-foreground">
-                        Culqi / Niubiz (Visa, Mastercard)
+                        Visa o Mastercard
                       </span>
                     </span>
                   </Label>
@@ -495,14 +468,18 @@ function Agendar() {
                       </div>
                       <div className="mt-4 rounded-2xl border border-border bg-muted/40 p-6 text-center">
                         <QrArt />
-                        <p className="mt-3 font-display text-lg font-semibold">956 402 118</p>
-                        <p className="text-sm text-muted-foreground">
-                          {billetera === "yape" ? "Yape" : "Plin"} · OdontoSystem SAC ·{" "}
-                          {soles(garantia)}
+                        <p className="mt-3 text-sm text-muted-foreground">
+                          {billetera === "yape" ? "Yape" : "Plin"} · OdontoSystem ·{" "}
+                          {soles(deposito)} (simulado)
                         </p>
                       </div>
-                      <Button onClick={() => setStep(3)} className="mt-5 w-full rounded-full">
-                        Ya pagué, subir comprobante
+                      <Button
+                        disabled={enviando}
+                        onClick={() => pagar(billetera === "yape" ? "YAPE" : "PLIN")}
+                        className="mt-5 w-full rounded-full"
+                      >
+                        {enviando && <Loader2 className="size-4 animate-spin" />}
+                        {enviando ? "Verificando pago…" : `Ya pagué ${soles(deposito)}`}
                       </Button>
                     </motion.div>
                   ) : (
@@ -518,74 +495,36 @@ function Agendar() {
                         <Input
                           id="cc-num"
                           inputMode="numeric"
-                          placeholder="4242 4242 4242 4242"
                           defaultValue="4242 4242 4242 4242"
                           className="rounded-xl"
+                          readOnly
                         />
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1.5">
                           <Label htmlFor="cc-exp">Vencimiento</Label>
-                          <Input id="cc-exp" placeholder="MM/AA" defaultValue="12/28" className="rounded-xl" />
+                          <Input id="cc-exp" defaultValue="12/28" className="rounded-xl" readOnly />
                         </div>
                         <div className="space-y-1.5">
                           <Label htmlFor="cc-cvv">CVV</Label>
-                          <Input id="cc-cvv" placeholder="123" defaultValue="123" className="rounded-xl" />
+                          <Input id="cc-cvv" defaultValue="123" className="rounded-xl" readOnly />
                         </div>
                       </div>
                       <p className="rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
-                        Tarjeta de prueba Sandbox precargada. El cargo de {soles(garantia)} es
-                        simulado.
+                        Tarjeta de prueba del sandbox. El cargo de {soles(deposito)} es simulado: no
+                        escribas datos de una tarjeta real.
                       </p>
                       <Button
                         disabled={enviando}
-                        onClick={confirmarTarjeta}
+                        onClick={() => pagar("TARJETA")}
                         className="w-full rounded-full"
                       >
                         {enviando && <Loader2 className="size-4 animate-spin" />}
-                        {enviando ? "Procesando pago…" : `Pagar ${soles(garantia)} y confirmar`}
+                        {enviando ? "Procesando pago…" : `Pagar ${soles(deposito)} y confirmar`}
                       </Button>
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </motion.div>
-            ) : (
-              <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-                <h2 className="font-display text-lg font-semibold">3. Adjunta tu comprobante</h2>
-                <label className="mt-4 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border bg-muted/30 px-6 py-10 text-center transition-colors hover:border-primary/60">
-                  <ImagePlus className="size-8 text-primary" />
-                  <span className="text-sm font-medium">
-                    Sube la captura del {billetera === "yape" ? "Yape" : "Plin"}
-                  </span>
-                  <span className="text-xs text-muted-foreground">PNG o JPG hasta 5 MB</span>
-                  <input type="file" accept="image/*" className="hidden" onChange={onFile} />
-                </label>
-
-                <AnimatePresence>
-                  {preview && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.96 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="mt-4 overflow-hidden rounded-2xl border border-border"
-                    >
-                      <img
-                        src={preview}
-                        alt="Vista previa del comprobante"
-                        className="max-h-64 w-full object-contain"
-                      />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                <Button
-                  disabled={!preview || enviando}
-                  onClick={confirmarBilletera}
-                  className="mt-6 w-full rounded-full"
-                >
-                  {enviando && <Loader2 className="size-4 animate-spin" />}
-                  {enviando ? "Enviando comprobante…" : "Enviar para verificación"}
-                </Button>
               </motion.div>
             )}
           </AnimatePresence>
@@ -597,20 +536,21 @@ function Agendar() {
             <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
               <ShieldCheck className="size-5 text-primary" /> Resumen de la cita
             </h2>
-            <Row label="Especialista" value={dentist.name} />
-            <Row label="Servicio" value={service} />
-            <Row label="Fecha" value={fechaLarga} />
-            <Row label="Hora" value={time ?? "—"} />
-            <Row label="Total del servicio" value={soles(precioServicio)} />
+            <Row label="Especialista" value={perfil.nombre} />
+            {perfil.consultorio && <Row label="Consultorio" value={perfil.consultorio} />}
+            <Row label="Servicio" value={servicio?.titulo ?? "—"} />
+            <Row label="Fecha" value={inicioCita ? fechaLarga(fechaDe(inicioCita)) : "—"} />
+            <Row label="Hora" value={inicioCita ? horaDe(inicioCita) : "—"} />
+            <Row label="Total del servicio" value={soles(precio)} />
             <div className="flex items-center justify-between border-t border-border pt-3">
-              <span className="font-semibold">Garantía (20%)</span>
+              <span className="font-semibold">Depósito</span>
               <span className="font-display text-lg font-semibold text-primary">
-                {soles(garantia)}
+                {soles(deposito)}
               </span>
             </div>
             <p className="rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
-              La garantía se descuenta del total en consulta. Si no subes el comprobante a tiempo,
-              el cupo se libera automáticamente.
+              El depósito se descuenta del total en tu consulta. Si cancelas con 12 horas o más de
+              anticipación, se te devuelve.
             </p>
           </div>
         </aside>
