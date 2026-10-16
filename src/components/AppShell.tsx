@@ -88,11 +88,12 @@ function PatientHeader() {
   const [menuOpen, setMenuOpen] = React.useState(false);
   const { usuario } = useAppState();
   const salir = useCerrarSesion();
-  const nombre = usuario?.nombre ?? "Nicole Ramírez";
+  const nombre = usuario?.nombre ?? "Paciente";
 
   const navLinks = [
     { to: "/paciente/catalogo", label: "Buscar dentista", icon: Search },
     { to: "/paciente/panel", label: "Mi panel", icon: LayoutDashboard },
+    { to: "/paciente/perfil", label: "Mi perfil", icon: User },
   ] as const;
 
   return (
@@ -155,13 +156,17 @@ function PatientHeader() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem>
-                <User className="size-4 mr-2" />
-                Mi perfil
+              <DropdownMenuItem asChild>
+                <Link to="/paciente/perfil">
+                  <User className="size-4 mr-2" />
+                  Mi perfil
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Settings className="size-4 mr-2" />
-                Configuración
+              <DropdownMenuItem asChild>
+                <Link to="/paciente/panel">
+                  <Settings className="size-4 mr-2" />
+                  Configuración
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="text-destructive" onSelect={salir}>
@@ -210,13 +215,14 @@ function DentistSidebar({ open, onToggle }: { open: boolean; onToggle: () => voi
   const location = useLocation();
   const { usuario } = useAppState();
   const salir = useCerrarSesion();
-  const nombre = usuario?.nombre ?? "Dra. Claudia";
+  const nombre = usuario?.nombre ?? "Odontólogo";
 
   const navItems = [
     { to: "/dentist/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { to: "/dentist/agenda", label: "Agenda", icon: Calendar },
     { to: "/dentist/pacientes", label: "Pacientes", icon: Users },
     { to: "/dentist/horarios", label: "Horarios", icon: Clock },
+    { to: "/dentist/perfil", label: "Mi perfil", icon: User },
     { to: "/odontologo/configuracion", label: "Configuración", icon: Settings },
   ] as const;
 
@@ -302,13 +308,17 @@ function DentistSidebar({ open, onToggle }: { open: boolean; onToggle: () => voi
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent side="right" align="end" className="w-48">
-            <DropdownMenuItem>
-              <User className="size-4 mr-2" />
-              Mi perfil
+            <DropdownMenuItem asChild>
+              <Link to="/dentist/perfil">
+                <User className="size-4 mr-2" />
+                Mi perfil
+              </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Settings className="size-4 mr-2" />
-              Configuración
+            <DropdownMenuItem asChild>
+              <Link to="/odontologo/configuracion">
+                <Settings className="size-4 mr-2" />
+                Configuración
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-destructive" onSelect={salir}>

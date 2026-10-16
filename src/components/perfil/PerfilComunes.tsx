@@ -5,7 +5,8 @@
  * Un único sistema de UI; cada rol sólo aporta sus datos.
  */
 import * as React from "react";
-import { AlertCircle, Camera, Lock, Save } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { AlertCircle, Camera, Lock, LogIn, Save } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { ApiError, usuariosApi, type EstadoCita, type UsuarioYo } from "@/lib/api";
-import { iniciales } from "@/lib/odontologos";
+import { fechaDe, fechaLima, iniciales } from "@/lib/odontologos";
 import { cn } from "@/lib/utils";
 
 /** Mensaje legible de cualquier error de la API (sesión expirada incluida). */
@@ -407,6 +408,77 @@ export function FormularioDatosContacto({
 /** Icono de solo lectura para datos que el usuario no puede editar. */
 export function IconoSoloLectura() {
   return <Lock className="size-3" aria-label="Dato de solo lectura" />;
+}
+
+/** Etiqueta corta del documento de identidad (sin inventar tipos). */
+export function etiquetaDocumento(tipo: string | null | undefined): string {
+  if (!tipo) return "Documento";
+  if (tipo === "DNI") return "DNI";
+  if (tipo === "CE" || tipo === "C.E.") return "C.E.";
+  return tipo;
+}
+
+/** Fecha YYYY-MM-DD a partir de un ISO o de una fecha ya recortada. */
+export function fechaPerfil(valor: string): string {
+  return valor.length <= 10 ? valor : fechaDe(valor);
+}
+
+/**
+ * Rango de agenda para GET /api/odontologos/yo/citas (`hasta` es exclusivo).
+ * Cubre ~6 meses atrás y ~3 meses adelante, sin fechas ficticias de citas.
+ */
+export function rangoAgendaOdontologo(): { desde: string; hasta: string } {
+  return { desde: fechaLima(-180), hasta: fechaLima(91) };
+}
+
+/** Esqueleto de la página de perfil (cabecera + datos + resumen). */
+export function EsqueletoPaginaPerfil() {
+  return (
+    <div className="space-y-6" aria-busy="true" aria-label="Cargando perfil">
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-9 w-48" />
+        <Skeleton className="h-4 w-72 max-w-full" />
+      </div>
+      <Card>
+        <CardContent className="flex items-center gap-4 pt-6">
+          <Skeleton className="size-20 rounded-full" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <Skeleton className="h-6 w-56 max-w-full" />
+            <Skeleton className="h-4 w-40" />
+          </div>
+        </CardContent>
+      </Card>
+      <div className="grid gap-4 sm:grid-cols-2">
+        {Array.from({ length: 4 }, (_, i) => (
+          <Skeleton key={i} className="h-24 rounded-2xl" />
+        ))}
+      </div>
+      <ResumenSkeleton />
+    </div>
+  );
+}
+
+/** Pantalla cuando no hay sesión o el rol no corresponde a esta ruta. */
+export function AccesoPerfil({
+  titulo,
+  descripcion,
+}: {
+  titulo: string;
+  descripcion: string;
+}) {
+  return (
+    <Card className="mx-auto mt-8 max-w-md text-center">
+      <CardContent className="py-10">
+        <LogIn className="mx-auto size-10 text-primary" />
+        <h1 className="mt-4 font-display text-xl font-semibold">{titulo}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{descripcion}</p>
+        <Button asChild className="mt-6 rounded-full">
+          <Link to="/">Ir a iniciar sesión</Link>
+        </Button>
+      </CardContent>
+    </Card>
+  );
 }
 
 

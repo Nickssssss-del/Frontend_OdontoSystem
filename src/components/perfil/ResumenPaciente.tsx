@@ -20,6 +20,7 @@ import {
   AvisoError,
   claseEstadoCita,
   etiquetaEstadoCita,
+  fechaPerfil,
   KpiPerfil,
   mensajeDeError,
   ResumenSkeleton,
@@ -232,8 +233,56 @@ export function ResumenPaciente() {
           </CardContent>
         </Card>
       </div>
-      {/* FIN_RESUMEN */}
 
+      {errorHistorias && <AvisoError mensaje={errorHistorias} onReintentar={reintentar} />}
+      <Card className="transition-shadow hover:shadow-md">
+        <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+          <div>
+            <CardTitle className="flex items-center gap-2 font-display text-xl">
+              <FileText className="size-5 text-primary" /> Historial de atenciones
+            </CardTitle>
+            <CardDescription>Notas clínicas de citas ya atendidas.</CardDescription>
+          </div>
+          <Button variant="ghost" size="sm" asChild className="shrink-0 text-primary">
+            <Link to="/paciente/panel">
+              Ver panel <ChevronRight className="size-4" />
+            </Link>
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {!errorHistorias && historias.length === 0 && (
+            <p className="rounded-xl border border-dashed border-border/70 bg-background p-4 text-sm text-muted-foreground">
+              Aún no hay atenciones registradas en tu historial clínico.
+            </p>
+          )}
+          {historias.slice(0, 4).map((historia) => (
+            <div
+              key={historia.id}
+              className="rounded-xl border border-border/70 bg-background p-4"
+            >
+              <p className="text-sm font-semibold">{historia.servicio}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                con {historia.odontologo} · {fechaLarga(fechaPerfil(historia.fecha_cita))}
+              </p>
+              {historia.diagnostico ? (
+                <p className="mt-1 text-xs text-foreground">
+                  Diagnóstico: {historia.diagnostico}
+                </p>
+              ) : null}
+              {historia.tratamiento ? (
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Tratamiento: {historia.tratamiento}
+                </p>
+              ) : null}
+            </div>
+          ))}
+          {historias.length > 4 && (
+            <p className="text-xs text-muted-foreground">
+              Y {historias.length - 4} atenciones más en tu historial.
+            </p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
