@@ -1,7 +1,6 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import {
-  CalendarHeart,
   Search,
   Bell,
   User,
@@ -19,7 +18,6 @@ import * as React from "react";
 import type { ReactNode } from "react";
 import { ChatbotWidget } from "./ChatbotWidget";
 import { useAppState } from "@/lib/app-state";
-import { Stethoscope } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,6 +43,34 @@ const nombreCorto = (nombre: string) => {
   return segundo ? `${primero} ${segundo[0]}.` : (primero ?? nombre);
 };
 
+/** Ruta del logotipo corporativo (mismo archivo que usa la landing). */
+const LOGO_SRC = "/odontosystem-logo.png";
+
+/**
+ * Lockup de marca: logotipo corporativo + "OdontoSystem".
+ * Se usa en la cabecera del paciente y en el menú lateral del odontólogo
+ * para mantener una identidad visual única (logo, nombre e iconos).
+ */
+function Marca({ tagline = false }: { tagline?: boolean }) {
+  return (
+    <span className="flex min-w-0 items-center gap-2.5">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border/70 bg-white p-1 shadow-sm">
+        <img src={LOGO_SRC} alt="OdontoSystem" className="size-full object-contain" />
+      </span>
+      <span className="flex min-w-0 flex-col leading-none">
+        <span className="font-display text-[15px] font-semibold tracking-tight text-foreground">
+          Odonto<span className="text-brand">System</span>
+        </span>
+        {tagline && (
+          <span className="mt-1 text-[10px] font-medium text-muted-foreground">
+            Plataforma dental verificada
+          </span>
+        )}
+      </span>
+    </span>
+  );
+}
+
 /** Cierra la sesión en el navegador y vuelve a la pantalla de ingreso. */
 function useCerrarSesion() {
   const { cerrarSesion } = useAppState();
@@ -62,27 +88,26 @@ function PatientHeader() {
   const [menuOpen, setMenuOpen] = React.useState(false);
   const { usuario } = useAppState();
   const salir = useCerrarSesion();
-  const nombre = usuario?.nombre ?? "Nicole Ramírez";
+  const nombre = usuario?.nombre ?? "Paciente";
 
   const navLinks = [
     { to: "/paciente/catalogo", label: "Buscar dentista", icon: Search },
     { to: "/paciente/panel", label: "Mi panel", icon: LayoutDashboard },
+    { to: "/paciente/perfil", label: "Mi perfil", icon: User },
   ] as const;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/70 bg-background/80 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 flex-shrink-0">
-          <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <CalendarHeart className="size-5" />
-          </span>
-          <span className="font-display text-lg font-semibold tracking-tight">
-            Odonto<span className="text-primary">System</span>
-          </span>
-          <span className="hidden rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold text-muted-foreground sm:inline">
-            v4.3
-          </span>
+    <header className="sticky top-0 z-40 border-b border-border/70 bg-card/85 shadow-[0_1px_3px_rgba(0,107,104,0.06)] backdrop-blur-xl">
+      <div className="relative mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
+        {/* Detalle decorativo discreto: anillos + diente */}
+        <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 -z-10 w-56 overflow-hidden">
+          <div className="decor-rings absolute -right-20 -top-24 size-64 rounded-full opacity-50" />
+          <div className="decor-tooth absolute right-32 top-4 size-7 opacity-30" />
+        </div>
+
+        {/* Marca */}
+        <Link to="/" className="flex-shrink-0" aria-label="Ir al inicio de OdontoSystem">
+          <Marca />
         </Link>
 
         {/* Desktop Navigation */}
@@ -99,7 +124,7 @@ function PatientHeader() {
                   {state.isActive && (
                     <motion.span
                       layoutId="nav-pill"
-                      className="absolute inset-x-[-10px] inset-y-[-6px] -z-10 rounded-full bg-primary/12"
+                      className="absolute inset-x-[-10px] inset-y-[-6px] -z-10 rounded-full bg-sky"
                       transition={{ type: "spring", stiffness: 400, damping: 32 }}
                     />
                   )}
@@ -131,13 +156,17 @@ function PatientHeader() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem>
-                <User className="size-4 mr-2" />
-                Mi perfil
+              <DropdownMenuItem asChild>
+                <Link to="/paciente/perfil">
+                  <User className="size-4 mr-2" />
+                  Mi perfil
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Settings className="size-4 mr-2" />
-                Configuración
+              <DropdownMenuItem asChild>
+                <Link to="/paciente/panel">
+                  <Settings className="size-4 mr-2" />
+                  Configuración
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="text-destructive" onSelect={salir}>
@@ -182,41 +211,59 @@ function PatientHeader() {
 // ============================================================================
 // VISTA DEL ODONTÓLOGO: Sidebar Navigation
 // ============================================================================
-function DentistSidebar() {
+function DentistSidebar({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   const location = useLocation();
-  const [open, setOpen] = React.useState(true);
   const { usuario } = useAppState();
   const salir = useCerrarSesion();
-  const nombre = usuario?.nombre ?? "Dra. Claudia";
+  const nombre = usuario?.nombre ?? "Odontólogo";
 
   const navItems = [
     { to: "/dentist/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { to: "/dentist/agenda", label: "Agenda", icon: Calendar },
     { to: "/dentist/pacientes", label: "Pacientes", icon: Users },
     { to: "/dentist/horarios", label: "Horarios", icon: Clock },
+    { to: "/dentist/perfil", label: "Mi perfil", icon: User },
     { to: "/odontologo/configuracion", label: "Configuración", icon: Settings },
   ] as const;
 
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 border-r border-border/70 bg-background transition-all duration-300 h-screen",
+        "fixed left-0 top-0 z-40 h-screen border-r border-border/70 bg-card shadow-[1px_0_3px_rgba(0,107,104,0.05)] transition-all duration-300",
         open ? "w-56" : "w-20"
       )}
     >
-      {/* Header */}
-      <div className="border-b border-border/70 p-4 flex items-center justify-between h-16">
-        {open && (
-          <Link to="/dentist/dashboard" className="flex items-center gap-2">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold">
-              <Stethoscope className="size-4" />
-            </span>
-            <span className="font-semibold text-sm">OdontoSys</span>
-          </Link>
+      {/* Detalle decorativo discreto */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        <div className="decor-rings absolute -bottom-28 -right-20 size-64 rounded-full opacity-40" />
+        <div className="decor-tooth absolute bottom-32 right-5 size-14 opacity-[0.08]" />
+      </div>
+
+      {/* Header de marca */}
+      <div
+        className={cn(
+          "relative flex h-16 items-center justify-between border-b border-border/70",
+          open ? "px-4" : "px-2"
         )}
+      >
+        <Link
+          to="/dentist/dashboard"
+          className="flex min-w-0 items-center gap-2"
+          aria-label="Dashboard de OdontoSystem"
+        >
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border/70 bg-white p-1 shadow-sm">
+            <img src={LOGO_SRC} alt="OdontoSystem" className="size-full object-contain" />
+          </span>
+          {open && (
+            <span className="truncate font-display text-sm font-semibold tracking-tight text-foreground">
+              Odonto<span className="text-brand">System</span>
+            </span>
+          )}
+        </Link>
         <button
-          onClick={() => setOpen(!open)}
-          className="p-1 hover:bg-muted rounded-lg transition-colors"
+          onClick={onToggle}
+          aria-label={open ? "Contraer menú" : "Expandir menú"}
+          className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-sky hover:text-foreground"
         >
           <Menu className="size-4" />
         </button>
@@ -233,8 +280,8 @@ function DentistSidebar() {
               className={cn(
                 "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm font-medium",
                 isActive
-                  ? "bg-primary/12 text-primary"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  ? "bg-brand-deep font-semibold text-white shadow-sm shadow-brand-deep/25"
+                  : "text-muted-foreground hover:bg-sky hover:text-foreground"
               )}
             >
               <Icon className="size-5 flex-shrink-0" />
@@ -249,7 +296,7 @@ function DentistSidebar() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors">
-              <div className="size-8 rounded-full bg-gradient-to-br from-accent to-accent/60 flex items-center justify-center text-xs font-semibold text-background flex-shrink-0">
+              <div className="size-8 flex-shrink-0 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-xs font-semibold text-primary-foreground">
                 {iniciales(nombre)}
               </div>
               {open && (
@@ -261,13 +308,17 @@ function DentistSidebar() {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent side="right" align="end" className="w-48">
-            <DropdownMenuItem>
-              <User className="size-4 mr-2" />
-              Mi perfil
+            <DropdownMenuItem asChild>
+              <Link to="/dentist/perfil">
+                <User className="size-4 mr-2" />
+                Mi perfil
+              </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Settings className="size-4 mr-2" />
-              Configuración
+            <DropdownMenuItem asChild>
+              <Link to="/odontologo/configuracion">
+                <Settings className="size-4 mr-2" />
+                Configuración
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-destructive" onSelect={salir}>
@@ -286,12 +337,15 @@ function DentistSidebar() {
 // ============================================================================
 export function AppShell({ children }: { children: ReactNode }) {
   const { userRole } = useAppState();
+  const [sidebarOpen, setSidebarOpen] = React.useState(true);
 
   if (userRole === "dentist") {
     return (
-      <div className="min-h-screen bg-background">
-        <DentistSidebar />
-        <main className="ml-20 lg:ml-56 transition-all duration-300">
+      <div className="min-h-screen bg-background decor-glow">
+        <DentistSidebar open={sidebarOpen} onToggle={() => setSidebarOpen((v) => !v)} />
+        <main
+          className={cn("transition-all duration-300", sidebarOpen ? "ml-56" : "ml-20")}
+        >
           <div className="p-8">{children}</div>
         </main>
         <ChatbotWidget />
@@ -301,7 +355,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   // Patient view
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background decor-glow">
       <PatientHeader />
       <main className="mx-auto max-w-7xl px-4 pb-24 pt-8">{children}</main>
       <ChatbotWidget />
