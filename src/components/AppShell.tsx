@@ -163,7 +163,7 @@ function PatientHeader() {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link to="/paciente/panel">
+                <Link to="/paciente/configuracion">
                   <Settings className="size-4 mr-2" />
                   Configuración
                 </Link>
