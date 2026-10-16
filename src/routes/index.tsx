@@ -22,13 +22,7 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChatbotWidget } from "@/components/ChatbotWidget";
@@ -101,8 +95,7 @@ function LoginScreen() {
   const [aceptaPrivacidad, setAceptaPrivacidad] = React.useState(false);
 
   const campoRegistro =
-    (campo: keyof DatosRegistro) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    (campo: keyof DatosRegistro) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setRegistro((r) => ({ ...r, [campo]: e.target.value }));
 
   const entrar = (sesion: Sesion, titulo: string, descripcion?: string) => {
@@ -195,12 +188,14 @@ function LoginScreen() {
 
         <header className="relative flex items-center gap-3">
           <div className="flex size-20 shrink-0 items-center justify-center rounded-full bg-white p-2.5 shadow-lg shadow-black/15 ring-1 ring-black/5">
-            <img src="/odontosystem-logo.png" alt="Logo de OdontoSystem" className="size-full object-contain" />
+            <img
+              src="/odontosystem-logo.png"
+              alt="Logo de OdontoSystem"
+              className="size-full object-contain"
+            />
           </div>
           <div>
-            <p className="font-display text-xl font-bold leading-tight">
-              OdontoSystem
-            </p>
+            <p className="font-display text-xl font-bold leading-tight">OdontoSystem</p>
             <p className="text-sm opacity-80">Plataforma dental verificada</p>
           </div>
         </header>
@@ -219,8 +214,8 @@ function LoginScreen() {
             Tu salud dental, en manos expertas.
           </h1>
           <p className="mt-5 max-w-md text-lg leading-relaxed opacity-85">
-            Agenda con especialistas verificados por el Colegio Odontológico del
-            Perú. Pagos seguros, citas sin complicaciones.
+            Agenda con especialistas verificados por el Colegio Odontológico del Perú. Pagos
+            seguros, citas sin complicaciones.
           </p>
           <dl className="mt-12 grid max-w-lg grid-cols-3 gap-6 border-t border-white/20 pt-8">
             {stats.map((s) => (
@@ -252,15 +247,15 @@ function LoginScreen() {
           {/* Marca compacta en móvil */}
           <div className="mb-6 flex items-center justify-center gap-3 lg:hidden">
             <div className="flex size-16 shrink-0 items-center justify-center rounded-full border border-border/60 bg-card p-2 shadow-md shadow-primary/10">
-              <img src="/odontosystem-logo.png" alt="Logo de OdontoSystem" className="size-full object-contain" />
+              <img
+                src="/odontosystem-logo.png"
+                alt="Logo de OdontoSystem"
+                className="size-full object-contain"
+              />
             </div>
             <div>
-              <p className="font-display text-lg font-bold leading-tight">
-                OdontoSystem
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Plataforma dental verificada
-              </p>
+              <p className="font-display text-lg font-bold leading-tight">OdontoSystem</p>
+              <p className="text-xs text-muted-foreground">Plataforma dental verificada</p>
             </div>
           </div>
 
@@ -315,9 +310,7 @@ function LoginScreen() {
                         value={login.correo}
                         onChange={(e) => setLogin((l) => ({ ...l, correo: e.target.value }))}
                         placeholder={
-                          role === "paciente"
-                            ? "nombre@correo.com"
-                            : "dentista@correo.com"
+                          role === "paciente" ? "nombre@correo.com" : "dentista@correo.com"
                         }
                         required
                       />
@@ -340,9 +333,7 @@ function LoginScreen() {
                         <button
                           type="button"
                           onClick={() => setShowPassword((v) => !v)}
-                          aria-label={
-                            showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
-                          }
+                          aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
                         >
                           <Eye className="size-4" />
@@ -357,16 +348,19 @@ function LoginScreen() {
                       </label>
                       <button
                         type="button"
-                        onClick={() =>
-                          toast.info("La recuperación de contraseña estará disponible pronto.")
-                        }
+                        onClick={() => navigate({ to: "/recuperar" })}
                         className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
                       >
                         ¿Olvidaste tu contraseña?
                       </button>
                     </div>
 
-                    <Button type="submit" size="lg" className="w-full rounded-xl" disabled={enviando}>
+                    <Button
+                      type="submit"
+                      size="lg"
+                      className="w-full rounded-xl"
+                      disabled={enviando}
+                    >
                       {enviando ? "Ingresando…" : "Iniciar sesión"}
                       <ArrowRight className="ml-2 size-4" />
                     </Button>
@@ -497,8 +491,10 @@ function LoginScreen() {
                       />
                       <span>
                         Acepto la{" "}
-                        <span className="font-semibold text-foreground">política de privacidad</span> y el
-                        tratamiento de mis datos personales (Ley N.º 29733).
+                        <span className="font-semibold text-foreground">
+                          política de privacidad
+                        </span>{" "}
+                        y el tratamiento de mis datos personales (Ley N.º 29733).
                       </span>
                     </label>
 
@@ -521,9 +517,7 @@ function LoginScreen() {
                         <div className="w-full border-t border-border/50" />
                       </div>
                       <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-card px-2 text-muted-foreground">
-                          O continúa con
-                        </span>
+                        <span className="bg-card px-2 text-muted-foreground">O continúa con</span>
                       </div>
                     </div>
 

@@ -5,8 +5,10 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * OdontoSystem v4.3 design system — clinical mint/teal over deep slate.
- * All colors are semantic tokens in oklch. Never hardcode colors in components.
+ * OdontoSystem design system — identidad dental teal/menta.
+ * Paleta: teal oscuro #006B68 · turquesa #00A99D · menta #7FD7C9 ·
+ * celeste pálido #E6F7F5 · blanco #F5FBFC.
+ * Los colores son tokens semánticos; nunca hardcodear colores en componentes.
  */
 
 @theme inline {
@@ -56,85 +58,99 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  /* Paleta de marca (accesible como utilidades: bg-brand, text-mint, …) */
+  --color-brand: var(--brand);
+  --color-brand-deep: var(--brand-deep);
+  --color-mint: var(--mint);
+  --color-sky: var(--sky);
+  --color-ice: var(--ice);
 }
 
 :root {
   --radius: 1rem;
-  --background: oklch(0.985 0.008 195);
-  --foreground: oklch(0.24 0.038 236);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.24 0.038 236);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.24 0.038 236);
-  --primary: oklch(0.58 0.115 191);
-  --primary-foreground: oklch(0.99 0.01 190);
-  --secondary: oklch(0.955 0.019 196);
-  --secondary-foreground: oklch(0.3 0.05 220);
-  --muted: oklch(0.955 0.014 205);
-  --muted-foreground: oklch(0.52 0.026 226);
-  --accent: oklch(0.9 0.06 178);
-  --accent-foreground: oklch(0.28 0.05 218);
+
+  /* Paleta de marca OdontoSystem */
+  --brand-deep: #006b68; /* teal oscuro */
+  --brand: #00a99d; /* turquesa */
+  --mint: #7fd7c9; /* menta */
+  --sky: #e6f7f5; /* celeste pálido */
+  --ice: #f5fbfc; /* blanco */
+
+  --background: var(--ice);
+  --foreground: #0f2c31;
+  --card: #ffffff;
+  --card-foreground: var(--foreground);
+  --popover: #ffffff;
+  --popover-foreground: var(--foreground);
+  --primary: var(--brand-deep);
+  --primary-foreground: #ffffff;
+  --secondary: var(--sky);
+  --secondary-foreground: var(--brand-deep);
+  --muted: var(--sky);
+  --muted-foreground: #4f6e73;
+  --accent: var(--mint);
+  --accent-foreground: #00403e;
   --destructive: oklch(0.58 0.198 22);
   --destructive-foreground: oklch(0.99 0.008 20);
-  --success: oklch(0.62 0.135 155);
-  --success-foreground: oklch(0.34 0.09 155);
-  --warning: oklch(0.79 0.14 78);
-  --warning-foreground: oklch(0.42 0.1 65);
-  --border: oklch(0.9 0.017 205);
-  --input: oklch(0.9 0.017 205);
-  --ring: oklch(0.58 0.115 191);
-  --chart-1: oklch(0.58 0.115 191);
-  --chart-2: oklch(0.66 0.12 168);
-  --chart-3: oklch(0.45 0.09 232);
-  --chart-4: oklch(0.79 0.14 78);
-  --chart-5: oklch(0.63 0.15 300);
-  --sidebar: oklch(0.99 0.008 195);
-  --sidebar-foreground: oklch(0.24 0.038 236);
-  --sidebar-primary: oklch(0.58 0.115 191);
-  --sidebar-primary-foreground: oklch(0.99 0.01 190);
-  --sidebar-accent: oklch(0.95 0.02 196);
-  --sidebar-accent-foreground: oklch(0.28 0.05 218);
-  --sidebar-border: oklch(0.9 0.017 205);
-  --sidebar-ring: oklch(0.58 0.115 191);
+  --success: #0c8a63;
+  --success-foreground: #065f46;
+  --warning: #d97706;
+  --warning-foreground: #7c4a12;
+  --border: #d7eae8;
+  --input: #c6e2df;
+  --ring: var(--brand-deep);
+  --chart-1: #006b68;
+  --chart-2: #00a99d;
+  --chart-3: #7fd7c9;
+  --chart-4: #d97706;
+  --chart-5: #6b8afd;
+  --sidebar: #ffffff;
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--brand-deep);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--sky);
+  --sidebar-accent-foreground: var(--brand-deep);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--brand-deep);
 }
 
 .dark {
-  --background: oklch(0.19 0.03 238);
-  --foreground: oklch(0.96 0.01 200);
-  --card: oklch(0.24 0.035 238);
-  --card-foreground: oklch(0.96 0.01 200);
-  --popover: oklch(0.24 0.035 238);
-  --popover-foreground: oklch(0.96 0.01 200);
-  --primary: oklch(0.72 0.115 186);
-  --primary-foreground: oklch(0.2 0.04 232);
-  --secondary: oklch(0.29 0.035 236);
-  --secondary-foreground: oklch(0.96 0.01 200);
-  --muted: oklch(0.29 0.032 236);
-  --muted-foreground: oklch(0.72 0.025 214);
-  --accent: oklch(0.36 0.06 190);
-  --accent-foreground: oklch(0.95 0.02 190);
+  --background: oklch(0.19 0.025 210);
+  --foreground: oklch(0.96 0.012 195);
+  --card: oklch(0.24 0.03 212);
+  --card-foreground: oklch(0.96 0.012 195);
+  --popover: oklch(0.24 0.03 212);
+  --popover-foreground: oklch(0.96 0.012 195);
+  --primary: oklch(0.78 0.115 185);
+  --primary-foreground: oklch(0.22 0.045 205);
+  --secondary: oklch(0.3 0.045 205);
+  --secondary-foreground: oklch(0.96 0.012 195);
+  --muted: oklch(0.3 0.04 208);
+  --muted-foreground: oklch(0.74 0.03 195);
+  --accent: oklch(0.72 0.09 185);
+  --accent-foreground: oklch(0.22 0.045 205);
   --destructive: oklch(0.68 0.18 22);
   --destructive-foreground: oklch(0.2 0.04 232);
   --success: oklch(0.72 0.13 158);
-  --success-foreground: oklch(0.92 0.06 158);
-  --warning: oklch(0.83 0.14 80);
+  --success-foreground: oklch(0.22 0.05 160);
+  --warning: oklch(0.75 0.15 65);
   --warning-foreground: oklch(0.94 0.08 85);
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.72 0.115 186);
-  --chart-1: oklch(0.72 0.115 186);
-  --chart-2: oklch(0.74 0.13 168);
-  --chart-3: oklch(0.66 0.11 246);
-  --chart-4: oklch(0.83 0.14 80);
-  --chart-5: oklch(0.72 0.15 302);
-  --sidebar: oklch(0.22 0.032 238);
-  --sidebar-foreground: oklch(0.96 0.01 200);
-  --sidebar-primary: oklch(0.72 0.115 186);
-  --sidebar-primary-foreground: oklch(0.2 0.04 232);
-  --sidebar-accent: oklch(0.3 0.04 232);
-  --sidebar-accent-foreground: oklch(0.96 0.01 200);
+  --ring: oklch(0.78 0.115 185);
+  --chart-1: oklch(0.78 0.115 185);
+  --chart-2: oklch(0.8 0.11 190);
+  --chart-3: oklch(0.72 0.09 185);
+  --chart-4: oklch(0.75 0.15 65);
+  --chart-5: oklch(0.72 0.12 250);
+  --sidebar: oklch(0.22 0.03 212);
+  --sidebar-foreground: oklch(0.96 0.012 195);
+  --sidebar-primary: oklch(0.78 0.115 185);
+  --sidebar-primary-foreground: oklch(0.22 0.045 205);
+  --sidebar-accent: oklch(0.3 0.04 208);
+  --sidebar-accent-foreground: oklch(0.96 0.012 195);
   --sidebar-border: oklch(1 0 0 / 12%);
-  --sidebar-ring: oklch(0.72 0.115 186);
+  --sidebar-ring: oklch(0.78 0.115 185);
 }
 
 @layer base {
@@ -146,6 +162,12 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--brand) 32%, transparent);
   }
 
   h1,
@@ -172,4 +194,55 @@
       var(--color-primary) 52%,
       color-mix(in oklab, var(--color-primary) 72%, var(--color-chart-2)) 100%
     );
+}
+
+/*
+ * Detalles decorativos discretos de la identidad dental.
+ * Fondos suaves para cabeceras y contenedores; no interferir con el contenido.
+ */
+
+/* Resplandor menta/celeste en la parte superior de las pantallas */
+@utility decor-glow {
+  background-image:
+    radial-gradient(
+      46rem 22rem at 88% -4rem,
+      color-mix(in oklab, var(--mint) 60%, transparent),
+      transparent 72%
+    ),
+    radial-gradient(
+      34rem 20rem at -8rem 4rem,
+      color-mix(in oklab, var(--sky) 95%, transparent),
+      transparent 70%
+    );
+}
+
+/* Anillos concéntricos inspirados en la sonrisa */
+@utility decor-rings {
+  background-image:
+    radial-gradient(
+      circle at center,
+      transparent 0 37%,
+      color-mix(in oklab, var(--brand) 30%, transparent) 37% 38.4%,
+      transparent 38.4%
+    ),
+    radial-gradient(
+      circle at center,
+      transparent 0 55%,
+      color-mix(in oklab, var(--mint) 45%, transparent) 55% 56.6%,
+      transparent 56.6%
+    ),
+    radial-gradient(
+      circle at center,
+      transparent 0 73%,
+      color-mix(in oklab, var(--brand) 20%, transparent) 73% 74.4%,
+      transparent 74.4%
+    );
+}
+
+/* Marca de agua: silueta de diente en trazo */
+@utility decor-tooth {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300A99D' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 4.5c-1.4 0-2.2-.8-3.6-.8C6.2 3.7 4 5.4 4 8.6c0 3.7 1.4 5.6 2 8.7.4 2 .7 3.9 1.9 3.9 1.3 0 1.6-2.4 2-4.4.3-1.5.6-2.5 2.1-2.5s1.8 1 2.1 2.5c.4 2 .7 4.4 2 4.4 1.2 0 1.5-1.9 1.9-3.9.6-3.1 2-5 2-8.7 0-3.2-2.2-4.9-4.4-4.9-1.4 0-2.2.8-3.6.8z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
 }

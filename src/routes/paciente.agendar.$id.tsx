@@ -259,7 +259,7 @@ function Agendar() {
       </AnimatePresence>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.5fr_1fr]">
-        <div className="rounded-3xl border border-emerald-100 bg-card p-6 shadow-sm">
+        <div className="rounded-3xl border border-mint/60 bg-card p-6 shadow-sm">
           {error && !expired && (
             <p className="mb-4 rounded-xl border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
               {error}
@@ -532,7 +532,7 @@ function Agendar() {
 
         {/* Resumen de la cita */}
         <aside className="lg:sticky lg:top-24 lg:h-fit">
-          <div className="space-y-3 rounded-3xl border border-emerald-100 bg-card p-6 text-sm shadow-sm">
+          <div className="space-y-3 rounded-3xl border border-mint/60 bg-card p-6 text-sm shadow-sm">
             <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
               <ShieldCheck className="size-5 text-primary" /> Resumen de la cita
             </h2>

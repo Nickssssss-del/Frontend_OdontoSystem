@@ -69,7 +69,7 @@ function PerfilDentista() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: "spring", stiffness: 240, damping: 26 }}
       >
-        <Card className="mt-4 overflow-hidden rounded-3xl border-emerald-100 shadow-sm transition-all hover:shadow-md">
+        <Card className="mt-4 overflow-hidden rounded-3xl border-mint/60 shadow-sm transition-all hover:shadow-md">
           <div className="flex h-36 items-center justify-center bg-gradient-to-br from-primary/25 to-accent/40">
             {perfil.foto_url ? (
               <img
@@ -142,7 +142,7 @@ function PerfilDentista() {
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.6fr_1fr]">
         <div className="space-y-6">
           {/* Horarios disponibles */}
-          <Card className="rounded-3xl border-emerald-100 shadow-sm">
+          <Card className="rounded-3xl border-mint/60 shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 font-display text-lg">
                 <CalendarClock className="size-5 text-primary" /> Horarios disponibles
@@ -203,7 +203,7 @@ function PerfilDentista() {
           </Card>
 
           {/* Reseñas reales */}
-          <Card className="rounded-3xl border-emerald-100 shadow-sm">
+          <Card className="rounded-3xl border-mint/60 shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="font-display text-lg">Reseñas verificadas</CardTitle>
             </CardHeader>
@@ -241,7 +241,7 @@ function PerfilDentista() {
 
         {/* Servicios */}
         <aside className="lg:sticky lg:top-24 lg:h-fit">
-          <Card className="rounded-3xl border-emerald-100 shadow-sm">
+          <Card className="rounded-3xl border-mint/60 shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="font-display text-lg">Servicios y precios</CardTitle>
             </CardHeader>

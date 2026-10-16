@@ -164,6 +164,21 @@ async function renovarToken(): Promise<boolean> {
   return renovacionEnCurso;
 }
 
+/** Traduce una respuesta fallida del backend en un ApiError con mensaje legible. */
+async function errorDeRespuesta(respuesta: Response): Promise<ApiError> {
+  let mensaje: string | undefined;
+  try {
+    const error = (await respuesta.json()) as { mensaje?: string };
+    mensaje = error.mensaje;
+  } catch {
+    // El cuerpo no era JSON.
+  }
+  return new ApiError(
+    respuesta.status,
+    mensaje ?? mensajePorEstado[respuesta.status] ?? "Ocurrió un error inesperado.",
+  );
+}
+
 async function llamar<T>(ruta: string, opciones: Opciones = {}, reintentar = true): Promise<T> {
   const { method = "GET", body, conToken = true } = opciones;
   const headers: Record<string, string> = { Accept: "application/json" };
@@ -188,22 +203,15 @@ async function llamar<T>(ruta: string, opciones: Opciones = {}, reintentar = tru
     if (await renovarToken()) return llamar<T>(ruta, opciones, false);
   }
 
-  if (!respuesta.ok) {
-    let mensaje: string | undefined;
-    try {
-      const error = (await respuesta.json()) as { mensaje?: string };
-      mensaje = error.mensaje;
-    } catch {
-      // El cuerpo no era JSON.
-    }
-    throw new ApiError(
-      respuesta.status,
-      mensaje ?? mensajePorEstado[respuesta.status] ?? "Ocurrió un error inesperado.",
-    );
-  }
+  if (!respuesta.ok) throw await errorDeRespuesta(respuesta);
 
   if (respuesta.status === 204) return undefined as T;
-  return (await respuesta.json()) as T;
+  // Algunos endpoints responden 200 sin cuerpo: no es un error, se devuelve undefined.
+  try {
+    return (await respuesta.json()) as T;
+  } catch {
+    return undefined as T;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -234,6 +242,69 @@ export const authApi = {
     guardarSesion(null);
   },
 };
+
+// ---------------------------------------------------------------------------
+// Recuperación de contraseña (flujo público de 4 pasos)
+// ---------------------------------------------------------------------------
+// Contrato exigido al backend (todo queda bajo /api/auth/**, que SecurityConfig
+// ya deja pasar sin token; los nombres van en snake_case como el resto de la API):
+//
+//   POST /api/auth/recuperar/solicitar   { correo }          -> 200  respuesta genérica (no revela si la cuenta existe)
+//   POST /api/auth/recuperar/reenviar     { correo }          -> 200  respuesta genérica
+//   POST /api/auth/recuperar/verificar    { correo, codigo }  -> 200  { token }  token de un solo uso y corta validez
+//   POST /api/auth/recuperar/restablecer  { token, password } -> 200  marca el token como consumido
+//
+// El backend publicado hoy NO los expone (solo login/refresh/register) y responde
+// 404; la interfaz lo informa con servicioNoDisponible() sin simular el flujo.
+
+export type RespuestaRecuperacion = { mensaje?: string };
+export type VerificacionRecuperacion = { token?: string };
+
+export const recuperacionApi = {
+  /** Paso 1: pide el código. La respuesta debe ser idéntica exista o no la cuenta. */
+  solicitar(correo: string): Promise<RespuestaRecuperacion> {
+    return llamar<RespuestaRecuperacion>("/api/auth/recuperar/solicitar", {
+      method: "POST",
+      body: { correo },
+      conToken: false,
+    });
+  },
+
+  /** Paso 2: reenvía el mismo código (o lo renueva) respetando el tiempo de espera. */
+  reenviar(correo: string): Promise<RespuestaRecuperacion> {
+    return llamar<RespuestaRecuperacion>("/api/auth/recuperar/reenviar", {
+      method: "POST",
+      body: { correo },
+      conToken: false,
+    });
+  },
+
+  /** Paso 2: valida el código y devuelve el token de un solo uso para el paso 3. */
+  verificar(correo: string, codigo: string): Promise<VerificacionRecuperacion> {
+    return llamar<VerificacionRecuperacion>("/api/auth/recuperar/verificar", {
+      method: "POST",
+      body: { correo, codigo },
+      conToken: false,
+    });
+  },
+
+  /** Paso 3: cambia la contraseña consumiendo el token. Nunca se envía por URL. */
+  restablecer(token: string, password: string): Promise<RespuestaRecuperacion> {
+    return llamar<RespuestaRecuperacion>("/api/auth/recuperar/restablecer", {
+      method: "POST",
+      body: { token, password },
+      conToken: false,
+    });
+  },
+};
+
+/** true cuando el servidor aún no implementa el endpoint (404 / 405 / 501). */
+export function servicioNoDisponible(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    (error.status === 404 || error.status === 405 || error.status === 501)
+  );
+}
 
 export const chatbotApi = {
   enviarMensaje(mensaje: string, sesionId?: string): Promise<RespuestaChatbot> {
@@ -481,3 +552,184 @@ export const resenasApi = {
     });
   },
 };
+
+// ---------------------------------------------------------------------------
+// Mi cuenta y perfil (paciente y odontólogo)
+// ---------------------------------------------------------------------------
+// GET/PATCH /api/usuarios/yo funcionan para cualquier rol autenticado. Los
+// campos restringidos (correo, documento, rol, colegiatura) NUNCA se envían en
+// una actualización: el formulario solo envía lo que el backend permite.
+export type UsuarioYo = {
+  id: string;
+  nombre_completo: string;
+  correo: string;
+  telefono: string;
+  tipo_documento: string;
+  numero_documento: string;
+  rol: Rol;
+  foto_perfil_url: string | null;
+};
+
+/** PATCH /api/usuarios/yo — solo nombre (3..150) y teléfono (\+?\d{9,15}). */
+export type ActualizarUsuarioRequest = {
+  nombre_completo?: string;
+  telefono?: string;
+};
+
+export type FotoPerfil = { foto_perfil_url: string };
+
+/** GET /api/usuarios/yo/reputacion — strikes por inasistencia del paciente. */
+export type ReputacionPaciente = {
+  strikes: number;
+  limite_strikes: number;
+  estado: "EXCELENTE" | "REGULAR" | "BLOQUEADO";
+  restringido_hasta: string | null;
+  puede_reservar: boolean;
+};
+
+/** Historia clínica de una cita atendida (cifrada en la BD según Ley N.º 29733). */
+export type HistoriaClinica = {
+  id: number;
+  cita_id: string;
+  paciente_id: string;
+  odontologo: string;
+  servicio: string;
+  fecha_cita: string;
+  diagnostico: string;
+  tratamiento: string;
+  notas: string | null;
+  creado_en: string;
+};
+
+const FOTO_TIPOS_ADMITIDOS = ["image/jpeg", "image/png", "image/webp"];
+const FOTO_MAXIMO_BYTES = 5 * 1024 * 1024; // el backend limita a 5 MB
+
+/** PUT /api/usuarios/yo/foto — multipart (JPG/PNG/WEBP hasta 5 MB). */
+async function subirFotoPerfil(archivo: File, reintentar = true): Promise<FotoPerfil> {
+  if (!FOTO_TIPOS_ADMITIDOS.includes(archivo.type)) {
+    throw new ApiError(400, "Formato no admitido: usa una imagen JPG, PNG o WEBP.");
+  }
+  if (archivo.size > FOTO_MAXIMO_BYTES) {
+    throw new ApiError(400, "La imagen supera los 5 MB. Elige una más ligera.");
+  }
+  const sesion = leerSesion();
+  const datos = new FormData();
+  datos.append("archivo", archivo);
+
+  let respuesta: Response;
+  try {
+    respuesta = await fetch(`${API_URL}/api/usuarios/yo/foto`, {
+      method: "PUT",
+      headers: sesion ? { Authorization: `Bearer ${sesion.access_token}` } : {},
+      body: datos,
+    });
+  } catch {
+    throw new ApiError(0, mensajePorEstado[0]!);
+  }
+
+  if ((respuesta.status === 401 || respuesta.status === 403) && sesion && reintentar) {
+    if (await renovarToken()) return subirFotoPerfil(archivo, false);
+  }
+  if (!respuesta.ok) throw await errorDeRespuesta(respuesta);
+  return (await respuesta.json()) as FotoPerfil;
+}
+
+export const usuariosApi = {
+  /** GET /api/usuarios/yo — identidad del usuario autenticado (cualquier rol). */
+  yo(): Promise<UsuarioYo> {
+    return llamar<UsuarioYo>("/api/usuarios/yo");
+  },
+
+  /** PATCH /api/usuarios/yo — actualiza los únicos campos que el backend permite. */
+  actualizar(datos: ActualizarUsuarioRequest): Promise<UsuarioYo> {
+    return llamar<UsuarioYo>("/api/usuarios/yo", { method: "PATCH", body: datos });
+  },
+
+  /** PUT /api/usuarios/yo/foto — reemplaza la foto de perfil (paciente u odontólogo). */
+  subirFoto(archivo: File): Promise<FotoPerfil> {
+    return subirFotoPerfil(archivo);
+  },
+
+  /** GET /api/usuarios/yo/reputacion — estado de strikes (solo pacientes). */
+  reputacion(): Promise<ReputacionPaciente> {
+    return llamar<ReputacionPaciente>("/api/usuarios/yo/reputacion");
+  },
+};
+
+export const historiasApi = {
+  /** GET /api/historias/mias — mis historias clínicas, la más reciente primero. */
+  mias(): Promise<HistoriaClinica[]> {
+    return llamar<HistoriaClinica[]>("/api/historias/mias");
+  },
+};
+
+export const catalogosApi = {
+  /** GET /api/catalogos/especialidades — catálogo público (para editar el perfil). */
+  especialidades(): Promise<{ id: number; nombre: string }[]> {
+    return llamar<{ id: number; nombre: string }[]>("/api/catalogos/especialidades", {
+      conToken: false,
+    });
+  },
+};
+// ---------------------------------------------------------------------------
+// Odontólogo: mi perfil de consultorio, verificación COP y resumen de actividad
+// ---------------------------------------------------------------------------
+export type EstadoVerificacionCopa = "PENDIENTE" | "OBSERVADO" | "VERIFICADO" | "RECHAZADO";
+
+/** GET /api/odontologos/yo/perfil — perfil público + estado de verificación. */
+export type MiPerfilOdontologo = {
+  /** Mismo contrato que GET /api/odontologos/{id} (PerfilPublicoResponse). */
+  perfil: PerfilOdontologo;
+  estado_verificacion: EstadoVerificacionCopa;
+  nota_observacion: string | null;
+  ruc: string | null;
+  cci: string | null;
+  frecuencia_disponibilidad: "DIARIA" | "SEMANAL" | null;
+  disponibilidad_actualizada_en: string | null;
+};
+
+/**
+ * PATCH /api/odontologos/yo/perfil — actualización parcial: solo cambia lo que
+ * se envíe y `especialidad_ids` reemplaza la lista completa. Los campos
+ * restringidos (colegiatura, verificación) no forman parte de este contrato.
+ */
+export type ActualizarPerfilOdontologoRequest = {
+  nombre_consultorio?: string;
+  direccion_consultorio?: string;
+  distrito_consultorio?: string;
+  especialidad_ids?: number[];
+};
+
+/** Cita vista desde el odontólogo (CitaResponse + paciente). */
+export type CitaOdontologo = Cita & {
+  paciente?: { id: string; nombre: string; telefono?: string | null; correo?: string | null };
+  motivo_cancelacion?: string | null;
+  creado_en?: string;
+};
+
+export const miPerfilApi = {
+  /** GET /api/odontologos/yo/perfil — incluye estado de verificación y nota. */
+  obtener(): Promise<MiPerfilOdontologo> {
+    return llamar<MiPerfilOdontologo>("/api/odontologos/yo/perfil");
+  },
+
+  /** PATCH /api/odontologos/yo/perfil — campos permitidos del consultorio. */
+  actualizar(datos: ActualizarPerfilOdontologoRequest): Promise<MiPerfilOdontologo> {
+    return llamar<MiPerfilOdontologo>("/api/odontologos/yo/perfil", {
+      method: "PATCH",
+      body: datos,
+    });
+  },
+
+  /** GET /api/odontologos/yo/citas — desde/hasta en YYYY-MM-DD (hasta exclusivo). */
+  citas(desde: string, hasta: string): Promise<CitaOdontologo[]> {
+    return llamar<CitaOdontologo[]>(`/api/odontologos/yo/citas${consulta({ desde, hasta })}`);
+  },
+
+  /** GET /api/odontologos/yo/historias — historiales clínicos que registré. */
+  historias(): Promise<HistoriaClinica[]> {
+    return llamar<HistoriaClinica[]>("/api/odontologos/yo/historias");
+  },
+};
+
+
