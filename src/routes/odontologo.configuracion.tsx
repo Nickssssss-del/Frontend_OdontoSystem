@@ -14,7 +14,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -24,7 +23,6 @@ import {
   IconoSoloLectura,
   mensajeDeError,
 } from "@/components/perfil/PerfilComunes";
-import { DentistCard } from "@/components/DentistCard";
 import { VerificacionCOP } from "@/components/VerificacionCOP";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -231,22 +229,20 @@ function ConfiguracionOdontologo() {
 
   if (sesion?.rol !== "ODONTOLOGO") {
     return (
-      <AppShell>
-        <div className="mx-auto mt-10 max-w-md text-center">
-          <Shield className="mx-auto size-10 text-primary" />
-          <h1 className="mt-4 font-display text-xl font-semibold">
-            Configuración del odontólogo
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {sesion
-              ? "Tu cuenta es de paciente. Accede a la configuración desde tu perfil de paciente."
-              : "Inicia sesión como odontólogo para ver y editar tu configuración."}
-          </p>
-          <Button asChild className="mt-6 rounded-full">
-            <Link to="/">Ir a iniciar sesión</Link>
-          </Button>
-        </div>
-      </AppShell>
+      <div className="mx-auto mt-10 max-w-md text-center">
+        <Shield className="mx-auto size-10 text-primary" />
+        <h1 className="mt-4 font-display text-xl font-semibold">
+          Configuración del odontólogo
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {sesion
+            ? "Tu cuenta es de paciente. Accede a la configuración desde tu perfil de paciente."
+            : "Inicia sesión como odontólogo para ver y editar tu configuración."}
+        </p>
+        <Button asChild className="mt-6 rounded-full">
+          <Link to="/">Ir a iniciar sesión</Link>
+        </Button>
+      </div>
     );
   }
 
@@ -322,8 +318,7 @@ function ConfiguracionOdontologo() {
   const ocupacion = Math.round(((busyBlocks["d1"]?.length ?? 0) / timeBlocks.length) * 100);
 
   return (
-    <AppShell>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <header>
           <div className="flex items-center gap-2.5">
             <img src="/odontosystem-logo.png" alt="OdontoSystem" className="size-8" />
@@ -784,6 +779,5 @@ function ConfiguracionOdontologo() {
           </>
         )}
       </div>
-    </AppShell>
   );
 }

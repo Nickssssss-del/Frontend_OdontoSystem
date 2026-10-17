@@ -1,5 +1,5 @@
 import * as React from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useLocation } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
 import {
   Area,
@@ -56,23 +56,26 @@ export const Route = createFileRoute("/odontologo")({
 const dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
 function Odontologo() {
-const {
-     agenda,
-     updateAgenda,
-     addStrike,
-     strikes,
-     blockedToday,
-     setBlockedToday,
-     vouchersPorRevisar,
-     approveVoucher,
-     rejectVoucher,
-     bloqueoExpressActivo,
-   } = useAppState();
+  const {
+    agenda,
+    updateAgenda,
+    addStrike,
+    strikes,
+    blockedToday,
+    setBlockedToday,
+    vouchersPorRevisar,
+    approveVoucher,
+    rejectVoucher,
+    bloqueoExpressActivo,
+  } = useAppState();
   const [notaFor, setNotaFor] = React.useState<Appointment | null>(null);
   const [nota, setNota] = React.useState("");
   const [revisandoId, setRevisandoId] = React.useState<string | null>(null);
   const [motivo, setMotivo] = React.useState(motivosRechazo[0]!);
   const [modoRechazo, setModoRechazo] = React.useState(false);
+
+  const location = useLocation();
+  const mostrarConfiguracion = location.pathname === "/odontologo/configuracion";
 
   const revisando = vouchersPorRevisar.find((a) => a.id === revisandoId) ?? null;
   const enRevision = vouchersPorRevisar.filter((a) => a.voucher?.status === "EN_REVISION");
@@ -127,8 +130,10 @@ const {
   };
 
 return (
-     <AppShell>
-       {bloqueoExpressActivo && (
+  <AppShell>
+    {mostrarConfiguracion ? <Outlet /> : (
+      <>
+        {bloqueoExpressActivo && (
          <div className="mb-4 p-4 bg-destructive/10 text-destructive rounded-lg border border-destructive/20">
            <div className="flex items-start gap-3">
              <X className="size-5 shrink-0" />
@@ -587,7 +592,9 @@ return (
           </motion.div>
         )}
       </AnimatePresence>
-    </AppShell>
+      </>
+    )}
+  </AppShell>
   );
 }
 
