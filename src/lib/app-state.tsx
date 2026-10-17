@@ -265,7 +265,10 @@ type Ctx = {
   updateAgenda: (id: string, patch: Partial<Appointment>) => void;
   approveVoucher: (id: string) => void;
   rejectVoucher: (id: string, reason: string) => void;
-  resubmitVoucher: (id: string, data: { imageUrl?: string; reference: string; method: "yape" | "plin" }) => void;
+  resubmitVoucher: (
+    id: string,
+    data: { imageUrl?: string; reference: string; method: "yape" | "plin" },
+  ) => void;
   blockedToday: boolean;
   setBlockedToday: (v: boolean) => void;
   documentos: Document[];
@@ -311,7 +314,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [blockedToday, setBlockedToday] = React.useState(false);
   const [documentos, setDocumentos] = React.useState<Document[]>(documentosIniciales);
   const [frecuenciaDisponibilidad, setFrecuenciaDisponibilidad] = React.useState(
-    "Actualizo mi disponibilidad diariamente"
+    "Actualizo mi disponibilidad diariamente",
   );
   const [bloqueoExpressActivo, setBloqueoExpressActivo] = React.useState(false);
   const [confirmacionManual, setConfirmacionManual] = React.useState(false);
@@ -329,8 +332,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     return all
       .filter((a) => (seen.has(a.id) ? false : (seen.add(a.id), true)))
       .sort((a, b) => {
-        const rank = (v?: VoucherStatus) =>
-          v === "EN_REVISION" ? 0 : v === "RECHAZADO" ? 1 : 2;
+        const rank = (v?: VoucherStatus) => (v === "EN_REVISION" ? 0 : v === "RECHAZADO" ? 1 : 2);
         return rank(a.voucher?.status) - rank(b.voucher?.status);
       });
   }, [agenda, appointments]);
@@ -367,9 +369,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     rejectVoucher: (id, reason) =>
       patchBoth(id, (a) => ({
         status: "PAYMENT_REJECTED",
-        ...(a.voucher
-          ? { voucher: { ...a.voucher, status: "RECHAZADO" as const, reason } }
-          : {}),
+        ...(a.voucher ? { voucher: { ...a.voucher, status: "RECHAZADO" as const, reason } } : {}),
       })),
     resubmitVoucher: (id, data) =>
       patchBoth(id, (a) => ({

@@ -13,7 +13,12 @@ import {
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DatoSoloLectura, FormularioDatosContacto, IconoSoloLectura, mensajeDeError } from "@/components/perfil/PerfilComunes";
+import {
+  DatoSoloLectura,
+  FormularioDatosContacto,
+  IconoSoloLectura,
+  mensajeDeError,
+} from "@/components/perfil/PerfilComunes";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -27,16 +32,7 @@ import { Switch } from "@/components/ui/switch";
 import { useAppState } from "@/lib/app-state";
 import { leerSesion, usuariosApi, type UsuarioYo } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import {
-  ArrowRight,
-  Bell,
-  Clock,
-  LogOut,
-  Mail,
-  Phone,
-  Shield,
-  UserRound,
-} from "lucide-react";
+import { ArrowRight, Bell, Clock, LogOut, Mail, Phone, Shield, UserRound } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/paciente/configuracion")({
@@ -45,8 +41,7 @@ export const Route = createFileRoute("/paciente/configuracion")({
       { title: "Configuración de cuenta | OdontoSystem" },
       {
         name: "description",
-        content:
-          "Administra tus preferencias y seguridad desde un solo lugar.",
+        content: "Administra tus preferencias y seguridad desde un solo lugar.",
       },
     ],
   }),
@@ -183,11 +178,7 @@ function ConfiguracionPaciente() {
       const siguiente = { ...prev, [clave]: valor };
       toast.success("Preferencia guardada", {
         description:
-          typeof valor === "boolean"
-            ? valor
-              ? "Activada"
-              : "Desactivada"
-            : String(valor),
+          typeof valor === "boolean" ? (valor ? "Activada" : "Desactivada") : String(valor),
       });
       return siguiente;
     });
@@ -226,11 +217,7 @@ function ConfiguracionPaciente() {
         <div className="space-y-6">
           <header>
             <div className="flex items-center gap-2.5">
-              <img
-                src="/odontosystem-logo.png"
-                alt="OdontoSystem"
-                className="size-8"
-              />
+              <img src="/odontosystem-logo.png" alt="OdontoSystem" className="size-8" />
               <div className="min-w-0 flex-col leading-none">
                 <span className="text-xs font-semibold uppercase tracking-wider text-primary">
                   OdontoSystem
@@ -268,9 +255,21 @@ function ConfiguracionPaciente() {
               ) : (
                 <div className="grid gap-4 sm:grid-cols-2">
                   <DatoSoloLectura label="Nombre completo" valor={usuario!.nombre_completo} />
-                  <DatoSoloLectura label="Correo" valor={usuario!.correo} icono={<IconoSoloLectura />} />
-                  <DatoSoloLectura label="Teléfono" valor={usuario!.telefono} icono={<Phone className="size-3" />} />
-                  <DatoSoloLectura label="Rol" valor="Paciente" icono={<UserRound className="size-3" />} />
+                  <DatoSoloLectura
+                    label="Correo"
+                    valor={usuario!.correo}
+                    icono={<IconoSoloLectura />}
+                  />
+                  <DatoSoloLectura
+                    label="Teléfono"
+                    valor={usuario!.telefono}
+                    icono={<Phone className="size-3" />}
+                  />
+                  <DatoSoloLectura
+                    label="Rol"
+                    valor="Paciente"
+                    icono={<UserRound className="size-3" />}
+                  />
                 </div>
               )}
               <div className="mt-5 flex items-center gap-3">
@@ -279,7 +278,12 @@ function ConfiguracionPaciente() {
                     Editar datos de contacto
                   </Button>
                 ) : (
-                  <Button type="button" variant="outline" onClick={() => setEditando(false)} className="rounded-xl">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setEditando(false)}
+                    className="rounded-xl"
+                  >
                     Cancelar
                   </Button>
                 )}
@@ -312,7 +316,8 @@ function ConfiguracionPaciente() {
                 <CambiarContrasenaButton />
               </div>
               <p className="text-xs text-muted-foreground">
-                ¿No recuerdas tu contraseña? Usa <span className="font-medium text-primary">¿Olvidaste tu contraseña?</span>
+                ¿No recuerdas tu contraseña? Usa{" "}
+                <span className="font-medium text-primary">¿Olvidaste tu contraseña?</span>
                 desde el inicio de sesión o el enlace de recuperación.
               </p>
             </CardContent>
@@ -324,9 +329,7 @@ function ConfiguracionPaciente() {
               <CardTitle className="flex items-center gap-2 font-display text-xl">
                 <Bell className="size-5 text-primary" /> Notificaciones
               </CardTitle>
-              <CardDescription>
-                Elige cómo quieres que OdontoSystem te avise.
-              </CardDescription>
+              <CardDescription>Elige cómo quieres que OdontoSystem te avise.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between gap-4 rounded-xl border border-border p-4">
@@ -443,9 +446,7 @@ function ConfiguracionPaciente() {
               <CardTitle className="flex items-center gap-2 font-display text-xl">
                 <Shield className="size-5 text-primary" /> Preferencias
               </CardTitle>
-              <CardDescription>
-                Idioma, tema visual y otras opciones disponibles.
-              </CardDescription>
+              <CardDescription>Idioma, tema visual y otras opciones disponibles.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Idioma */}
@@ -516,10 +517,7 @@ function ConfiguracionPaciente() {
             </CardContent>
           </Card>
 
-          <AlertDialog
-            open={cerrarAbierto}
-            onOpenChange={setCerrarAbierto}
-          >
+          <AlertDialog open={cerrarAbierto} onOpenChange={setCerrarAbierto}>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>¿Cerrar sesión?</AlertDialogTitle>

@@ -4,7 +4,13 @@ import { soles } from "@/lib/mock-data";
 import { voucherClass, voucherLabel, type Voucher } from "@/lib/app-state";
 import { cn } from "@/lib/utils";
 
-export function VoucherBadge({ status, className }: { status: Voucher["status"]; className?: string }) {
+export function VoucherBadge({
+  status,
+  className,
+}: {
+  status: Voucher["status"];
+  className?: string;
+}) {
   return (
     <motion.span
       initial={{ opacity: 0, scale: 0.9 }}

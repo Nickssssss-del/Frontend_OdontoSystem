@@ -113,12 +113,14 @@ const etiquetaVerificacion: Record<string, string> = {
 };
 
 function estadoClase(estado: string) {
-  return {
-    PENDIENTE: "border-warning/40 bg-warning/15 text-warning-foreground",
-    OBSERVADO: "border-warning/40 bg-warning/15 text-warning-foreground",
-    VERIFICADO: "border-success/40 bg-success/15 text-success-foreground",
-    RECHAZADO: "border-destructive/40 bg-destructive/10 text-destructive",
-  }[estado] ?? "border-border text-muted-foreground";
+  return (
+    {
+      PENDIENTE: "border-warning/40 bg-warning/15 text-warning-foreground",
+      OBSERVADO: "border-warning/40 bg-warning/15 text-warning-foreground",
+      VERIFICADO: "border-success/40 bg-success/15 text-success-foreground",
+      RECHAZADO: "border-destructive/40 bg-destructive/10 text-destructive",
+    }[estado] ?? "border-border text-muted-foreground"
+  );
 }
 
 function SettingRow({
@@ -135,7 +137,9 @@ function SettingRow({
   prominent?: boolean;
 }) {
   return (
-    <div className={`flex items-center justify-between gap-4 rounded-2xl border p-4 ${prominent ? "border-warning/40 bg-warning/10" : "border-border"}`}>
+    <div
+      className={`flex items-center justify-between gap-4 rounded-2xl border p-4 ${prominent ? "border-warning/40 bg-warning/10" : "border-border"}`}
+    >
       <div>
         <p className="text-sm font-semibold">{label}</p>
         <p className="mt-1 text-xs text-muted-foreground">{description}</p>
@@ -190,7 +194,9 @@ function ConfiguracionOdontologo() {
         if (!vigente) return;
         setUsuario(cuenta);
         setMiPerfil(perfil);
-        setIdsEspecialidades(perfil.perfil.especialidades.map((e: { id: number; nombre: string }) => e.id));
+        setIdsEspecialidades(
+          perfil.perfil.especialidades.map((e: { id: number; nombre: string }) => e.id),
+        );
       })
       .catch((err) => {
         if (!vigente) return;
@@ -231,9 +237,7 @@ function ConfiguracionOdontologo() {
     return (
       <div className="mx-auto mt-10 max-w-md text-center">
         <Shield className="mx-auto size-10 text-primary" />
-        <h1 className="mt-4 font-display text-xl font-semibold">
-          Configuración del odontólogo
-        </h1>
+        <h1 className="mt-4 font-display text-xl font-semibold">Configuración del odontólogo</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {sesion
             ? "Tu cuenta es de paciente. Accede a la configuración desde tu perfil de paciente."
@@ -319,465 +323,472 @@ function ConfiguracionOdontologo() {
 
   return (
     <div className="space-y-6">
-        <header>
-          <div className="flex items-center gap-2.5">
-            <img src="/odontosystem-logo.png" alt="OdontoSystem" className="size-8" />
-            <div className="min-w-0 flex-col leading-none">
-              <span className="text-xs font-semibold uppercase tracking-wider text-primary">
-                OdontoSystem
-              </span>
-              <h1 className="font-display text-2xl font-semibold">Configuración</h1>
-            </div>
+      <header>
+        <div className="flex items-center gap-2.5">
+          <img src="/odontosystem-logo.png" alt="OdontoSystem" className="size-8" />
+          <div className="min-w-0 flex-col leading-none">
+            <span className="text-xs font-semibold uppercase tracking-wider text-primary">
+              OdontoSystem
+            </span>
+            <h1 className="font-display text-2xl font-semibold">Configuración</h1>
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Documentación COP, disponibilidad, agenda y preferencias de tu consultorio.
-          </p>
-        </header>
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Documentación COP, disponibilidad, agenda y preferencias de tu consultorio.
+        </p>
+      </header>
 
-        {cargando ? (
-          <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
-            Cargando configuración…
-          </div>
-        ) : error ? (
-          <div className="mx-auto mt-10 max-w-md text-center">
-            <p className="text-sm text-destructive">{error}</p>
-            <Button
-              variant="outline"
-              className="mt-4 rounded-full"
-              onClick={() => setIntento((n) => n + 1)}
-            >
-              Reintentar
-            </Button>
-          </div>
-        ) : (
-          <>
-            {/* Cuenta y acceso */}
+      {cargando ? (
+        <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
+          Cargando configuración…
+        </div>
+      ) : error ? (
+        <div className="mx-auto mt-10 max-w-md text-center">
+          <p className="text-sm text-destructive">{error}</p>
+          <Button
+            variant="outline"
+            className="mt-4 rounded-full"
+            onClick={() => setIntento((n) => n + 1)}
+          >
+            Reintentar
+          </Button>
+        </div>
+      ) : (
+        <>
+          {/* Cuenta y acceso */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 font-display text-xl">
+                <UserRound className="size-5 text-primary" /> Cuenta y acceso
+              </CardTitle>
+              <CardDescription>
+                Tus datos de la cuenta. El correo y el documento son de solo lectura.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {editandoCuenta ? (
+                <FormularioDatosContacto
+                  usuario={usuario!}
+                  onGuardado={() => {
+                    setEditandoCuenta(false);
+                  }}
+                  onCancelar={() => setEditandoCuenta(false)}
+                />
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <DatoSoloLectura label="Nombre completo" valor={usuario!.nombre_completo} />
+                  <DatoSoloLectura
+                    label="Correo"
+                    valor={usuario!.correo}
+                    icono={<IconoSoloLectura />}
+                  />
+                  <DatoSoloLectura
+                    label="Teléfono"
+                    valor={usuario!.telefono}
+                    icono={<Phone className="size-3" />}
+                  />
+                  <DatoSoloLectura
+                    label="Rol"
+                    valor="Odontólogo"
+                    icono={<UserRound className="size-3" />}
+                  />
+                </div>
+              )}
+              <div className="mt-5 flex items-center gap-3">
+                {!editandoCuenta ? (
+                  <Button
+                    type="button"
+                    onClick={() => setEditandoCuenta(true)}
+                    className="rounded-xl"
+                  >
+                    Editar datos de contacto
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setEditandoCuenta(false)}
+                    className="rounded-xl"
+                  >
+                    Cancelar
+                  </Button>
+                )}
+                <Button asChild variant="outline" className="rounded-xl">
+                  <Link to="/dentist/perfil">Ir a Mi perfil</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Seguridad */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 font-display text-xl">
+                <Shield className="size-5 text-primary" /> Seguridad
+              </CardTitle>
+              <CardDescription>
+                Cambia tu contraseña o recupera el acceso a tu cuenta.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-2xl border border-border p-4 flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold">Cambiar contraseña</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Se te enviará un código de verificación a tu correo para crear una nueva
+                    contraseña.
+                  </p>
+                </div>
+                <Button asChild variant="outline" className="rounded-xl">
+                  <Link to="/recuperar">
+                    Cambiar contraseña <ArrowRight className="ml-2 size-4" />
+                  </Link>
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                ¿No recuerdas tu contraseña? Usa{" "}
+                <span className="font-medium text-primary">¿Olvidaste tu contraseña?</span>
+                desde el inicio de sesión o el enlace de recuperación.
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Preferencias de notificaciones (odontólogo) */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 font-display text-xl">
+                <Bell className="size-5 text-primary" /> Preferencias de notificaciones de citas
+              </CardTitle>
+              <CardDescription>
+                Elige qué avisos recibes sobre la agenda de tu consultorio.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <SettingRow
+                label="Recordatorios de citas próximas"
+                description="Te avisa cuando se acerca una cita confirmada."
+                checked={preferencias.recordatoriosCitas}
+                onCheckedChange={(v) => togglePref("recordatoriosCitas", v)}
+              />
+              <SettingRow
+                label="Confirmaciones de cita"
+                description="Te avisa cuando un paciente confirma o paga una cita."
+                checked={preferencias.confirmacionesCitas}
+                onCheckedChange={(v) => togglePref("confirmacionesCitas", v)}
+              />
+              <SettingRow
+                label="Cancelaciones y reprogramaciones"
+                description="Te avisa cuando un paciente cancela o reprograma una cita."
+                checked={preferencias.cancelacionesCitas}
+                onCheckedChange={(v) => togglePref("cancelacionesCitas", v)}
+              />
+              <SettingRow
+                label="Notificaciones por correo electrónico"
+                description="Copia de los avisos de agenda en tu correo."
+                checked={preferencias.correo}
+                onCheckedChange={(v) => togglePref("correo", v)}
+              />
+              <p className="mt-3 text-xs text-muted-foreground">
+                Estas preferencias se guardan en tu dispositivo.
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Disponibilidad y agenda (existen en el sistema) */}
+          <div className="grid gap-6 lg:grid-cols-2">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 font-display text-xl">
-                  <UserRound className="size-5 text-primary" /> Cuenta y acceso
+                  <CalendarClock className="size-5 text-primary" /> Disponibilidad
                 </CardTitle>
-                <CardDescription>
-                  Tus datos de la cuenta. El correo y el documento son de solo lectura.
-                </CardDescription>
+                <p className="text-sm text-muted-foreground">
+                  Define con qué frecuencia actualizas tus bloques.
+                </p>
               </CardHeader>
               <CardContent>
-                {editandoCuenta ? (
-                  <FormularioDatosContacto
-                    usuario={usuario!}
-                    onGuardado={() => {
-                      setEditandoCuenta(false);
-                    }}
-                    onCancelar={() => setEditandoCuenta(false)}
-                  />
-                ) : (
+                <ToggleGroup
+                  type="single"
+                  value={frecuenciaDisponibilidad}
+                  onValueChange={(value) => value && setFrecuenciaDisponibilidad(value)}
+                  className="grid gap-2 sm:grid-cols-2"
+                >
+                  <ToggleGroupItem
+                    value="Actualizo mi disponibilidad diariamente"
+                    className="h-auto justify-start p-4 text-left"
+                  >
+                    Diariamente
+                  </ToggleGroupItem>
+                  <ToggleGroupItem
+                    value="Actualizo semanalmente"
+                    className="h-auto justify-start p-4 text-left"
+                  >
+                    Semanalmente
+                  </ToggleGroupItem>
+                </ToggleGroup>
+                <p className="mt-3 text-xs text-muted-foreground">{frecuenciaDisponibilidad}</p>
+              </CardContent>
+            </Card>
+            <Card className={bloqueoExpressActivo ? "border-destructive/50" : undefined}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 font-display text-xl">
+                  <AlertTriangle className="size-5 text-warning" /> Bloqueo Express
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Pausa la agenda de hoy cuando ocurre una emergencia.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <SettingRow
+                  label="Activar bloqueo express de mi agenda"
+                  description="Requiere confirmación porque afecta los turnos de hoy."
+                  checked={bloqueoExpressActivo}
+                  onCheckedChange={requestBlock}
+                  prominent
+                />
+                <SettingRow
+                  label="Requerir mi confirmación manual antes de bloquear la agenda"
+                  description="Las solicitudes quedarán pendientes hasta que las revises."
+                  checked={confirmacionManual}
+                  onCheckedChange={setConfirmacionManual}
+                />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Datos profesionales (respetando permisos COP) */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 font-display text-xl">
+                <ShieldCheck className="size-5 text-primary" /> Datos profesionales
+              </CardTitle>
+              <CardDescription>
+                Consultorio, dirección, distrito y especialidades. La colegiatura y el estado de
+                verificación COP no se editan desde aquí.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {editandoProfesional && cargandoCatalogo ? (
+                <div className="flex min-h-[200px] items-center justify-center text-muted-foreground">
+                  Cargando especialidades…
+                </div>
+              ) : editandoProfesional ? (
+                <form onSubmit={guardarProfesional} noValidate className="space-y-5">
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <DatoSoloLectura label="Nombre completo" valor={usuario!.nombre_completo} />
-                    <DatoSoloLectura
-                      label="Correo"
-                      valor={usuario!.correo}
-                      icono={<IconoSoloLectura />}
-                    />
-                    <DatoSoloLectura
-                      label="Teléfono"
-                      valor={usuario!.telefono}
-                      icono={<Phone className="size-3" />}
-                    />
-                    <DatoSoloLectura label="Rol" valor="Odontólogo" icono={<UserRound className="size-3" />} />
+                    <div className="space-y-2">
+                      <Label htmlFor="prof-consultorio">Clínica o consultorio</Label>
+                      <Input
+                        id="prof-consultorio"
+                        value={consultorioInput}
+                        onChange={(e) => setConsultorioInput(e.target.value)}
+                        maxLength={150}
+                        placeholder="Odontosystem Ica"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="prof-distrito">Distrito</Label>
+                      <Input
+                        id="prof-distrito"
+                        value={distritoInput}
+                        onChange={(e) => setDistritoInput(e.target.value)}
+                        maxLength={80}
+                        placeholder="Ica"
+                      />
+                    </div>
                   </div>
-                )}
-                <div className="mt-5 flex items-center gap-3">
-                  {!editandoCuenta ? (
-                    <Button
-                      type="button"
-                      onClick={() => setEditandoCuenta(true)}
-                      className="rounded-xl"
-                    >
-                      Editar datos de contacto
-                    </Button>
-                  ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="prof-direccion">Dirección</Label>
+                    <Input
+                      id="prof-direccion"
+                      value={direccionInput}
+                      onChange={(e) => setDireccionInput(e.target.value)}
+                      maxLength={200}
+                      placeholder="Av. Lima 123"
+                    />
+                  </div>
+                  <div className="space-y-3">
+                    <Label>Especialidades</Label>
+                    {catalogo.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Cargando especialidades…</p>
+                    ) : (
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {catalogo.map((item) => {
+                          const marcada = idsEspecialidades.includes(item.id);
+                          return (
+                            <label
+                              key={item.id}
+                              className="flex items-center gap-3 rounded-xl border border-border/70 bg-background p-3 text-sm cursor-pointer"
+                            >
+                              <Checkbox
+                                checked={marcada}
+                                onCheckedChange={(estado) =>
+                                  toggleEspecialidad(item.id, estado === true)
+                                }
+                                aria-label={item.nombre}
+                              />
+                              {item.nombre}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => setEditandoCuenta(false)}
+                      onClick={() => {
+                        setConsultorioInput(perfil?.consultorio ?? "");
+                        setDireccionInput(perfil?.direccion ?? "");
+                        setDistritoInput(perfil?.distrito ?? "");
+                        setIdsEspecialidades(perfil?.especialidades.map((e) => e.id) ?? []);
+                        setEditandoProfesional(false);
+                      }}
                       className="rounded-xl"
                     >
                       Cancelar
                     </Button>
-                  )}
-                  <Button asChild variant="outline" className="rounded-xl">
-                    <Link to="/dentist/perfil">Ir a Mi perfil</Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Seguridad */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 font-display text-xl">
-                  <Shield className="size-5 text-primary" /> Seguridad
-                </CardTitle>
-                <CardDescription>
-                  Cambia tu contraseña o recupera el acceso a tu cuenta.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="rounded-2xl border border-border p-4 flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-semibold">Cambiar contraseña</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Se te enviará un código de verificación a tu correo para crear una nueva
-                      contraseña.
+                    <Button type="submit" className="rounded-xl">
+                      Guardar cambios
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {perfil?.consultorio ? (
+                    <DatoSoloLectura
+                      label="Clínica o consultorio"
+                      valor={perfil.consultorio}
+                      icono={<Building2 className="size-3" />}
+                    />
+                  ) : null}
+                  {perfil?.direccion ? (
+                    <DatoSoloLectura
+                      label="Dirección"
+                      valor={perfil.direccion}
+                      icono={<MapPin className="size-3" />}
+                    />
+                  ) : null}
+                  {perfil?.distrito ? (
+                    <DatoSoloLectura label="Distrito" valor={perfil.distrito} />
+                  ) : null}
+                  {!perfil?.consultorio && !perfil?.direccion && !perfil?.distrito ? (
+                    <p className="text-sm text-muted-foreground sm:col-span-2">
+                      Aún no has publicado datos de consultorio. Pulsa «Editar datos profesionales»
+                      para completarlos.
                     </p>
-                  </div>
+                  ) : null}
+                </div>
+              )}
+              {!editandoProfesional && (
+                <div className="mt-5 flex items-center gap-3">
+                  <Button
+                    type="button"
+                    onClick={() => setEditandoProfesional(true)}
+                    className="rounded-xl"
+                  >
+                    Editar datos profesionales
+                  </Button>
                   <Button asChild variant="outline" className="rounded-xl">
-                    <Link to="/recuperar">Cambiar contraseña <ArrowRight className="ml-2 size-4" /></Link>
+                    <Link to="/dentist/perfil">Ver perfil completo</Link>
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  ¿No recuerdas tu contraseña? Usa{" "}
-                  <span className="font-medium text-primary">¿Olvidaste tu contraseña?</span>
-                  desde el inicio de sesión o el enlace de recuperación.
-                </p>
-              </CardContent>
-            </Card>
+              )}
+            </CardContent>
+          </Card>
 
-            {/* Preferencias de notificaciones (odontólogo) */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 font-display text-xl">
-                  <Bell className="size-5 text-primary" /> Preferencias de notificaciones de citas
-                </CardTitle>
-                <CardDescription>
-                  Elige qué avisos recibes sobre la agenda de tu consultorio.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <SettingRow
-                  label="Recordatorios de citas próximas"
-                  description="Te avisa cuando se acerca una cita confirmada."
-                  checked={preferencias.recordatoriosCitas}
-                  onCheckedChange={(v) => togglePref("recordatoriosCitas", v)}
-                />
-                <SettingRow
-                  label="Confirmaciones de cita"
-                  description="Te avisa cuando un paciente confirma o paga una cita."
-                  checked={preferencias.confirmacionesCitas}
-                  onCheckedChange={(v) => togglePref("confirmacionesCitas", v)}
-                />
-                <SettingRow
-                  label="Cancelaciones y reprogramaciones"
-                  description="Te avisa cuando un paciente cancela o reprograma una cita."
-                  checked={preferencias.cancelacionesCitas}
-                  onCheckedChange={(v) => togglePref("cancelacionesCitas", v)}
-                />
-                <SettingRow
-                  label="Notificaciones por correo electrónico"
-                  description="Copia de los avisos de agenda en tu correo."
-                  checked={preferencias.correo}
-                  onCheckedChange={(v) => togglePref("correo", v)}
-                />
-                <p className="mt-3 text-xs text-muted-foreground">
-                  Estas preferencias se guardan en tu dispositivo.
-                </p>
-              </CardContent>
-            </Card>
+          {/* Documentación y verificación COP */}
+          <VerificacionCOP documentos={documentos} onChange={setDocumentos} />
 
-            {/* Disponibilidad y agenda (existen en el sistema) */}
-            <div className="grid gap-6 lg:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 font-display text-xl">
-                    <CalendarClock className="size-5 text-primary" /> Disponibilidad
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Define con qué frecuencia actualizas tus bloques.
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <ToggleGroup
-                    type="single"
-                    value={frecuenciaDisponibilidad}
-                    onValueChange={(value) => value && setFrecuenciaDisponibilidad(value)}
-                    className="grid gap-2 sm:grid-cols-2"
-                  >
-                    <ToggleGroupItem
-                      value="Actualizo mi disponibilidad diariamente"
-                      className="h-auto justify-start p-4 text-left"
-                    >
-                      Diariamente
-                    </ToggleGroupItem>
-                    <ToggleGroupItem value="Actualizo semanalmente" className="h-auto justify-start p-4 text-left">
-                      Semanalmente
-                    </ToggleGroupItem>
-                  </ToggleGroup>
-                  <p className="mt-3 text-xs text-muted-foreground">{frecuenciaDisponibilidad}</p>
-                </CardContent>
-              </Card>
-              <Card className={bloqueoExpressActivo ? "border-destructive/50" : undefined}>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 font-display text-xl">
-                    <AlertTriangle className="size-5 text-warning" /> Bloqueo Express
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Pausa la agenda de hoy cuando ocurre una emergencia.
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <SettingRow
-                    label="Activar bloqueo express de mi agenda"
-                    description="Requiere confirmación porque afecta los turnos de hoy."
-                    checked={bloqueoExpressActivo}
-                    onCheckedChange={requestBlock}
-                    prominent
-                  />
-                  <SettingRow
-                    label="Requerir mi confirmación manual antes de bloquear la agenda"
-                    description="Las solicitudes quedarán pendientes hasta que las revises."
-                    checked={confirmacionManual}
-                    onCheckedChange={setConfirmacionManual}
-                  />
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Datos profesionales (respetando permisos COP) */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 font-display text-xl">
-                  <ShieldCheck className="size-5 text-primary" /> Datos profesionales
-                </CardTitle>
-                <CardDescription>
-                  Consultorio, dirección, distrito y especialidades. La colegiatura y el estado de
-                  verificación COP no se editan desde aquí.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {editandoProfesional && cargandoCatalogo ? (
-                  <div className="flex min-h-[200px] items-center justify-center text-muted-foreground">
-                    Cargando especialidades…
-                  </div>
-                ) : editandoProfesional ? (
-                  <form onSubmit={guardarProfesional} noValidate className="space-y-5">
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="prof-consultorio">Clínica o consultorio</Label>
-                        <Input
-                          id="prof-consultorio"
-                          value={consultorioInput}
-                          onChange={(e) => setConsultorioInput(e.target.value)}
-                          maxLength={150}
-                          placeholder="Odontosystem Ica"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="prof-distrito">Distrito</Label>
-                        <Input
-                          id="prof-distrito"
-                          value={distritoInput}
-                          onChange={(e) => setDistritoInput(e.target.value)}
-                          maxLength={80}
-                          placeholder="Ica"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="prof-direccion">Dirección</Label>
-                      <Input
-                        id="prof-direccion"
-                        value={direccionInput}
-                        onChange={(e) => setDireccionInput(e.target.value)}
-                        maxLength={200}
-                        placeholder="Av. Lima 123"
-                      />
-                    </div>
-                    <div className="space-y-3">
-                      <Label>Especialidades</Label>
-                      {catalogo.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">Cargando especialidades…</p>
-                      ) : (
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          {catalogo.map((item) => {
-                            const marcada = idsEspecialidades.includes(item.id);
-                            return (
-                              <label
-                                key={item.id}
-                                className="flex items-center gap-3 rounded-xl border border-border/70 bg-background p-3 text-sm cursor-pointer"
-                              >
-                                <Checkbox
-                                  checked={marcada}
-                                  onCheckedChange={(estado) =>
-                                    toggleEspecialidad(item.id, estado === true)
-                                  }
-                                  aria-label={item.nombre}
-                                />
-                                {item.nombre}
-                              </label>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          setConsultorioInput(perfil?.consultorio ?? "");
-                          setDireccionInput(perfil?.direccion ?? "");
-                          setDistritoInput(perfil?.distrito ?? "");
-                          setIdsEspecialidades(
-                            perfil?.especialidades.map((e) => e.id) ?? [],
-                          );
-                          setEditandoProfesional(false);
-                        }}
-                        className="rounded-xl"
-                      >
-                        Cancelar
-                      </Button>
-                      <Button type="submit" className="rounded-xl">
-                        Guardar cambios
-                      </Button>
-                    </div>
-                  </form>
-                ) : (
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    {perfil?.consultorio ? (
-                      <DatoSoloLectura
-                        label="Clínica o consultorio"
-                        valor={perfil.consultorio}
-                        icono={<Building2 className="size-3" />}
-                      />
-                    ) : null}
-                    {perfil?.direccion ? (
-                      <DatoSoloLectura
-                        label="Dirección"
-                        valor={perfil.direccion}
-                        icono={<MapPin className="size-3" />}
-                      />
-                    ) : null}
-                    {perfil?.distrito ? (
-                      <DatoSoloLectura label="Distrito" valor={perfil.distrito} />
-                    ) : null}
-                    {!perfil?.consultorio && !perfil?.direccion && !perfil?.distrito ? (
-                      <p className="text-sm text-muted-foreground sm:col-span-2">
-                        Aún no has publicado datos de consultorio. Pulsa «Editar datos
-                        profesionales» para completarlos.
-                      </p>
-                    ) : null}
-                  </div>
-                )}
-                {!editandoProfesional && (
-                  <div className="mt-5 flex items-center gap-3">
-                    <Button
-                      type="button"
-                      onClick={() => setEditandoProfesional(true)}
-                      className="rounded-xl"
-                    >
-                      Editar datos profesionales
-                    </Button>
-                    <Button asChild variant="outline" className="rounded-xl">
-                      <Link to="/dentist/perfil">Ver perfil completo</Link>
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Documentación y verificación COP */}
-            <VerificacionCOP documentos={documentos} onChange={setDocumentos} />
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              {estadoVerificacion && (
-                <DatoSoloLectura
-                  label="Estado de verificación COP"
-                  valor={
-                    <span className={cn(
+          <div className="grid gap-4 sm:grid-cols-2">
+            {estadoVerificacion && (
+              <DatoSoloLectura
+                label="Estado de verificación COP"
+                valor={
+                  <span
+                    className={cn(
                       "mt-1 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold",
                       estadoClase(estadoVerificacion),
-                    )}>
-                      {estadoVerificacion === "VERIFICADO" && (
-                        <BadgeCheck className="size-3.5" />
-                      )}
-                      {etiquetaVerificacion[estadoVerificacion]}
-                    </span>
-                  }
-                  icono={<IconoSoloLectura />}
-                />
-              )}
-              {perfil?.numero_colegiatura && (
-                <DatoSoloLectura
-                  label="Número de colegiatura COP"
-                  valor={perfil.numero_colegiatura}
-                  icono={<IconoSoloLectura />}
-                />
-              )}
-            </div>
-
-            {/* Cerrar sesión */}
-            <Card className="border-destructive/50">
-              <CardContent className="flex items-center justify-between gap-4 p-4">
-                <div>
-                  <p className="text-sm font-semibold">Cerrar sesión</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Se cerrará tu cuenta en este dispositivo.
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={() => setCerrarAbierto(true)}
-                  disabled={cerrandoSesion}
-                  className="rounded-xl"
-                >
-                  Cerrar sesión
-                </Button>
-              </CardContent>
-            </Card>
-
-            <AlertDialog open={cerrarAbierto} onOpenChange={setCerrarAbierto}>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>¿Cerrar sesión?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Tendrás que iniciar sesión de nuevo con tu correo y contraseña.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction onClick={salir} className="text-destructive">
-                    {cerrandoSesion ? "Cerrando…" : "Cerrar sesión"}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-
-            {/* Confirmación de bloqueo express */}
-            <AlertDialog open={dialogBlockOpen} onOpenChange={setDialogBlockOpen}>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>¿Activar bloqueo express?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Esto cancelará/pausará los turnos de hoy por emergencia y dejará de ofrecer
-                    nuevos cupos.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Continuar con la agenda</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => {
-                      setBloqueoExpressActivo(true);
-                      toast.warning("Bloqueo express activado");
-                    }}
+                    )}
                   >
-                    Activar bloqueo
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </>
-        )}
-      </div>
+                    {estadoVerificacion === "VERIFICADO" && <BadgeCheck className="size-3.5" />}
+                    {etiquetaVerificacion[estadoVerificacion]}
+                  </span>
+                }
+                icono={<IconoSoloLectura />}
+              />
+            )}
+            {perfil?.numero_colegiatura && (
+              <DatoSoloLectura
+                label="Número de colegiatura COP"
+                valor={perfil.numero_colegiatura}
+                icono={<IconoSoloLectura />}
+              />
+            )}
+          </div>
+
+          {/* Cerrar sesión */}
+          <Card className="border-destructive/50">
+            <CardContent className="flex items-center justify-between gap-4 p-4">
+              <div>
+                <p className="text-sm font-semibold">Cerrar sesión</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Se cerrará tu cuenta en este dispositivo.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => setCerrarAbierto(true)}
+                disabled={cerrandoSesion}
+                className="rounded-xl"
+              >
+                Cerrar sesión
+              </Button>
+            </CardContent>
+          </Card>
+
+          <AlertDialog open={cerrarAbierto} onOpenChange={setCerrarAbierto}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>¿Cerrar sesión?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tendrás que iniciar sesión de nuevo con tu correo y contraseña.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={salir} className="text-destructive">
+                  {cerrandoSesion ? "Cerrando…" : "Cerrar sesión"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          {/* Confirmación de bloqueo express */}
+          <AlertDialog open={dialogBlockOpen} onOpenChange={setDialogBlockOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>¿Activar bloqueo express?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esto cancelará/pausará los turnos de hoy por emergencia y dejará de ofrecer nuevos
+                  cupos.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Continuar con la agenda</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => {
+                    setBloqueoExpressActivo(true);
+                    toast.warning("Bloqueo express activado");
+                  }}
+                >
+                  Activar bloqueo
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </>
+      )}
+    </div>
   );
 }

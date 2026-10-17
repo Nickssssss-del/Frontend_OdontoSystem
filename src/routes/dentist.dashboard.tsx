@@ -140,18 +140,18 @@ function DentistDashboard() {
                 <CardContent className="pt-6">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-xs text-muted-foreground font-medium mb-1">
-                        {kpi.label}
-                      </p>
+                      <p className="text-xs text-muted-foreground font-medium mb-1">{kpi.label}</p>
                       <p className="text-2xl font-bold">{kpi.value}</p>
                     </div>
-                    <div className={cn(
-                      "p-2 rounded-lg",
-                      kpi.color === "primary" && "bg-primary/12 text-primary",
-                      kpi.color === "accent" && "bg-accent/12 text-accent",
-                      kpi.color === "destructive" && "bg-destructive/12 text-destructive",
-                      kpi.color === "success" && "bg-success/12 text-success",
-                    )}>
+                    <div
+                      className={cn(
+                        "p-2 rounded-lg",
+                        kpi.color === "primary" && "bg-primary/12 text-primary",
+                        kpi.color === "accent" && "bg-accent/12 text-accent",
+                        kpi.color === "destructive" && "bg-destructive/12 text-destructive",
+                        kpi.color === "success" && "bg-success/12 text-success",
+                      )}
+                    >
                       {kpi.icon}
                     </div>
                   </div>
@@ -180,8 +180,15 @@ function DentistDashboard() {
               <CardContent>
                 <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={ingresoSemanalData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--muted-foreground-opacity-20)" />
-                    <XAxis dataKey="day" stroke="var(--muted-foreground)" style={{ fontSize: "12px" }} />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="var(--muted-foreground-opacity-20)"
+                    />
+                    <XAxis
+                      dataKey="day"
+                      stroke="var(--muted-foreground)"
+                      style={{ fontSize: "12px" }}
+                    />
                     <YAxis stroke="var(--muted-foreground)" style={{ fontSize: "12px" }} />
                     <RechartsTooltip
                       contentStyle={{
@@ -215,9 +222,20 @@ function DentistDashboard() {
               <CardContent>
                 <ResponsiveContainer width="100%" height={280}>
                   <LineChart data={ocupacionMensualData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--muted-foreground-opacity-20)" />
-                    <XAxis dataKey="week" stroke="var(--muted-foreground)" style={{ fontSize: "12px" }} />
-                    <YAxis stroke="var(--muted-foreground)" style={{ fontSize: "12px" }} domain={[0, 100]} />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="var(--muted-foreground-opacity-20)"
+                    />
+                    <XAxis
+                      dataKey="week"
+                      stroke="var(--muted-foreground)"
+                      style={{ fontSize: "12px" }}
+                    />
+                    <YAxis
+                      stroke="var(--muted-foreground)"
+                      style={{ fontSize: "12px" }}
+                      domain={[0, 100]}
+                    />
                     <RechartsTooltip
                       contentStyle={{
                         backgroundColor: "var(--background)",
@@ -284,7 +302,7 @@ function DentistDashboard() {
                               apt.status === "CONFIRMED" &&
                                 "bg-primary/10 text-primary border-primary/30",
                               apt.status === "VERIFYING" &&
-                                "bg-warning/10 text-warning border-warning/30"
+                                "bg-warning/10 text-warning border-warning/30",
                             )}
                           >
                             {statusLabel[apt.status]}

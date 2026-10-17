@@ -52,8 +52,16 @@ function DentistAgenda() {
 
   // Horas disponibles
   const hours = [
-    "08:00", "09:00", "10:00", "11:00", "12:00",
-    "14:00", "15:00", "16:00", "17:00", "18:00"
+    "08:00",
+    "09:00",
+    "10:00",
+    "11:00",
+    "12:00",
+    "14:00",
+    "15:00",
+    "16:00",
+    "17:00",
+    "18:00",
   ];
 
   // View: Day
@@ -69,7 +77,7 @@ function DentistAgenda() {
               animate={{ opacity: 1, y: 0 }}
               className={cn(
                 "rounded-lg border border-border/70 p-3 transition-all hover:shadow-md",
-                appointment ? statusColors[appointment.status] : "bg-muted/30"
+                appointment ? statusColors[appointment.status] : "bg-muted/30",
               )}
             >
               <p className="text-xs font-semibold text-muted-foreground mb-2">{hour}</p>
@@ -111,7 +119,7 @@ function DentistAgenda() {
             if (!date) return null;
             const isToday = date.toDateString() === currentDate.toDateString();
             const dayAppointments = agenda.filter(
-              (a) => new Date(a.date).toDateString() === date.toDateString()
+              (a) => new Date(a.date).toDateString() === date.toDateString(),
             );
 
             return (
@@ -122,7 +130,7 @@ function DentistAgenda() {
                 transition={{ delay: idx * 0.05 }}
                 className={cn(
                   "rounded-lg border border-border/70 p-4 min-w-max transition-all",
-                  isToday ? "bg-primary/10 border-primary/50" : "bg-muted/30"
+                  isToday ? "bg-primary/10 border-primary/50" : "bg-muted/30",
                 )}
               >
                 <div className="mb-3">
@@ -184,7 +192,7 @@ function DentistAgenda() {
           {days.map((day) => {
             const date = new Date(year, month, day);
             const dayAppointments = agenda.filter(
-              (a) => new Date(a.date).toDateString() === date.toDateString()
+              (a) => new Date(a.date).toDateString() === date.toDateString(),
             );
             const isToday = date.toDateString() === currentDate.toDateString();
 
@@ -195,7 +203,7 @@ function DentistAgenda() {
                 animate={{ opacity: 1, scale: 1 }}
                 className={cn(
                   "aspect-square rounded-lg border border-border/70 p-2 flex flex-col text-xs hover:shadow-md transition-shadow",
-                  isToday ? "bg-primary/10 border-primary/50" : "bg-muted/30"
+                  isToday ? "bg-primary/10 border-primary/50" : "bg-muted/30",
                 )}
               >
                 <p className="font-semibold">{day}</p>
@@ -322,12 +330,15 @@ function DentistAgenda() {
                 { status: "PAYMENT_REJECTED", label: "Pago rechazado", icon: AlertCircle },
               ].map((item) => (
                 <div key={item.status} className="flex items-center gap-2">
-                  <div className={cn("w-3 h-3 rounded-full", 
-                    item.status === "CONFIRMED" && "bg-primary",
-                    item.status === "COMPLETED" && "bg-success",
-                    item.status === "VERIFYING" && "bg-warning",
-                    item.status === "PAYMENT_REJECTED" && "bg-destructive"
-                  )} />
+                  <div
+                    className={cn(
+                      "w-3 h-3 rounded-full",
+                      item.status === "CONFIRMED" && "bg-primary",
+                      item.status === "COMPLETED" && "bg-success",
+                      item.status === "VERIFYING" && "bg-warning",
+                      item.status === "PAYMENT_REJECTED" && "bg-destructive",
+                    )}
+                  />
                   <span className="text-sm">{item.label}</span>
                 </div>
               ))}

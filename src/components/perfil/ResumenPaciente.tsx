@@ -27,13 +27,7 @@ import {
 } from "@/components/perfil/PerfilComunes";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   citasApi,
   historiasApi,
@@ -131,9 +125,7 @@ export function ResumenPaciente() {
           label="Strikes de puntualidad"
           valor={reputacion ? `${reputacion.strikes}/${reputacion.limite_strikes}` : "—"}
           icono={<ShieldAlert className="size-5" />}
-          tono={
-            reputacion && reputacion.strikes > 0 ? "destructive" : "success"
-          }
+          tono={reputacion && reputacion.strikes > 0 ? "destructive" : "success"}
         />
       </div>
 
@@ -256,18 +248,13 @@ export function ResumenPaciente() {
             </p>
           )}
           {historias.slice(0, 4).map((historia) => (
-            <div
-              key={historia.id}
-              className="rounded-xl border border-border/70 bg-background p-4"
-            >
+            <div key={historia.id} className="rounded-xl border border-border/70 bg-background p-4">
               <p className="text-sm font-semibold">{historia.servicio}</p>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 con {historia.odontologo} · {fechaLarga(fechaPerfil(historia.fecha_cita))}
               </p>
               {historia.diagnostico ? (
-                <p className="mt-1 text-xs text-foreground">
-                  Diagnóstico: {historia.diagnostico}
-                </p>
+                <p className="mt-1 text-xs text-foreground">Diagnóstico: {historia.diagnostico}</p>
               ) : null}
               {historia.tratamiento ? (
                 <p className="mt-0.5 text-xs text-muted-foreground">

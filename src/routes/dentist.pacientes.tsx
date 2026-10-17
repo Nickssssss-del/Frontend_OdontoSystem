@@ -134,7 +134,7 @@ function DentistPacientes() {
   ];
 
   const filteredPatients = patients.filter((p) =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const stats = {
@@ -235,9 +235,7 @@ function DentistPacientes() {
           <Card>
             <CardHeader>
               <CardTitle>Registro de Pacientes</CardTitle>
-              <CardDescription>
-                {filteredPatients.length} paciente(s) encontrado(s)
-              </CardDescription>
+              <CardDescription>{filteredPatients.length} paciente(s) encontrado(s)</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">

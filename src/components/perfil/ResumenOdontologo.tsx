@@ -6,14 +6,7 @@
  */
 import * as React from "react";
 import { Link } from "@tanstack/react-router";
-import {
-  Calendar,
-  CalendarClock,
-  CheckCircle2,
-  ChevronRight,
-  FileText,
-  Star,
-} from "lucide-react";
+import { Calendar, CalendarClock, CheckCircle2, ChevronRight, FileText, Star } from "lucide-react";
 import {
   AvisoError,
   claseEstadoCita,
@@ -26,13 +19,7 @@ import {
 } from "@/components/perfil/PerfilComunes";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   miPerfilApi,
   odontologosApi,
@@ -85,7 +72,9 @@ export function ResumenOdontologo({ odontologoId }: { odontologoId: string }) {
       if (rResenas.status === "fulfilled") setResenas(rResenas.value);
       else {
         setResenas(null);
-        setErrorResenas(mensajeDeError(rResenas.reason, "No se pudieron cargar tus calificaciones."));
+        setErrorResenas(
+          mensajeDeError(rResenas.reason, "No se pudieron cargar tus calificaciones."),
+        );
       }
       setCargando(false);
     })();
@@ -227,7 +216,9 @@ export function ResumenOdontologo({ odontologoId }: { odontologoId: string }) {
           <CardTitle className="flex items-center gap-2 font-display text-xl">
             <Star className="size-5 text-primary" /> Calificaciones
           </CardTitle>
-          <CardDescription>Lo que tus pacientes han publicado sobre tus atenciones.</CardDescription>
+          <CardDescription>
+            Lo que tus pacientes han publicado sobre tus atenciones.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {!errorResenas && resenas && resenas.resenas.length === 0 && (
@@ -237,17 +228,12 @@ export function ResumenOdontologo({ odontologoId }: { odontologoId: string }) {
           )}
           {!errorResenas &&
             resenas?.resenas.slice(0, 3).map((resena) => (
-              <div
-                key={resena.id}
-                className="rounded-xl border border-border/70 bg-background p-4"
-              >
+              <div key={resena.id} className="rounded-xl border border-border/70 bg-background p-4">
                 <p className="text-sm font-semibold">{resena.paciente}</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   {resena.calificacion} de 5 · {fechaLarga(fechaPerfil(resena.creado_en))}
                 </p>
-                {resena.comentario ? (
-                  <p className="mt-1 text-xs">{resena.comentario}</p>
-                ) : null}
+                {resena.comentario ? <p className="mt-1 text-xs">{resena.comentario}</p> : null}
               </div>
             ))}
           {!errorResenas && resenas && resenas.resenas.length > 3 && (
