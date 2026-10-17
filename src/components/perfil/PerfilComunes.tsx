@@ -58,7 +58,10 @@ export function AvatarPerfil({
       onCambio(resultado.foto_perfil_url);
     } catch (error) {
       toast.error("No se pudo subir la foto", {
-        description: mensajeDeError(error, "Revisa el formato (JPG, PNG o WEBP) y el tamaño (máx. 5 MB)."),
+        description: mensajeDeError(
+          error,
+          "Revisa el formato (JPG, PNG o WEBP) y el tamaño (máx. 5 MB).",
+        ),
       });
     } finally {
       setSubiendo(false);
@@ -68,7 +71,11 @@ export function AvatarPerfil({
   return (
     <div className="relative size-20 shrink-0">
       <Avatar className="size-20 border border-border/70 shadow-sm">
-        <AvatarImage src={fotoUrl ?? undefined} alt={`Foto de ${nombre}`} className="object-cover" />
+        <AvatarImage
+          src={fotoUrl ?? undefined}
+          alt={`Foto de ${nombre}`}
+          className="object-cover"
+        />
         <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-xl font-semibold text-primary-foreground">
           {iniciales(nombre)}
         </AvatarFallback>
@@ -460,13 +467,7 @@ export function EsqueletoPaginaPerfil() {
 }
 
 /** Pantalla cuando no hay sesión o el rol no corresponde a esta ruta. */
-export function AccesoPerfil({
-  titulo,
-  descripcion,
-}: {
-  titulo: string;
-  descripcion: string;
-}) {
+export function AccesoPerfil({ titulo, descripcion }: { titulo: string; descripcion: string }) {
   return (
     <Card className="mx-auto mt-8 max-w-md text-center">
       <CardContent className="py-10">
@@ -480,5 +481,3 @@ export function AccesoPerfil({
     </Card>
   );
 }
-
-

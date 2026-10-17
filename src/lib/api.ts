@@ -731,5 +731,3 @@ export const miPerfilApi = {
     return llamar<HistoriaClinica[]>("/api/odontologos/yo/historias");
   },
 };
-
-

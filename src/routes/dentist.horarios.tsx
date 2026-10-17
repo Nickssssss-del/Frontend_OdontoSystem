@@ -61,21 +61,92 @@ function DentistHorarios() {
     },
     {
       day: "Sábado",
-      blocks: generateBlocks(["09:00", "10:00", "11:00", "bloqueado", "bloqueado", "14:00", "15:00"]),
+      blocks: generateBlocks([
+        "09:00",
+        "10:00",
+        "11:00",
+        "bloqueado",
+        "bloqueado",
+        "14:00",
+        "15:00",
+      ]),
     },
   ]);
 
   function generateBlocks(config: string[]): HourBlock[] {
     return [
-      { hour: "08:00", status: (config.includes("08:00") ? "libre" : config.includes("cita") ? "cita" : "bloqueado") as BlockStatus },
-      { hour: "09:00", status: (config.includes("09:00") ? "libre" : config.includes("cita") ? "cita" : "bloqueado") as BlockStatus },
-      { hour: "10:00", status: (config.includes("10:00") ? "libre" : config.includes("cita") ? "cita" : "bloqueado") as BlockStatus },
-      { hour: "11:00", status: (config.includes("11:00") ? "libre" : config.includes("cita") ? "cita" : "bloqueado") as BlockStatus },
-      { hour: "12:00", status: (config.includes("12:00") ? "libre" : config.includes("cita") ? "cita" : "bloqueado") as BlockStatus },
-      { hour: "14:00", status: (config.includes("14:00") ? "libre" : config.includes("cita") ? "cita" : "bloqueado") as BlockStatus },
-      { hour: "15:00", status: (config.includes("15:00") ? "libre" : config.includes("cita") ? "cita" : "bloqueado") as BlockStatus },
-      { hour: "16:00", status: (config.includes("16:00") ? "libre" : config.includes("cita") ? "cita" : "bloqueado") as BlockStatus },
-      { hour: "17:00", status: (config.includes("17:00") ? "libre" : config.includes("cita") ? "cita" : "bloqueado") as BlockStatus },
+      {
+        hour: "08:00",
+        status: (config.includes("08:00")
+          ? "libre"
+          : config.includes("cita")
+            ? "cita"
+            : "bloqueado") as BlockStatus,
+      },
+      {
+        hour: "09:00",
+        status: (config.includes("09:00")
+          ? "libre"
+          : config.includes("cita")
+            ? "cita"
+            : "bloqueado") as BlockStatus,
+      },
+      {
+        hour: "10:00",
+        status: (config.includes("10:00")
+          ? "libre"
+          : config.includes("cita")
+            ? "cita"
+            : "bloqueado") as BlockStatus,
+      },
+      {
+        hour: "11:00",
+        status: (config.includes("11:00")
+          ? "libre"
+          : config.includes("cita")
+            ? "cita"
+            : "bloqueado") as BlockStatus,
+      },
+      {
+        hour: "12:00",
+        status: (config.includes("12:00")
+          ? "libre"
+          : config.includes("cita")
+            ? "cita"
+            : "bloqueado") as BlockStatus,
+      },
+      {
+        hour: "14:00",
+        status: (config.includes("14:00")
+          ? "libre"
+          : config.includes("cita")
+            ? "cita"
+            : "bloqueado") as BlockStatus,
+      },
+      {
+        hour: "15:00",
+        status: (config.includes("15:00")
+          ? "libre"
+          : config.includes("cita")
+            ? "cita"
+            : "bloqueado") as BlockStatus,
+      },
+      {
+        hour: "16:00",
+        status: (config.includes("16:00")
+          ? "libre"
+          : config.includes("cita")
+            ? "cita"
+            : "bloqueado") as BlockStatus,
+      },
+      {
+        hour: "17:00",
+        status: (config.includes("17:00")
+          ? "libre"
+          : config.includes("cita")
+            ? "cita"
+            : "bloqueado") as BlockStatus,
+      },
     ];
   }
 
@@ -83,23 +154,24 @@ function DentistHorarios() {
     setSchedules((prev) => {
       const updated = [...prev];
       const block = updated[dayIdx]!.blocks[blockIdx]!;
-      
+
       if (block.status === "libre") {
         block.status = "bloqueado";
       } else if (block.status === "bloqueado") {
         block.status = "libre";
       }
-      
+
       return updated;
     });
   };
 
   const handleBlockToday = () => {
     setBlockedToday(!blockedToday);
-    toast.success(
-      blockedToday ? "Disponibilidad restaurada" : "Agenda bloqueada para hoy",
-      { description: blockedToday ? "Tus pacientes pueden agendar nuevamente." : "No se aceptarán citas hoy." }
-    );
+    toast.success(blockedToday ? "Disponibilidad restaurada" : "Agenda bloqueada para hoy", {
+      description: blockedToday
+        ? "Tus pacientes pueden agendar nuevamente."
+        : "No se aceptarán citas hoy.",
+    });
   };
 
   const handleSave = () => {
@@ -132,7 +204,15 @@ function DentistHorarios() {
       },
       {
         day: "Sábado",
-        blocks: generateBlocks(["09:00", "10:00", "11:00", "bloqueado", "bloqueado", "14:00", "15:00"]),
+        blocks: generateBlocks([
+          "09:00",
+          "10:00",
+          "11:00",
+          "bloqueado",
+          "bloqueado",
+          "14:00",
+          "15:00",
+        ]),
       },
     ]);
     toast.info("Horarios reiniciados");
@@ -180,9 +260,14 @@ function DentistHorarios() {
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">Horarios libres</p>
                   <p className="text-2xl font-bold">
-                    {schedules.reduce((sum, day) => sum + day.blocks.filter(b => b.status === "libre").length, 0)}
+                    {schedules.reduce(
+                      (sum, day) => sum + day.blocks.filter((b) => b.status === "libre").length,
+                      0,
+                    )}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-2">de {schedules.length * 9} totales</p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    de {schedules.length * 9} totales
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -199,7 +284,10 @@ function DentistHorarios() {
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">Bloqueados</p>
                   <p className="text-2xl font-bold">
-                    {schedules.reduce((sum, day) => sum + day.blocks.filter(b => b.status === "bloqueado").length, 0)}
+                    {schedules.reduce(
+                      (sum, day) => sum + day.blocks.filter((b) => b.status === "bloqueado").length,
+                      0,
+                    )}
                   </p>
                   <p className="text-xs text-muted-foreground mt-2">Cambiar para disponibilidad</p>
                 </div>
@@ -213,7 +301,8 @@ function DentistHorarios() {
           <CardHeader>
             <CardTitle>Horarios de la Semana</CardTitle>
             <CardDescription>
-              Haz clic en un bloque para cambiar entre Libre y Bloqueado (No puedes modificar citas existentes)
+              Haz clic en un bloque para cambiar entre Libre y Bloqueado (No puedes modificar citas
+              existentes)
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -246,7 +335,7 @@ function DentistHorarios() {
                             block.status === "bloqueado" &&
                               "bg-muted text-muted-foreground border-border hover:bg-muted/70",
                             block.status === "cita" &&
-                              "bg-primary/20 text-primary border-primary/30 cursor-not-allowed opacity-70"
+                              "bg-primary/20 text-primary border-primary/30 cursor-not-allowed opacity-70",
                           )}
                         >
                           <div className="font-semibold">{block.hour}</div>
@@ -284,18 +373,11 @@ function DentistHorarios() {
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 justify-end">
-          <Button
-            variant="outline"
-            onClick={handleReset}
-            className="gap-2"
-          >
+          <Button variant="outline" onClick={handleReset} className="gap-2">
             <RotateCcw className="size-4" />
             Restaurar valores
           </Button>
-          <Button
-            onClick={handleSave}
-            className="gap-2"
-          >
+          <Button onClick={handleSave} className="gap-2">
             <Save className="size-4" />
             Guardar disponibilidad
           </Button>
