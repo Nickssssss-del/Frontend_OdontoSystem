@@ -103,7 +103,6 @@ function CambiarContrasenaButton() {
   return (
     <Button
       type="button"
-      asChild
       variant="outline"
       className="w-full sm:w-auto rounded-xl"
       onClick={() => navigate({ to: "/recuperar" })}
