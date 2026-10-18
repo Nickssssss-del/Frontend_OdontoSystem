@@ -22,7 +22,9 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { AgendaHoyCard } from "@/components/odontologo/AgendaHoyCard";
 import { useAppState, statusLabel } from "@/lib/app-state";
+import { fechaLima } from "@/lib/odontologos";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -49,22 +51,16 @@ export const Route = createFileRoute("/dentist/dashboard")({
   component: DentistDashboard,
 });
 
-// Mock data para gráficos
-const ingresoSemanalData = [
-  { day: "Lun", ingresos: 280 },
-  { day: "Mar", ingresos: 420 },
-  { day: "Mié", ingresos: 350 },
-  { day: "Jue", ingresos: 510 },
-  { day: "Vie", ingresos: 480 },
-  { day: "Sáb", ingresos: 350 },
-];
+const DIAS_SEMANA = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
-const ocupacionMensualData = [
-  { week: "Sem 1", ocupacion: 65 },
-  { week: "Sem 2", ocupacion: 72 },
-  { week: "Sem 3", ocupacion: 68 },
-  { week: "Sem 4", ocupacion: 85 },
-];
+/** Lunes (YYYY-MM-DD) de la semana de una fecha YYYY-MM-DD, calculado en UTC para no correr el día. */
+function lunesDe(fecha: string, offsetSemanas = 0): Date {
+  const d = new Date(`${fecha}T12:00:00Z`);
+  const dow = (d.getUTCDay() + 6) % 7; // lunes = 0
+  d.setUTCDate(d.getUTCDate() - dow + offsetSemanas * 7);
+  return d;
+}
+const aClave = (d: Date) => d.toISOString().slice(0, 10);
 
 type KPI = {
   id: string;
@@ -76,16 +72,45 @@ type KPI = {
 };
 
 function DentistDashboard() {
-  const { agenda, appointments, strikes } = useAppState();
+  const { agenda, appointments, usuario, recargarCitas } = useAppState();
 
-  // Calcular KPIs
-  const totalIngresos = appointments
+  // KPIs con las citas reales del backend (/api/odontologos/yo/citas).
+  const hoy = fechaLima(0);
+  const citasHoy = agenda
+    .filter((a) => a.date === hoy)
+    .sort((x, y) => x.time.localeCompare(y.time));
+  const totalIngresos = citasHoy
     .filter((a) => a.status === "COMPLETED")
     .reduce((sum, a) => sum + a.amount, 0);
+  const pacientesCitados = new Set(citasHoy.map((a) => a.patientId ?? a.patient)).size;
+  const proximas = agenda.filter(
+    (a) => a.date >= hoy && a.status !== "CANCELLED" && a.status !== "NO_SHOW",
+  ).length;
+  const porConfirmar = agenda.filter((a) => a.status === "VERIFYING").length;
 
-  const pacientesCitados = [...new Set(agenda.map((a) => a.patient))].length;
-  const ocupacionPromedio = 72; // Mock
-  const strikesActivos = strikes;
+  const lunes = lunesDe(hoy);
+  const ingresoSemanalData = DIAS_SEMANA.map((day, i) => {
+    const fecha = new Date(lunes);
+    fecha.setUTCDate(lunes.getUTCDate() + i);
+    const clave = aClave(fecha);
+    return {
+      day,
+      ingresos: appointments
+        .filter((a) => a.date === clave && a.status === "COMPLETED")
+        .reduce((sum, a) => sum + a.amount, 0),
+    };
+  });
+  const citasPorSemanaData = [-1, 0, 1, 2, 3].map((offset) => {
+    const desde = aClave(lunesDe(hoy, offset));
+    const hasta = aClave(lunesDe(hoy, offset + 1));
+    return {
+      week: offset === 0 ? "Esta semana" : offset < 0 ? "Anterior" : `+${offset} sem`,
+      citas: agenda.filter(
+        (a) =>
+          a.date >= desde && a.date < hasta && a.status !== "CANCELLED" && a.status !== "NO_SHOW",
+      ).length,
+    };
+  });
 
   const kpis: KPI[] = [
     {
@@ -104,17 +129,17 @@ function DentistDashboard() {
     },
     {
       id: "ocupacion",
-      label: "Ocupación",
-      value: `${ocupacionPromedio}%`,
+      label: "Citas próximas",
+      value: proximas,
       icon: <BarChart3 className="size-5" />,
       color: "accent",
     },
     {
       id: "strikes",
-      label: "Strikes activos",
-      value: strikesActivos,
+      label: "Por confirmar",
+      value: porConfirmar,
       icon: <AlertCircle className="size-5" />,
-      color: strikesActivos >= 2 ? "destructive" : "primary",
+      color: porConfirmar > 0 ? "destructive" : "primary",
     },
   ];
 
@@ -124,7 +149,11 @@ function DentistDashboard() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-semibold mb-2">Dashboard</h1>
-          <p className="text-muted-foreground">Bienvenida, Dra. Claudia Manrique</p>
+          <p className="text-muted-foreground">Bienvenido/a, {usuario?.nombre ?? "odontólogo"}</p>
+        </div>
+
+        <div className="mb-8">
+          <AgendaHoyCard onCambio={() => void recargarCitas()} />
         </div>
 
         {/* KPIs */}
@@ -175,7 +204,7 @@ function DentistDashboard() {
                   <TrendingUp className="size-5 text-success" />
                   Ingresos Semanales
                 </CardTitle>
-                <CardDescription>Últimos 7 días en soles</CardDescription>
+                <CardDescription>Citas atendidas esta semana, en soles</CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={280}>
@@ -215,13 +244,13 @@ function DentistDashboard() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <BarChart3 className="size-5 text-primary" />
-                  Ocupación Mensual
+                  Citas por semana
                 </CardTitle>
-                <CardDescription>Porcentaje de horarios ocupados</CardDescription>
+                <CardDescription>Citas activas (no canceladas) por semana</CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={280}>
-                  <LineChart data={ocupacionMensualData}>
+                  <LineChart data={citasPorSemanaData}>
                     <CartesianGrid
                       strokeDasharray="3 3"
                       stroke="var(--muted-foreground-opacity-20)"
@@ -234,7 +263,7 @@ function DentistDashboard() {
                     <YAxis
                       stroke="var(--muted-foreground)"
                       style={{ fontSize: "12px" }}
-                      domain={[0, 100]}
+                      allowDecimals={false}
                     />
                     <RechartsTooltip
                       contentStyle={{
@@ -242,11 +271,11 @@ function DentistDashboard() {
                         border: "1px solid var(--border)",
                         borderRadius: "6px",
                       }}
-                      formatter={(value) => `${value}%`}
+                      formatter={(value) => `${value} cita(s)`}
                     />
                     <Line
                       type="monotone"
-                      dataKey="ocupacion"
+                      dataKey="citas"
                       stroke="hsl(var(--primary))"
                       strokeWidth={2}
                       dot={{ fill: "hsl(var(--primary))", r: 4 }}
@@ -270,7 +299,7 @@ function DentistDashboard() {
                 <Clock className="size-5 text-accent" />
                 Agenda Hoy
               </CardTitle>
-              <CardDescription>Citas programadas para el 15 de Setiembre</CardDescription>
+              <CardDescription>Citas programadas para hoy</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -285,7 +314,7 @@ function DentistDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {agenda.slice(0, 6).map((apt) => (
+                    {citasHoy.slice(0, 8).map((apt) => (
                       <TableRow key={apt.id} className="hover:bg-muted/50">
                         <TableCell className="font-medium text-sm">{apt.time}</TableCell>
                         <TableCell className="text-sm">{apt.patient}</TableCell>

@@ -16,6 +16,7 @@ import {
   Zap,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { AccionesCita } from "@/components/paciente/AccionesCita";
 import { useAppState } from "@/lib/app-state";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -287,6 +288,7 @@ function PacientePanel() {
                     <CitaProxima
                       key={c.id}
                       cita={c}
+                      onCambio={() => setRecargar((n) => n + 1)}
                       onCancelada={(actualizada) =>
                         setCitas((prev) =>
                           prev.map((x) => (x.id === actualizada.id ? actualizada : x)),
@@ -383,6 +385,7 @@ function PacientePanel() {
                           <TableHead>Fecha</TableHead>
                           <TableHead>Precio</TableHead>
                           <TableHead>Estado</TableHead>
+                          <TableHead>Acciones</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -403,6 +406,9 @@ function PacientePanel() {
                                 {etiquetaEstado[c.estado]}
                               </Badge>
                             </TableCell>
+                            <TableCell className="min-w-[14rem]">
+                              <AccionesCita cita={c} onCambio={() => setRecargar((n) => n + 1)} />
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -418,7 +424,15 @@ function PacientePanel() {
   );
 }
 
-function CitaProxima({ cita, onCancelada }: { cita: Cita; onCancelada: (c: Cita) => void }) {
+function CitaProxima({
+  cita,
+  onCancelada,
+  onCambio,
+}: {
+  cita: Cita;
+  onCancelada: (c: Cita) => void;
+  onCambio: () => void;
+}) {
   const [confirmando, setConfirmando] = React.useState(false);
   const [enviando, setEnviando] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -481,6 +495,8 @@ function CitaProxima({ cita, onCancelada }: { cita: Cita; onCancelada: (c: Cita)
       )}
 
       {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
+
+      <AccionesCita cita={cita} onCambio={onCambio} />
 
       <div className="mt-3 border-t border-border pt-3">
         {!confirmando ? (

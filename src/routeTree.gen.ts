@@ -11,12 +11,16 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OdontologoRouteImport } from './routes/odontologo'
+import { Route as ReclamosRouteImport } from './routes/reclamos'
 import { Route as RecuperarRouteImport } from './routes/recuperar'
 import { Route as DentistAgendaRouteImport } from './routes/dentist.agenda'
+import { Route as DentistConsultorioRouteImport } from './routes/dentist.consultorio'
 import { Route as DentistDashboardRouteImport } from './routes/dentist.dashboard'
 import { Route as DentistHorariosRouteImport } from './routes/dentist.horarios'
+import { Route as DentistLiquidacionesRouteImport } from './routes/dentist.liquidaciones'
 import { Route as DentistPacientesRouteImport } from './routes/dentist.pacientes'
 import { Route as DentistPerfilRouteImport } from './routes/dentist.perfil'
+import { Route as DentistReclamosRouteImport } from './routes/dentist.reclamos'
 import { Route as OdontologoConfiguracionRouteImport } from './routes/odontologo.configuracion'
 import { Route as PacienteCatalogoRouteImport } from './routes/paciente.catalogo'
 import { Route as PacienteConfiguracionRouteImport } from './routes/paciente.configuracion'
@@ -35,6 +39,11 @@ const OdontologoRoute = OdontologoRouteImport.update({
   path: '/odontologo',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReclamosRoute = ReclamosRouteImport.update({
+  id: '/reclamos',
+  path: '/reclamos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RecuperarRoute = RecuperarRouteImport.update({
   id: '/recuperar',
   path: '/recuperar',
@@ -43,6 +52,11 @@ const RecuperarRoute = RecuperarRouteImport.update({
 const DentistAgendaRoute = DentistAgendaRouteImport.update({
   id: '/dentist/agenda',
   path: '/dentist/agenda',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DentistConsultorioRoute = DentistConsultorioRouteImport.update({
+  id: '/dentist/consultorio',
+  path: '/dentist/consultorio',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DentistDashboardRoute = DentistDashboardRouteImport.update({
@@ -55,6 +69,11 @@ const DentistHorariosRoute = DentistHorariosRouteImport.update({
   path: '/dentist/horarios',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DentistLiquidacionesRoute = DentistLiquidacionesRouteImport.update({
+  id: '/dentist/liquidaciones',
+  path: '/dentist/liquidaciones',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DentistPacientesRoute = DentistPacientesRouteImport.update({
   id: '/dentist/pacientes',
   path: '/dentist/pacientes',
@@ -63,6 +82,11 @@ const DentistPacientesRoute = DentistPacientesRouteImport.update({
 const DentistPerfilRoute = DentistPerfilRouteImport.update({
   id: '/dentist/perfil',
   path: '/dentist/perfil',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DentistReclamosRoute = DentistReclamosRouteImport.update({
+  id: '/dentist/reclamos',
+  path: '/dentist/reclamos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OdontologoConfiguracionRoute = OdontologoConfiguracionRouteImport.update({
@@ -104,12 +128,16 @@ const PacienteDentistaIdRoute = PacienteDentistaIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/odontologo': typeof OdontologoRouteWithChildren
+  '/reclamos': typeof ReclamosRoute
   '/recuperar': typeof RecuperarRoute
   '/dentist/agenda': typeof DentistAgendaRoute
+  '/dentist/consultorio': typeof DentistConsultorioRoute
   '/dentist/dashboard': typeof DentistDashboardRoute
   '/dentist/horarios': typeof DentistHorariosRoute
+  '/dentist/liquidaciones': typeof DentistLiquidacionesRoute
   '/dentist/pacientes': typeof DentistPacientesRoute
   '/dentist/perfil': typeof DentistPerfilRoute
+  '/dentist/reclamos': typeof DentistReclamosRoute
   '/odontologo/configuracion': typeof OdontologoConfiguracionRoute
   '/paciente/catalogo': typeof PacienteCatalogoRoute
   '/paciente/configuracion': typeof PacienteConfiguracionRoute
@@ -121,12 +149,16 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/odontologo': typeof OdontologoRouteWithChildren
+  '/reclamos': typeof ReclamosRoute
   '/recuperar': typeof RecuperarRoute
   '/dentist/agenda': typeof DentistAgendaRoute
+  '/dentist/consultorio': typeof DentistConsultorioRoute
   '/dentist/dashboard': typeof DentistDashboardRoute
   '/dentist/horarios': typeof DentistHorariosRoute
+  '/dentist/liquidaciones': typeof DentistLiquidacionesRoute
   '/dentist/pacientes': typeof DentistPacientesRoute
   '/dentist/perfil': typeof DentistPerfilRoute
+  '/dentist/reclamos': typeof DentistReclamosRoute
   '/odontologo/configuracion': typeof OdontologoConfiguracionRoute
   '/paciente/catalogo': typeof PacienteCatalogoRoute
   '/paciente/configuracion': typeof PacienteConfiguracionRoute
@@ -139,12 +171,16 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/odontologo': typeof OdontologoRouteWithChildren
+  '/reclamos': typeof ReclamosRoute
   '/recuperar': typeof RecuperarRoute
   '/dentist/agenda': typeof DentistAgendaRoute
+  '/dentist/consultorio': typeof DentistConsultorioRoute
   '/dentist/dashboard': typeof DentistDashboardRoute
   '/dentist/horarios': typeof DentistHorariosRoute
+  '/dentist/liquidaciones': typeof DentistLiquidacionesRoute
   '/dentist/pacientes': typeof DentistPacientesRoute
   '/dentist/perfil': typeof DentistPerfilRoute
+  '/dentist/reclamos': typeof DentistReclamosRoute
   '/odontologo/configuracion': typeof OdontologoConfiguracionRoute
   '/paciente/catalogo': typeof PacienteCatalogoRoute
   '/paciente/configuracion': typeof PacienteConfiguracionRoute
@@ -158,12 +194,16 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/odontologo'
+    | '/reclamos'
     | '/recuperar'
     | '/dentist/agenda'
+    | '/dentist/consultorio'
     | '/dentist/dashboard'
     | '/dentist/horarios'
+    | '/dentist/liquidaciones'
     | '/dentist/pacientes'
     | '/dentist/perfil'
+    | '/dentist/reclamos'
     | '/odontologo/configuracion'
     | '/paciente/catalogo'
     | '/paciente/configuracion'
@@ -175,12 +215,16 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/odontologo'
+    | '/reclamos'
     | '/recuperar'
     | '/dentist/agenda'
+    | '/dentist/consultorio'
     | '/dentist/dashboard'
     | '/dentist/horarios'
+    | '/dentist/liquidaciones'
     | '/dentist/pacientes'
     | '/dentist/perfil'
+    | '/dentist/reclamos'
     | '/odontologo/configuracion'
     | '/paciente/catalogo'
     | '/paciente/configuracion'
@@ -192,12 +236,16 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/odontologo'
+    | '/reclamos'
     | '/recuperar'
     | '/dentist/agenda'
+    | '/dentist/consultorio'
     | '/dentist/dashboard'
     | '/dentist/horarios'
+    | '/dentist/liquidaciones'
     | '/dentist/pacientes'
     | '/dentist/perfil'
+    | '/dentist/reclamos'
     | '/odontologo/configuracion'
     | '/paciente/catalogo'
     | '/paciente/configuracion'
@@ -210,12 +258,16 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   OdontologoRoute: typeof OdontologoRouteWithChildren
+  ReclamosRoute: typeof ReclamosRoute
   RecuperarRoute: typeof RecuperarRoute
   DentistAgendaRoute: typeof DentistAgendaRoute
+  DentistConsultorioRoute: typeof DentistConsultorioRoute
   DentistDashboardRoute: typeof DentistDashboardRoute
   DentistHorariosRoute: typeof DentistHorariosRoute
+  DentistLiquidacionesRoute: typeof DentistLiquidacionesRoute
   DentistPacientesRoute: typeof DentistPacientesRoute
   DentistPerfilRoute: typeof DentistPerfilRoute
+  DentistReclamosRoute: typeof DentistReclamosRoute
   PacienteCatalogoRoute: typeof PacienteCatalogoRoute
   PacienteConfiguracionRoute: typeof PacienteConfiguracionRoute
   PacientePanelRoute: typeof PacientePanelRoute
@@ -240,6 +292,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OdontologoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reclamos': {
+      id: '/reclamos'
+      path: '/reclamos'
+      fullPath: '/reclamos'
+      preLoaderRoute: typeof ReclamosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/recuperar': {
       id: '/recuperar'
       path: '/recuperar'
@@ -252,6 +311,13 @@ declare module '@tanstack/react-router' {
       path: '/dentist/agenda'
       fullPath: '/dentist/agenda'
       preLoaderRoute: typeof DentistAgendaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dentist/consultorio': {
+      id: '/dentist/consultorio'
+      path: '/dentist/consultorio'
+      fullPath: '/dentist/consultorio'
+      preLoaderRoute: typeof DentistConsultorioRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dentist/dashboard': {
@@ -268,6 +334,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DentistHorariosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dentist/liquidaciones': {
+      id: '/dentist/liquidaciones'
+      path: '/dentist/liquidaciones'
+      fullPath: '/dentist/liquidaciones'
+      preLoaderRoute: typeof DentistLiquidacionesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dentist/pacientes': {
       id: '/dentist/pacientes'
       path: '/dentist/pacientes'
@@ -280,6 +353,13 @@ declare module '@tanstack/react-router' {
       path: '/dentist/perfil'
       fullPath: '/dentist/perfil'
       preLoaderRoute: typeof DentistPerfilRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dentist/reclamos': {
+      id: '/dentist/reclamos'
+      path: '/dentist/reclamos'
+      fullPath: '/dentist/reclamos'
+      preLoaderRoute: typeof DentistReclamosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/odontologo/configuracion': {
@@ -349,12 +429,16 @@ const OdontologoRouteWithChildren = OdontologoRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   OdontologoRoute: OdontologoRouteWithChildren,
+  ReclamosRoute: ReclamosRoute,
   RecuperarRoute: RecuperarRoute,
   DentistAgendaRoute: DentistAgendaRoute,
+  DentistConsultorioRoute: DentistConsultorioRoute,
   DentistDashboardRoute: DentistDashboardRoute,
   DentistHorariosRoute: DentistHorariosRoute,
+  DentistLiquidacionesRoute: DentistLiquidacionesRoute,
   DentistPacientesRoute: DentistPacientesRoute,
   DentistPerfilRoute: DentistPerfilRoute,
+  DentistReclamosRoute: DentistReclamosRoute,
   PacienteCatalogoRoute: PacienteCatalogoRoute,
   PacienteConfiguracionRoute: PacienteConfiguracionRoute,
   PacientePanelRoute: PacientePanelRoute,

@@ -1,26 +1,25 @@
 import * as React from "react";
-import { alCambiarSesion, authApi, leerSesion, type Rol } from "@/lib/api";
+import { toast } from "sonner";
+import {
+  agendaApi,
+  alCambiarSesion,
+  authApi,
+  citasApi,
+  horariosApi,
+  leerSesion,
+  miPerfilApi,
+  usuariosApi,
+  type Cita,
+  type CitaOdontologo,
+  type EstadoCita,
+  type Rol,
+} from "@/lib/api";
+import { fechaDe, fechaLima, horaDe } from "@/lib/odontologos";
 
 export type UserRole = "patient" | "dentist";
 
 /** Usuario con sesión iniciada en el backend (null = nadie inició sesión). */
 export type Usuario = { nombre: string; rol: Rol };
-
-export type DocumentType = "DNI" | "Título" | "Colegiatura" | "CV";
-export type DocumentStatus = "PENDIENTE" | "OBSERVADO" | "RECHAZADO" | "VERIFICADO";
-export type Document = {
-  type: DocumentType;
-  estado: DocumentStatus;
-  url?: string | undefined;
-  motivoRechazo?: string | undefined;
-};
-
-const documentosIniciales: Document[] = [
-  { type: "DNI", estado: "VERIFICADO" },
-  { type: "Título", estado: "VERIFICADO" },
-  { type: "Colegiatura", estado: "PENDIENTE" },
-  { type: "CV", estado: "PENDIENTE" },
-];
 
 export type AppointmentStatus =
   | "PENDING_PAYMENT"
@@ -48,6 +47,9 @@ export type Appointment = {
   id: string;
   dentistId: string;
   patient: string;
+  patientId?: string | undefined;
+  patientPhone?: string | undefined;
+  patientEmail?: string | undefined;
   date: string;
   time: string;
   service: string;
@@ -56,6 +58,38 @@ export type Appointment = {
   note?: string;
   voucher?: Voucher;
 };
+
+/** Estados del backend (EstadoCita) → estados de la interfaz. */
+const ESTADO_UI: Record<EstadoCita, AppointmentStatus> = {
+  PENDIENTE_PAGO: "PENDING_PAYMENT",
+  PENDIENTE_CONFIRMACION: "VERIFYING", // pagada; espera que el odontólogo la confirme
+  CONFIRMADA: "CONFIRMED",
+  COMPLETADA: "COMPLETED",
+  CANCELADA_CON_REEMBOLSO: "CANCELLED",
+  CANCELADA_SIN_REEMBOLSO: "CANCELLED",
+  INASISTENCIA_PENALIZADA: "NO_SHOW",
+  REPROGRAMADA: "CANCELLED",
+};
+
+/** Cita del backend (/api/citas/mias o /api/odontologos/yo/citas) → Appointment de la interfaz. */
+export function citaAAppointment(c: Cita | CitaOdontologo, pacientePorDefecto = ""): Appointment {
+  const paciente = "paciente" in c ? c.paciente : undefined;
+  const nota = "motivo_cancelacion" in c ? c.motivo_cancelacion : null;
+  return {
+    id: c.id,
+    dentistId: c.odontologo.id,
+    patient: paciente?.nombre ?? pacientePorDefecto,
+    patientId: paciente?.id,
+    patientPhone: paciente?.telefono ?? undefined,
+    patientEmail: paciente?.correo ?? undefined,
+    date: fechaDe(c.inicio),
+    time: horaDe(c.inicio),
+    service: c.servicio.titulo,
+    amount: Number(c.precio),
+    status: ESTADO_UI[c.estado] ?? "PENDING_PAYMENT",
+    ...(nota ? { note: nota } : {}),
+  };
+}
 
 export const statusLabel: Record<AppointmentStatus, string> = {
   PENDING_PAYMENT: "Pago pendiente",
@@ -96,157 +130,6 @@ export const motivosRechazo = [
   "El comprobante corresponde a otra fecha",
 ];
 
-const seed: Appointment[] = [
-  {
-    id: "a1",
-    dentistId: "d1",
-    patient: "Nicole Ramírez",
-    date: "2026-08-04",
-    time: "10:00",
-    service: "Control mensual de brackets",
-    amount: 80,
-    status: "COMPLETED",
-    note: "Cambio de ligas superiores. Buena higiene, se indica cepillo interdental.",
-  },
-  {
-    id: "a2",
-    dentistId: "d5",
-    patient: "Nicole Ramírez",
-    date: "2026-07-12",
-    time: "16:00",
-    service: "Destartraje",
-    amount: 80,
-    status: "COMPLETED",
-    note: "Destartraje supragingival completo. Control en 6 meses.",
-  },
-  {
-    id: "a3",
-    dentistId: "d2",
-    patient: "Nicole Ramírez",
-    date: "2026-06-20",
-    time: "09:00",
-    service: "Diagnóstico de dolor",
-    amount: 45,
-    status: "NO_SHOW",
-  },
-  {
-    id: "a4",
-    dentistId: "d1",
-    patient: "Nicole Ramírez",
-    date: "2026-09-18",
-    time: "11:00",
-    service: "Control mensual de brackets",
-    amount: 80,
-    status: "CONFIRMED",
-    voucher: {
-      method: "yape",
-      reference: "OP 8842190",
-      amount: 20,
-      uploadedAt: "12 Set, 18:42",
-      status: "APROBADO",
-      attempt: 1,
-    },
-  },
-  {
-    id: "a5",
-    dentistId: "d4",
-    patient: "Nicole Ramírez",
-    date: "2026-09-22",
-    time: "16:00",
-    service: "Blanqueamiento láser",
-    amount: 480,
-    status: "VERIFYING",
-    voucher: {
-      method: "plin",
-      reference: "OP 9013774",
-      amount: 20,
-      uploadedAt: "15 Set, 09:05",
-      status: "EN_REVISION",
-      attempt: 1,
-    },
-  },
-];
-
-const agendaHoy: Appointment[] = [
-  {
-    id: "h1",
-    dentistId: "d1",
-    patient: "Nicole Ramírez",
-    date: "2026-09-15",
-    time: "09:00",
-    service: "Control de brackets",
-    amount: 80,
-    status: "CONFIRMED",
-  },
-  {
-    id: "h2",
-    dentistId: "d1",
-    patient: "Marco Ayala",
-    date: "2026-09-15",
-    time: "10:00",
-    service: "Evaluación ortodóncica",
-    amount: 60,
-    status: "VERIFYING",
-    voucher: {
-      method: "yape",
-      reference: "OP 7712045",
-      amount: 20,
-      uploadedAt: "15 Set, 08:12",
-      status: "EN_REVISION",
-      attempt: 1,
-    },
-  },
-  {
-    id: "h3",
-    dentistId: "d1",
-    patient: "Lucía Tenorio",
-    date: "2026-09-15",
-    time: "11:00",
-    service: "Instalación de brackets",
-    amount: 950,
-    status: "CONFIRMED",
-  },
-  {
-    id: "h4",
-    dentistId: "d1",
-    patient: "Jorge Bermúdez",
-    date: "2026-09-15",
-    time: "12:00",
-    service: "Control mensual",
-    amount: 80,
-    status: "PAYMENT_REJECTED",
-    voucher: {
-      method: "plin",
-      reference: "OP 6620881",
-      amount: 20,
-      uploadedAt: "14 Set, 20:31",
-      status: "RECHAZADO",
-      reason: "La imagen está borrosa o incompleta",
-      attempt: 1,
-    },
-  },
-  {
-    id: "h5",
-    dentistId: "d1",
-    patient: "Ana Peralta",
-    date: "2026-09-15",
-    time: "16:00",
-    service: "Retiro de brackets",
-    amount: 320,
-    status: "CONFIRMED",
-  },
-  {
-    id: "h6",
-    dentistId: "d1",
-    patient: "Diego Falcón",
-    date: "2026-09-15",
-    time: "17:00",
-    service: "Evaluación",
-    amount: 60,
-    status: "COMPLETED",
-  },
-];
-
 type Ctx = {
   usuario: Usuario | null;
   cerrarSesion: () => void;
@@ -258,40 +141,22 @@ type Ctx = {
   appointments: Appointment[];
   agenda: Appointment[];
   vouchersPorRevisar: Appointment[];
-  addStrike: () => void;
-  clearStrikes: () => void;
-  addAppointment: (a: Appointment) => void;
-  updateAppointment: (id: string, patch: Partial<Appointment>) => void;
-  updateAgenda: (id: string, patch: Partial<Appointment>) => void;
+  /** Citas reales del backend; se refrescan solas (cada 60 s y al volver a la pestaña). */
+  citasCargando: boolean;
+  recargarCitas: () => Promise<void>;
+  /** Acciones del odontólogo sobre una cita (llaman al backend y recargan la agenda). */
+  confirmarCita: (id: string) => Promise<void>;
+  completarCita: (id: string) => Promise<void>;
+  marcarInasistencia: (id: string) => Promise<void>;
+  /** El backend no maneja comprobantes manuales (pasarela simulada): aprobar = confirmar la cita. */
   approveVoucher: (id: string) => void;
-  rejectVoucher: (id: string, reason: string) => void;
-  resubmitVoucher: (
-    id: string,
-    data: { imageUrl?: string; reference: string; method: "yape" | "plin" },
-  ) => void;
   blockedToday: boolean;
   setBlockedToday: (v: boolean) => void;
-  documentos: Document[];
-  setDocumentos: React.Dispatch<React.SetStateAction<Document[]>>;
-  frecuenciaDisponibilidad: string;
-  setFrecuenciaDisponibilidad: (v: string) => void;
-  bloqueoExpressActivo: boolean;
-  setBloqueoExpressActivo: (v: boolean) => void;
-  confirmacionManual: boolean;
-  setConfirmacionManual: (v: boolean) => void;
 };
 
 const AppStateContext = React.createContext<Ctx | null>(null);
 
 export const STRIKE_LIMIT = 3;
-
-const ahora = () =>
-  new Date().toLocaleString("es-PE", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 
 export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [userRole, setUserRole] = React.useState<UserRole>("patient");
@@ -308,92 +173,159 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     sincronizar();
     return alCambiarSesion(sincronizar);
   }, []);
-  const [strikes, setStrikes] = React.useState(1);
-  const [appointments, setAppointments] = React.useState<Appointment[]>(seed);
-  const [agenda, setAgenda] = React.useState<Appointment[]>(agendaHoy);
-  const [blockedToday, setBlockedToday] = React.useState(false);
-  const [documentos, setDocumentos] = React.useState<Document[]>(documentosIniciales);
-  const [frecuenciaDisponibilidad, setFrecuenciaDisponibilidad] = React.useState(
-    "Actualizo mi disponibilidad diariamente",
+  const [strikes, setStrikes] = React.useState(0);
+  const [puedeReservar, setPuedeReservar] = React.useState(true);
+  const [appointments, setAppointments] = React.useState<Appointment[]>([]);
+  const [agenda, setAgenda] = React.useState<Appointment[]>([]);
+  const [citasCargando, setCitasCargando] = React.useState(false);
+  const [blockedToday, setBlockedTodayEstado] = React.useState(false);
+
+  const rol = usuario?.rol ?? null;
+  const nombreUsuario = usuario?.nombre ?? "";
+
+  /** Trae las citas reales del backend según el rol (paciente: /citas/mias; odontólogo: su agenda). */
+  const recargarCitas = React.useCallback(async () => {
+    if (!rol) {
+      setAppointments([]);
+      setAgenda([]);
+      return;
+    }
+    try {
+      if (rol === "ODONTOLOGO") {
+        // El backend limita el rango de la agenda a 62 días (hasta es exclusivo): 14 atrás + 45 adelante.
+        const [citas, bloqueos] = await Promise.all([
+          miPerfilApi.citas(fechaLima(-14), fechaLima(45)),
+          horariosApi.bloqueos().catch(() => []),
+        ]);
+        const lista = citas.map((c) => citaAAppointment(c));
+        setAgenda(lista);
+        setAppointments(lista);
+        const ahora = Date.now();
+        setBlockedTodayEstado(
+          bloqueos.some((b) => Date.parse(b.inicio) <= ahora && ahora < Date.parse(b.fin)),
+        );
+      } else {
+        const [citas, reputacion] = await Promise.all([
+          citasApi.mias(),
+          usuariosApi.reputacion().catch(() => null),
+        ]);
+        setAppointments(citas.map((c) => citaAAppointment(c, nombreUsuario)));
+        setAgenda([]);
+        if (reputacion) {
+          setStrikes(reputacion.strikes);
+          setPuedeReservar(reputacion.puede_reservar);
+        }
+      }
+    } catch (e) {
+      // Sin red o sesión vencida: se conserva lo último que se mostró.
+      console.error("No se pudieron sincronizar las citas", e);
+    }
+  }, [rol, nombreUsuario]);
+
+  // Sincronización entre dispositivos (web ↔ app): el backend es la fuente de verdad, así que
+  // se recarga al iniciar sesión, cada 60 s y cuando la pestaña vuelve a primer plano.
+  React.useEffect(() => {
+    if (!rol) {
+      setAppointments([]);
+      setAgenda([]);
+      setStrikes(0);
+      setPuedeReservar(true);
+      setBlockedTodayEstado(false);
+      return;
+    }
+    let cancelado = false;
+    const cargar = async () => {
+      setCitasCargando(true);
+      await recargarCitas();
+      if (!cancelado) setCitasCargando(false);
+    };
+    void cargar();
+    const timer = window.setInterval(() => void recargarCitas(), 60_000);
+    const alVolver = () => {
+      if (document.visibilityState === "visible") void recargarCitas();
+    };
+    document.addEventListener("visibilitychange", alVolver);
+    return () => {
+      cancelado = true;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", alVolver);
+    };
+  }, [rol, recargarCitas]);
+
+  const accionCita = React.useCallback(
+    async (fn: () => Promise<unknown>, errorTexto: string) => {
+      try {
+        await fn();
+        await recargarCitas();
+      } catch (e) {
+        toast.error(errorTexto, { description: e instanceof Error ? e.message : undefined });
+        throw e;
+      }
+    },
+    [recargarCitas],
   );
-  const [bloqueoExpressActivo, setBloqueoExpressActivo] = React.useState(false);
-  const [confirmacionManual, setConfirmacionManual] = React.useState(false);
 
-  const patchBoth = (id: string, patch: (a: Appointment) => Partial<Appointment>) => {
-    const apply = (prev: Appointment[]) =>
-      prev.map((a) => (a.id === id ? { ...a, ...patch(a) } : a));
-    setAppointments(apply);
-    setAgenda(apply);
-  };
+  /** Bloquea lo que queda de hoy (cancela con reembolso las citas) o quita el bloqueo vigente. */
+  const setBlockedToday = React.useCallback(
+    (bloquear: boolean) => {
+      void (async () => {
+        try {
+          if (bloquear) {
+            const ok =
+              typeof window === "undefined" ||
+              window.confirm(
+                "Al bloquear hoy, las citas ya reservadas en lo que queda del día se cancelan con reembolso del 100 %. ¿Continuar?",
+              );
+            if (!ok) return;
+            const finDelDia = new Date(`${fechaLima(0)}T23:59:59-05:00`).toISOString();
+            await horariosApi.bloquear(new Date().toISOString(), finDelDia, "Bloqueo del día");
+          } else {
+            const ahora = Date.now();
+            const vigentes = (await horariosApi.bloqueos()).filter(
+              (b) => Date.parse(b.inicio) <= ahora && ahora < Date.parse(b.fin),
+            );
+            await Promise.all(vigentes.map((b) => horariosApi.quitarBloqueo(b.id)));
+          }
+          await recargarCitas();
+        } catch (e) {
+          toast.error("No se pudo actualizar el bloqueo", {
+            description: e instanceof Error ? e.message : undefined,
+          });
+        }
+      })();
+    },
+    [recargarCitas],
+  );
 
-  const vouchersPorRevisar = React.useMemo(() => {
-    const all = [...agenda, ...appointments].filter((a) => a.voucher);
-    const seen = new Set<string>();
-    return all
-      .filter((a) => (seen.has(a.id) ? false : (seen.add(a.id), true)))
-      .sort((a, b) => {
-        const rank = (v?: VoucherStatus) => (v === "EN_REVISION" ? 0 : v === "RECHAZADO" ? 1 : 2);
-        return rank(a.voucher?.status) - rank(b.voucher?.status);
-      });
-  }, [agenda, appointments]);
+  // El backend no tiene comprobantes manuales: nada por revisar.
+  const vouchersPorRevisar = React.useMemo<Appointment[]>(() => [], []);
 
   const value: Ctx = {
     usuario,
     cerrarSesion: () => authApi.cerrarSesion(),
     userRole,
     setUserRole,
-    // Mientras no haya citas reales, el resto de pantallas sigue con los datos de ejemplo.
-    patient: usuario?.nombre ?? "Nicole Ramírez",
+    patient: usuario?.nombre ?? "",
     strikes,
-    isBanned: strikes >= STRIKE_LIMIT,
+    isBanned: !puedeReservar,
     appointments,
     agenda,
     vouchersPorRevisar,
-    addStrike: () => setStrikes((s) => Math.min(STRIKE_LIMIT, s + 1)),
-    clearStrikes: () => setStrikes(0),
-    addAppointment: (a) => {
-      setAppointments((prev) => [a, ...prev]);
-      setAgenda((prev) => [...prev, a]);
+    citasCargando,
+    recargarCitas,
+    confirmarCita: (id) =>
+      accionCita(() => agendaApi.confirmar(id), "No se pudo confirmar la cita"),
+    completarCita: (id) =>
+      accionCita(() => agendaApi.completar(id), "No se pudo marcar como atendida"),
+    marcarInasistencia: (id) =>
+      accionCita(() => agendaApi.inasistencia(id), "No se pudo registrar la inasistencia"),
+    approveVoucher: (id) => {
+      void accionCita(() => agendaApi.confirmar(id), "No se pudo confirmar la cita").catch(
+        () => undefined,
+      );
     },
-    updateAppointment: (id, patch) =>
-      setAppointments((prev) => prev.map((a) => (a.id === id ? { ...a, ...patch } : a))),
-    updateAgenda: (id, patch) =>
-      setAgenda((prev) => prev.map((a) => (a.id === id ? { ...a, ...patch } : a))),
-    approveVoucher: (id) =>
-      patchBoth(id, (a) => ({
-        status: "CONFIRMED",
-        ...(a.voucher
-          ? { voucher: { ...a.voucher, status: "APROBADO" as const, reason: undefined } }
-          : {}),
-      })),
-    rejectVoucher: (id, reason) =>
-      patchBoth(id, (a) => ({
-        status: "PAYMENT_REJECTED",
-        ...(a.voucher ? { voucher: { ...a.voucher, status: "RECHAZADO" as const, reason } } : {}),
-      })),
-    resubmitVoucher: (id, data) =>
-      patchBoth(id, (a) => ({
-        status: "VERIFYING",
-        voucher: {
-          method: data.method,
-          reference: data.reference,
-          amount: a.voucher?.amount ?? 20,
-          uploadedAt: ahora(),
-          imageUrl: data.imageUrl,
-          status: "EN_REVISION",
-          attempt: (a.voucher?.attempt ?? 1) + 1,
-        },
-      })),
     blockedToday,
     setBlockedToday,
-    documentos,
-    setDocumentos,
-    frecuenciaDisponibilidad,
-    setFrecuenciaDisponibilidad,
-    bloqueoExpressActivo,
-    setBloqueoExpressActivo,
-    confirmacionManual,
-    setConfirmacionManual,
   };
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;

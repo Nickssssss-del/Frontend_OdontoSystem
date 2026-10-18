@@ -24,6 +24,7 @@ import {
   mensajeDeError,
 } from "@/components/perfil/PerfilComunes";
 import { VerificacionCOP } from "@/components/VerificacionCOP";
+import { ConsentimientosCard } from "@/components/paciente/ConsentimientosCard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -36,7 +37,6 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { busyBlocks, dentists, timeBlocks } from "@/lib/mock-data";
 import {
   catalogosApi,
   leerSesion,
@@ -151,14 +151,8 @@ function SettingRow({
 
 function ConfiguracionOdontologo() {
   const {
-    documentos,
-    setDocumentos,
-    frecuenciaDisponibilidad,
-    setFrecuenciaDisponibilidad,
-    bloqueoExpressActivo,
-    setBloqueoExpressActivo,
-    confirmacionManual,
-    setConfirmacionManual,
+    blockedToday,
+    setBlockedToday,
     cerrarSesion,
     usuario: sesion,
   } = useAppState();
@@ -225,6 +219,14 @@ function ConfiguracionOdontologo() {
   const [consultorioInput, setConsultorioInput] = React.useState("");
   const [direccionInput, setDireccionInput] = React.useState("");
   const [distritoInput, setDistritoInput] = React.useState("");
+  const [rucInput, setRucInput] = React.useState("");
+  const [cciInput, setCciInput] = React.useState("");
+
+  React.useEffect(() => {
+    if (!miPerfil) return;
+    setRucInput(miPerfil.ruc ?? "");
+    setCciInput(miPerfil.cci ?? "");
+  }, [miPerfil]);
 
   React.useEffect(() => {
     if (!perfil) return;
@@ -284,6 +286,16 @@ function ConfiguracionOdontologo() {
       toast.error("El distrito debe tener al menos 2 caracteres.");
       return;
     }
+    if (rucInput !== "" && !/^\d{11}$/.test(rucInput)) {
+      toast.error("El RUC tiene 11 dígitos.");
+      return;
+    }
+    if (cciInput !== "" && !/^\d{20}$/.test(cciInput)) {
+      toast.error("El CCI tiene 20 dígitos.");
+      return;
+    }
+    if (rucInput !== (miPerfil?.ruc ?? "")) datos.ruc = rucInput;
+    if (cciInput !== (miPerfil?.cci ?? "")) datos.cci = cciInput;
     if (consultorioLimpio) datos.nombre_consultorio = consultorioLimpio;
     if (direccionLimpia) datos.direccion_consultorio = direccionLimpia;
     if (distritoLimpio) datos.distrito_consultorio = distritoLimpio;
@@ -291,7 +303,7 @@ function ConfiguracionOdontologo() {
 
     setEditandoProfesional(false);
     try {
-      await miPerfilApi.actualizar(datos);
+      setMiPerfil(await miPerfilApi.actualizar(datos));
       toast.success("Datos profesionales actualizados", {
         description: "Tu consultorio y especialidades se guardaron correctamente.",
       });
@@ -316,10 +328,20 @@ function ConfiguracionOdontologo() {
   };
 
   const requestBlock = (checked: boolean) =>
-    checked ? setDialogBlockOpen(true) : setBloqueoExpressActivo(false);
+    checked ? setDialogBlockOpen(true) : setBlockedToday(false);
 
-  const dentist = dentists.find((item) => item.id === "d1")!;
-  const ocupacion = Math.round(((busyBlocks["d1"]?.length ?? 0) / timeBlocks.length) * 100);
+  /** Guarda en el backend un ajuste del consultorio (frecuencia, confirmación manual, RUC/CCI). */
+  const guardarAjuste = async (cambios: ActualizarPerfilOdontologoRequest, exito: string) => {
+    try {
+      setMiPerfil(await miPerfilApi.actualizar(cambios));
+      toast.success(exito);
+    } catch (err) {
+      toast.error("No se pudo guardar", { description: mensajeDeError(err, "Inténtalo de nuevo.") });
+    }
+  };
+
+  const frecuenciaDisponibilidad = miPerfil?.frecuencia_disponibilidad ?? "SEMANAL";
+  const confirmacionManual = perfil?.requiere_confirmacion_manual ?? false;
 
   return (
     <div className="space-y-6">
@@ -509,26 +531,32 @@ function ConfiguracionOdontologo() {
                 <ToggleGroup
                   type="single"
                   value={frecuenciaDisponibilidad}
-                  onValueChange={(value) => value && setFrecuenciaDisponibilidad(value)}
+                  onValueChange={(value) => {
+                    if (value !== "DIARIA" && value !== "SEMANAL") return;
+                    if (value === frecuenciaDisponibilidad) return;
+                    void guardarAjuste(
+                      { frecuencia_disponibilidad: value },
+                      "Frecuencia de disponibilidad guardada",
+                    );
+                  }}
                   className="grid gap-2 sm:grid-cols-2"
                 >
-                  <ToggleGroupItem
-                    value="Actualizo mi disponibilidad diariamente"
-                    className="h-auto justify-start p-4 text-left"
-                  >
+                  <ToggleGroupItem value="DIARIA" className="h-auto justify-start p-4 text-left">
                     Diariamente
                   </ToggleGroupItem>
-                  <ToggleGroupItem
-                    value="Actualizo semanalmente"
-                    className="h-auto justify-start p-4 text-left"
-                  >
+                  <ToggleGroupItem value="SEMANAL" className="h-auto justify-start p-4 text-left">
                     Semanalmente
                   </ToggleGroupItem>
                 </ToggleGroup>
-                <p className="mt-3 text-xs text-muted-foreground">{frecuenciaDisponibilidad}</p>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  {frecuenciaDisponibilidad === "DIARIA"
+                    ? "Actualizo mi disponibilidad diariamente"
+                    : "Actualizo mi disponibilidad semanalmente"}
+                  . Se guarda en tu cuenta.
+                </p>
               </CardContent>
             </Card>
-            <Card className={bloqueoExpressActivo ? "border-destructive/50" : undefined}>
+            <Card className={blockedToday ? "border-destructive/50" : undefined}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 font-display text-xl">
                   <AlertTriangle className="size-5 text-warning" /> Bloqueo Express
@@ -541,15 +569,20 @@ function ConfiguracionOdontologo() {
                 <SettingRow
                   label="Activar bloqueo express de mi agenda"
                   description="Requiere confirmación porque afecta los turnos de hoy."
-                  checked={bloqueoExpressActivo}
+                  checked={blockedToday}
                   onCheckedChange={requestBlock}
                   prominent
                 />
                 <SettingRow
-                  label="Requerir mi confirmación manual antes de bloquear la agenda"
-                  description="Las solicitudes quedarán pendientes hasta que las revises."
+                  label="Confirmar manualmente cada reserva"
+                  description="Las citas pagadas quedan pendientes de confirmación hasta que las revises en tu agenda."
                   checked={confirmacionManual}
-                  onCheckedChange={setConfirmacionManual}
+                  onCheckedChange={(v) =>
+                    void guardarAjuste(
+                      { requiere_confirmacion_manual: v },
+                      v ? "Confirmación manual activada" : "Confirmación manual desactivada",
+                    )
+                  }
                 />
               </CardContent>
             </Card>
@@ -605,6 +638,30 @@ function ConfiguracionOdontologo() {
                       placeholder="Av. Lima 123"
                     />
                   </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="prof-ruc">RUC</Label>
+                      <Input
+                        id="prof-ruc"
+                        inputMode="numeric"
+                        value={rucInput}
+                        onChange={(e) => setRucInput(e.target.value.replace(/\D/g, ""))}
+                        maxLength={11}
+                        placeholder="11 dígitos"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="prof-cci">CCI (para tus liquidaciones)</Label>
+                      <Input
+                        id="prof-cci"
+                        inputMode="numeric"
+                        value={cciInput}
+                        onChange={(e) => setCciInput(e.target.value.replace(/\D/g, ""))}
+                        maxLength={20}
+                        placeholder="20 dígitos"
+                      />
+                    </div>
+                  </div>
                   <div className="space-y-3">
                     <Label>Especialidades</Label>
                     {catalogo.length === 0 ? (
@@ -640,6 +697,8 @@ function ConfiguracionOdontologo() {
                         setConsultorioInput(perfil?.consultorio ?? "");
                         setDireccionInput(perfil?.direccion ?? "");
                         setDistritoInput(perfil?.distrito ?? "");
+                        setRucInput(miPerfil?.ruc ?? "");
+                        setCciInput(miPerfil?.cci ?? "");
                         setIdsEspecialidades(perfil?.especialidades.map((e) => e.id) ?? []);
                         setEditandoProfesional(false);
                       }}
@@ -671,6 +730,8 @@ function ConfiguracionOdontologo() {
                   {perfil?.distrito ? (
                     <DatoSoloLectura label="Distrito" valor={perfil.distrito} />
                   ) : null}
+                  {miPerfil?.ruc ? <DatoSoloLectura label="RUC" valor={miPerfil.ruc} /> : null}
+                  {miPerfil?.cci ? <DatoSoloLectura label="CCI" valor={miPerfil.cci} /> : null}
                   {!perfil?.consultorio && !perfil?.direccion && !perfil?.distrito ? (
                     <p className="text-sm text-muted-foreground sm:col-span-2">
                       Aún no has publicado datos de consultorio. Pulsa «Editar datos profesionales»
@@ -697,7 +758,15 @@ function ConfiguracionOdontologo() {
           </Card>
 
           {/* Documentación y verificación COP */}
-          <VerificacionCOP documentos={documentos} onChange={setDocumentos} />
+          <VerificacionCOP
+            onEstado={(e) =>
+              setMiPerfil((p) =>
+                p && (p.estado_verificacion !== e.estado || p.nota_observacion !== e.nota)
+                  ? { ...p, estado_verificacion: e.estado, nota_observacion: e.nota }
+                  : p,
+              )
+            }
+          />
 
           <div className="grid gap-4 sm:grid-cols-2">
             {estadoVerificacion && (
@@ -725,6 +794,8 @@ function ConfiguracionOdontologo() {
               />
             )}
           </div>
+
+          <ConsentimientosCard />
 
           {/* Cerrar sesión */}
           <Card className="border-destructive/50">
@@ -770,16 +841,15 @@ function ConfiguracionOdontologo() {
               <AlertDialogHeader>
                 <AlertDialogTitle>¿Activar bloqueo express?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Esto cancelará/pausará los turnos de hoy por emergencia y dejará de ofrecer nuevos
-                  cupos.
+                  Se cancelarán con reembolso del 100 % las citas que quedan hoy y se dejará de ofrecer
+                  cupos hasta que termine el día. Puedes quitar el bloqueo cuando quieras.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Continuar con la agenda</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={() => {
-                    setBloqueoExpressActivo(true);
-                    toast.warning("Bloqueo express activado");
+                    setBlockedToday(true);
                   }}
                 >
                   Activar bloqueo

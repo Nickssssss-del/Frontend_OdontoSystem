@@ -1,14 +1,16 @@
 import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "motion/react";
-import { Clock, Lock, RotateCcw, Save, AlertCircle } from "lucide-react";
+import { AlertCircle, CalendarOff, Clock, Loader2, Lock, Plus, Save, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useAppState } from "@/lib/app-state";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { ApiError, horariosApi, type Bloqueo, type DiaSemana, type Horario } from "@/lib/api";
+import { fechaDe, fechaLima, horaDe } from "@/lib/odontologos";
 
 export const Route = createFileRoute("/dentist/horarios")({
   head: () => ({
@@ -16,389 +18,392 @@ export const Route = createFileRoute("/dentist/horarios")({
       { title: "Gestión de Horarios | OdontoSystem Odontólogo" },
       {
         name: "description",
-        content: "Administra tu disponibilidad de horarios por día y hora.",
+        content: "Administra tu horario semanal y tus bloqueos de agenda.",
       },
     ],
   }),
   component: DentistHorarios,
 });
 
-type BlockStatus = "libre" | "cita" | "bloqueado";
+// Horario semanal y bloqueos reales:
+//   GET/PUT /api/odontologos/yo/horarios            (PUT reemplaza TODO el horario semanal)
+//   GET/POST/DELETE /api/odontologos/yo/bloqueos    (POST cancela con reembolso las citas del rango)
+// Los turnos que ven los pacientes (GET /api/odontologos/{id}/disponibilidad) salen de este horario.
 
-interface HourBlock {
-  hour: string;
-  status: BlockStatus;
-  patient?: string;
-}
+const DIAS: { clave: DiaSemana; etiqueta: string }[] = [
+  { clave: "LUNES", etiqueta: "Lunes" },
+  { clave: "MARTES", etiqueta: "Martes" },
+  { clave: "MIERCOLES", etiqueta: "Miércoles" },
+  { clave: "JUEVES", etiqueta: "Jueves" },
+  { clave: "VIERNES", etiqueta: "Viernes" },
+  { clave: "SABADO", etiqueta: "Sábado" },
+  { clave: "DOMINGO", etiqueta: "Domingo" },
+];
 
-interface DaySchedule {
-  day: string;
-  blocks: HourBlock[];
-}
+type Franja = { dia_semana: DiaSemana; hora_inicio: string; hora_fin: string; intervalo: string };
+
+/** "08:00:00" → "08:00" (los <input type="time"> trabajan con HH:mm). */
+const hhmm = (hora: string) => hora.slice(0, 5);
+
+const aFranja = (h: Horario): Franja => ({
+  dia_semana: h.dia_semana,
+  hora_inicio: hhmm(h.hora_inicio),
+  hora_fin: hhmm(h.hora_fin),
+  intervalo: h.intervalo_minutos ? String(h.intervalo_minutos) : "",
+});
+
+const mensajeDe = (e: unknown, defecto = "Ocurrió un error inesperado.") =>
+  e instanceof ApiError ? e.message : defecto;
+
+/** Instante ISO (con -05:00, hora de Lima) a partir de fecha y hora locales de Lima. */
+const instanteLima = (fecha: string, hora: string) =>
+  new Date(`${fecha}T${hora}:00-05:00`).toISOString();
 
 function DentistHorarios() {
-  const { blockedToday, setBlockedToday } = useAppState();
-  const [schedules, setSchedules] = React.useState<DaySchedule[]>([
-    {
-      day: "Lunes",
-      blocks: generateBlocks(["08:00", "09:00", "10:00", "14:00", "cita", "16:00", "17:00"]),
-    },
-    {
-      day: "Martes",
-      blocks: generateBlocks(["08:00", "09:00", "10:00", "11:00", "12:00", "14:00", "15:00"]),
-    },
-    {
-      day: "Miércoles",
-      blocks: generateBlocks(["08:00", "09:00", "cita", "cita", "14:00", "15:00", "16:00"]),
-    },
-    {
-      day: "Jueves",
-      blocks: generateBlocks(["08:00", "09:00", "10:00", "11:00", "14:00", "15:00", "16:00"]),
-    },
-    {
-      day: "Viernes",
-      blocks: generateBlocks(["08:00", "09:00", "10:00", "bloqueado", "14:00", "15:00", "16:00"]),
-    },
-    {
-      day: "Sábado",
-      blocks: generateBlocks([
-        "09:00",
-        "10:00",
-        "11:00",
-        "bloqueado",
-        "bloqueado",
-        "14:00",
-        "15:00",
-      ]),
-    },
-  ]);
+  const { blockedToday, setBlockedToday, recargarCitas } = useAppState();
+  const [franjas, setFranjas] = React.useState<Franja[]>([]);
+  const [bloqueos, setBloqueos] = React.useState<Bloqueo[]>([]);
+  const [cargando, setCargando] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [guardando, setGuardando] = React.useState(false);
+  const [sucio, setSucio] = React.useState(false);
 
-  function generateBlocks(config: string[]): HourBlock[] {
-    return [
-      {
-        hour: "08:00",
-        status: (config.includes("08:00")
-          ? "libre"
-          : config.includes("cita")
-            ? "cita"
-            : "bloqueado") as BlockStatus,
-      },
-      {
-        hour: "09:00",
-        status: (config.includes("09:00")
-          ? "libre"
-          : config.includes("cita")
-            ? "cita"
-            : "bloqueado") as BlockStatus,
-      },
-      {
-        hour: "10:00",
-        status: (config.includes("10:00")
-          ? "libre"
-          : config.includes("cita")
-            ? "cita"
-            : "bloqueado") as BlockStatus,
-      },
-      {
-        hour: "11:00",
-        status: (config.includes("11:00")
-          ? "libre"
-          : config.includes("cita")
-            ? "cita"
-            : "bloqueado") as BlockStatus,
-      },
-      {
-        hour: "12:00",
-        status: (config.includes("12:00")
-          ? "libre"
-          : config.includes("cita")
-            ? "cita"
-            : "bloqueado") as BlockStatus,
-      },
-      {
-        hour: "14:00",
-        status: (config.includes("14:00")
-          ? "libre"
-          : config.includes("cita")
-            ? "cita"
-            : "bloqueado") as BlockStatus,
-      },
-      {
-        hour: "15:00",
-        status: (config.includes("15:00")
-          ? "libre"
-          : config.includes("cita")
-            ? "cita"
-            : "bloqueado") as BlockStatus,
-      },
-      {
-        hour: "16:00",
-        status: (config.includes("16:00")
-          ? "libre"
-          : config.includes("cita")
-            ? "cita"
-            : "bloqueado") as BlockStatus,
-      },
-      {
-        hour: "17:00",
-        status: (config.includes("17:00")
-          ? "libre"
-          : config.includes("cita")
-            ? "cita"
-            : "bloqueado") as BlockStatus,
-      },
-    ];
-  }
+  // Formulario de bloqueo por rango.
+  const [bFecha, setBFecha] = React.useState(fechaLima(0));
+  const [bInicio, setBInicio] = React.useState("08:00");
+  const [bFin, setBFin] = React.useState("20:00");
+  const [bMotivo, setBMotivo] = React.useState("");
+  const [bloqueando, setBloqueando] = React.useState(false);
 
-  const toggleBlockStatus = (dayIdx: number, blockIdx: number) => {
-    setSchedules((prev) => {
-      const updated = [...prev];
-      const block = updated[dayIdx]!.blocks[blockIdx]!;
+  const cargar = React.useCallback(async () => {
+    setCargando(true);
+    setError(null);
+    try {
+      const [horarios, lista] = await Promise.all([horariosApi.obtener(), horariosApi.bloqueos()]);
+      setFranjas(horarios.map(aFranja));
+      setBloqueos(lista);
+      setSucio(false);
+    } catch (e) {
+      setError(mensajeDe(e, "No se pudo cargar tu horario."));
+    } finally {
+      setCargando(false);
+    }
+  }, []);
 
-      if (block.status === "libre") {
-        block.status = "bloqueado";
-      } else if (block.status === "bloqueado") {
-        block.status = "libre";
-      }
+  React.useEffect(() => {
+    void cargar();
+  }, [cargar]);
 
-      return updated;
-    });
+  // Cuando el bloqueo de hoy cambia desde el contexto, se refresca la lista.
+  React.useEffect(() => {
+    void horariosApi
+      .bloqueos()
+      .then(setBloqueos)
+      .catch(() => undefined);
+  }, [blockedToday]);
+
+  const cambiar = (indice: number, parche: Partial<Franja>) => {
+    setFranjas((prev) => prev.map((f, i) => (i === indice ? { ...f, ...parche } : f)));
+    setSucio(true);
   };
 
-  const handleBlockToday = () => {
-    setBlockedToday(!blockedToday);
-    toast.success(blockedToday ? "Disponibilidad restaurada" : "Agenda bloqueada para hoy", {
-      description: blockedToday
-        ? "Tus pacientes pueden agendar nuevamente."
-        : "No se aceptarán citas hoy.",
-    });
-  };
-
-  const handleSave = () => {
-    toast.success("Horarios guardados", {
-      description: "Tu disponibilidad ha sido actualizada.",
-    });
-  };
-
-  const handleReset = () => {
-    setSchedules([
-      {
-        day: "Lunes",
-        blocks: generateBlocks(["08:00", "09:00", "10:00", "14:00", "cita", "16:00", "17:00"]),
-      },
-      {
-        day: "Martes",
-        blocks: generateBlocks(["08:00", "09:00", "10:00", "11:00", "12:00", "14:00", "15:00"]),
-      },
-      {
-        day: "Miércoles",
-        blocks: generateBlocks(["08:00", "09:00", "cita", "cita", "14:00", "15:00", "16:00"]),
-      },
-      {
-        day: "Jueves",
-        blocks: generateBlocks(["08:00", "09:00", "10:00", "11:00", "14:00", "15:00", "16:00"]),
-      },
-      {
-        day: "Viernes",
-        blocks: generateBlocks(["08:00", "09:00", "10:00", "bloqueado", "14:00", "15:00", "16:00"]),
-      },
-      {
-        day: "Sábado",
-        blocks: generateBlocks([
-          "09:00",
-          "10:00",
-          "11:00",
-          "bloqueado",
-          "bloqueado",
-          "14:00",
-          "15:00",
-        ]),
-      },
+  const agregar = (dia: DiaSemana) => {
+    setFranjas((prev) => [
+      ...prev,
+      { dia_semana: dia, hora_inicio: "09:00", hora_fin: "13:00", intervalo: "" },
     ]);
-    toast.info("Horarios reiniciados");
+    setSucio(true);
+  };
+
+  const quitar = (indice: number) => {
+    setFranjas((prev) => prev.filter((_, i) => i !== indice));
+    setSucio(true);
+  };
+
+  const guardar = async () => {
+    if (guardando) return;
+    for (const f of franjas) {
+      if (!f.hora_inicio || !f.hora_fin || f.hora_fin <= f.hora_inicio) {
+        toast.error("Revisa tus horarios", {
+          description: "La hora de fin debe ser posterior a la de inicio.",
+        });
+        return;
+      }
+    }
+    setGuardando(true);
+    try {
+      const guardado = await horariosApi.guardar(
+        franjas.map((f) => ({
+          dia_semana: f.dia_semana,
+          hora_inicio: f.hora_inicio,
+          hora_fin: f.hora_fin,
+          intervalo_minutos: f.intervalo ? Number(f.intervalo) : null,
+        })),
+      );
+      setFranjas(guardado.map(aFranja));
+      setSucio(false);
+      toast.success("Horario guardado", {
+        description: "Los pacientes ya ven tus nuevos turnos disponibles.",
+      });
+    } catch (e) {
+      toast.error("No se pudo guardar el horario", { description: mensajeDe(e) });
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const bloquearRango = async () => {
+    if (bloqueando) return;
+    if (!bFecha || !bInicio || !bFin || bFin <= bInicio) {
+      toast.error("Revisa el bloqueo", {
+        description: "La hora de fin debe ser posterior al inicio.",
+      });
+      return;
+    }
+    const ok = window.confirm(
+      "Las citas ya reservadas dentro de ese rango se cancelan con reembolso del 100 %. ¿Continuar?",
+    );
+    if (!ok) return;
+    setBloqueando(true);
+    try {
+      const creado = await horariosApi.bloquear(
+        instanteLima(bFecha, bInicio),
+        instanteLima(bFecha, bFin),
+        bMotivo.trim() || undefined,
+      );
+      setBloqueos((prev) => [...prev, creado].sort((a, b) => a.inicio.localeCompare(b.inicio)));
+      setBMotivo("");
+      toast.success("Agenda bloqueada", {
+        description:
+          creado.citas_canceladas > 0
+            ? `Se cancelaron ${creado.citas_canceladas} cita(s) con reembolso.`
+            : "No había citas en ese rango.",
+      });
+      void recargarCitas();
+    } catch (e) {
+      toast.error("No se pudo bloquear la agenda", { description: mensajeDe(e) });
+    } finally {
+      setBloqueando(false);
+    }
+  };
+
+  const quitarBloqueo = async (id: string) => {
+    try {
+      await horariosApi.quitarBloqueo(id);
+      setBloqueos((prev) => prev.filter((b) => b.id !== id));
+      toast.success("Bloqueo eliminado");
+      void recargarCitas();
+    } catch (e) {
+      toast.error("No se pudo quitar el bloqueo", { description: mensajeDe(e) });
+    }
   };
 
   return (
     <AppShell>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-semibold mb-2">Gestión de Horarios</h1>
-          <p className="text-muted-foreground">Administra tu disponibilidad de citas</p>
+          <p className="text-muted-foreground">
+            Define cuándo atiendes. Los pacientes solo pueden reservar dentro de estas franjas.
+          </p>
         </div>
 
-        {/* Quick Actions */}
-        <div className="grid gap-4 mb-8 sm:grid-cols-2 lg:grid-cols-3">
-          {/* Block Today */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0 }}
-          >
-            <Card className="cursor-pointer hover:shadow-md transition-shadow h-full">
-              <CardContent className="pt-6">
-                <Button
-                  onClick={handleBlockToday}
-                  variant={blockedToday ? "destructive" : "outline"}
-                  className="w-full"
-                >
-                  <Lock className="size-4 mr-2" />
-                  {blockedToday ? "Desbloquear hoy" : "Bloquear agenda hoy"}
-                </Button>
-              </CardContent>
-            </Card>
-          </motion.div>
+        {error && (
+          <Card className="mb-6 border-destructive/40">
+            <CardContent className="flex items-center justify-between gap-4 pt-6">
+              <p className="flex items-center gap-2 text-sm text-destructive">
+                <AlertCircle className="size-4" /> {error}
+              </p>
+              <Button variant="outline" size="sm" onClick={() => void cargar()}>
+                Reintentar
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
-          {/* Stats */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-          >
-            <Card>
-              <CardContent className="pt-6">
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Horarios libres</p>
-                  <p className="text-2xl font-bold">
-                    {schedules.reduce(
-                      (sum, day) => sum + day.blocks.filter((b) => b.status === "libre").length,
-                      0,
-                    )}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    de {schedules.length * 9} totales
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* With Appointments */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <Card>
-              <CardContent className="pt-6">
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Bloqueados</p>
-                  <p className="text-2xl font-bold">
-                    {schedules.reduce(
-                      (sum, day) => sum + day.blocks.filter((b) => b.status === "bloqueado").length,
-                      0,
-                    )}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-2">Cambiar para disponibilidad</p>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
-
-        {/* Schedule Grid */}
+        {/* Horario semanal */}
         <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Horarios de la Semana</CardTitle>
-            <CardDescription>
-              Haz clic en un bloque para cambiar entre Libre y Bloqueado (No puedes modificar citas
-              existentes)
-            </CardDescription>
+          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="size-5 text-primary" /> Horario semanal
+              </CardTitle>
+              <CardDescription>
+                Puedes tener varias franjas por día (por ejemplo mañana y tarde). El intervalo es la
+                duración de cada turno; si lo dejas vacío se usa la duración del servicio.
+              </CardDescription>
+            </div>
+            <Button onClick={() => void guardar()} disabled={!sucio || guardando}>
+              {guardando ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : (
+                <Save className="mr-2 size-4" />
+              )}
+              Guardar horario
+            </Button>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {schedules.map((day, dayIdx) => (
-                <motion.div
-                  key={day.day}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: dayIdx * 0.1 }}
-                >
-                  <div>
-                    <h3 className="font-semibold mb-3">{day.day}</h3>
-                    <div className="grid grid-cols-3 md:grid-cols-6 lg:grid-cols-9 gap-2">
-                      {day.blocks.map((block, blockIdx) => (
-                        <motion.button
-                          key={`${day.day}-${block.hour}`}
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => {
-                            if (block.status !== "cita") {
-                              toggleBlockStatus(dayIdx, blockIdx);
-                            }
-                          }}
-                          disabled={block.status === "cita"}
-                          className={cn(
-                            "p-2 rounded-lg text-xs font-medium transition-all border cursor-pointer",
-                            block.status === "libre" &&
-                              "bg-success/10 text-success border-success/30 hover:bg-success/20",
-                            block.status === "bloqueado" &&
-                              "bg-muted text-muted-foreground border-border hover:bg-muted/70",
-                            block.status === "cita" &&
-                              "bg-primary/20 text-primary border-primary/30 cursor-not-allowed opacity-70",
-                          )}
-                        >
-                          <div className="font-semibold">{block.hour}</div>
-                          <div className="text-xs">
-                            {block.status === "libre" ? "✓" : block.status === "cita" ? "📅" : "🔒"}
-                          </div>
-                        </motion.button>
-                      ))}
+          <CardContent className="space-y-5">
+            {cargando ? (
+              <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="size-4 animate-spin" /> Cargando tu horario…
+              </p>
+            ) : (
+              DIAS.map(({ clave, etiqueta }) => {
+                const delDia = franjas
+                  .map((f, indice) => ({ f, indice }))
+                  .filter(({ f }) => f.dia_semana === clave);
+                return (
+                  <div key={clave} className="rounded-xl border border-border/70 p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                      <p className="font-semibold">{etiqueta}</p>
+                      <Button variant="ghost" size="sm" onClick={() => agregar(clave)}>
+                        <Plus className="mr-1 size-4" /> Agregar franja
+                      </Button>
                     </div>
+                    {delDia.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No atiendes este día.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {delDia.map(({ f, indice }) => (
+                          <div key={indice} className="flex flex-wrap items-center gap-2">
+                            <Input
+                              type="time"
+                              value={f.hora_inicio}
+                              onChange={(e) => cambiar(indice, { hora_inicio: e.target.value })}
+                              className="w-32"
+                              aria-label={`${etiqueta}: hora de inicio`}
+                            />
+                            <span className="text-sm text-muted-foreground">a</span>
+                            <Input
+                              type="time"
+                              value={f.hora_fin}
+                              onChange={(e) => cambiar(indice, { hora_fin: e.target.value })}
+                              className="w-32"
+                              aria-label={`${etiqueta}: hora de fin`}
+                            />
+                            <Input
+                              type="number"
+                              min={5}
+                              max={240}
+                              placeholder="Intervalo (min)"
+                              value={f.intervalo}
+                              onChange={(e) => cambiar(indice, { intervalo: e.target.value })}
+                              className="w-40"
+                              aria-label={`${etiqueta}: intervalo en minutos`}
+                            />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => quitar(indice)}
+                              aria-label="Quitar franja"
+                            >
+                              <Trash2 className="size-4 text-destructive" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </motion.div>
-              ))}
-            </div>
-
-            {/* Legend */}
-            <div className="mt-8 pt-6 border-t border-border/70">
-              <p className="text-sm font-semibold mb-3">Leyenda</p>
-              <div className="flex flex-wrap gap-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded bg-success/10 border border-success/30" />
-                  <span className="text-sm">Libre</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded bg-muted border border-border" />
-                  <span className="text-sm">Bloqueado</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded bg-primary/20 border border-primary/30" />
-                  <span className="text-sm">Cita (no modificable)</span>
-                </div>
-              </div>
-            </div>
+                );
+              })
+            )}
           </CardContent>
         </Card>
 
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-3 justify-end">
-          <Button variant="outline" onClick={handleReset} className="gap-2">
-            <RotateCcw className="size-4" />
-            Restaurar valores
-          </Button>
-          <Button onClick={handleSave} className="gap-2">
-            <Save className="size-4" />
-            Guardar disponibilidad
-          </Button>
-        </div>
-
-        {/* Info */}
-        {blockedToday && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-6 rounded-lg border border-warning/50 bg-warning/5 p-3 flex gap-3"
-          >
-            <AlertCircle className="size-5 text-warning flex-shrink-0 mt-0.5" />
-            <div className="text-sm">
-              <p className="font-medium text-warning">Agenda bloqueada para hoy</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Tus pacientes no podrán agendar citas por hoy.
-              </p>
+        {/* Bloqueos */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarOff className="size-5 text-primary" /> Bloqueos de agenda
+            </CardTitle>
+            <CardDescription>
+              Para imprevistos o vacaciones. Las citas ya reservadas en el rango se cancelan con
+              reembolso del 100 % al paciente (máximo 60 días por bloqueo).
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                variant={blockedToday ? "destructive" : "outline"}
+                onClick={() => setBlockedToday(!blockedToday)}
+              >
+                <Lock className="mr-2 size-4" />
+                {blockedToday ? "Desbloquear hoy" : "Bloquear lo que queda de hoy"}
+              </Button>
+              {blockedToday && (
+                <Badge variant="outline" className="border-destructive/40 text-destructive">
+                  Hoy no se aceptan reservas
+                </Badge>
+              )}
             </div>
-          </motion.div>
-        )}
+
+            <div className="grid gap-3 rounded-xl border border-border/70 p-4 sm:grid-cols-[repeat(4,minmax(0,1fr))_auto]">
+              <label className="text-xs font-medium text-muted-foreground">
+                Fecha
+                <Input
+                  type="date"
+                  min={fechaLima(0)}
+                  value={bFecha}
+                  onChange={(e) => setBFecha(e.target.value)}
+                />
+              </label>
+              <label className="text-xs font-medium text-muted-foreground">
+                Desde
+                <Input type="time" value={bInicio} onChange={(e) => setBInicio(e.target.value)} />
+              </label>
+              <label className="text-xs font-medium text-muted-foreground">
+                Hasta
+                <Input type="time" value={bFin} onChange={(e) => setBFin(e.target.value)} />
+              </label>
+              <label className="text-xs font-medium text-muted-foreground">
+                Motivo (opcional)
+                <Input
+                  maxLength={150}
+                  value={bMotivo}
+                  onChange={(e) => setBMotivo(e.target.value)}
+                  placeholder="Ej. Capacitación"
+                />
+              </label>
+              <div className="flex items-end">
+                <Button onClick={() => void bloquearRango()} disabled={bloqueando}>
+                  {bloqueando && <Loader2 className="mr-2 size-4 animate-spin" />}
+                  Bloquear
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {bloqueos.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No tienes bloqueos vigentes.</p>
+              ) : (
+                bloqueos.map((b) => (
+                  <div
+                    key={b.id}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-border/70 p-3 text-sm"
+                  >
+                    <div>
+                      <p className="font-medium">
+                        {fechaDe(b.inicio)} · {horaDe(b.inicio)} – {horaDe(b.fin)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {b.motivo ?? "Sin motivo"}
+                        {b.citas_canceladas > 0 && ` · ${b.citas_canceladas} cita(s) canceladas`}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => void quitarBloqueo(b.id)}
+                      aria-label="Quitar bloqueo"
+                    >
+                      <Trash2 className="size-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </motion.div>
     </AppShell>
   );
