@@ -147,6 +147,10 @@ type Opciones = {
   body?: unknown;
   /** false para endpoints públicos (login, registro, refresh). */
   conToken?: boolean;
+  /** multipart/form-data (el navegador pone el boundary; no se fija Content-Type). */
+  form?: FormData;
+  /** true para descargas binarias (PDF): devuelve un Blob. */
+  blob?: boolean;
 };
 
 let renovacionEnCurso: Promise<boolean> | null = null;
@@ -191,9 +195,9 @@ async function errorDeRespuesta(respuesta: Response): Promise<ApiError> {
 }
 
 async function llamar<T>(ruta: string, opciones: Opciones = {}, reintentar = true): Promise<T> {
-  const { method = "GET", body, conToken = true } = opciones;
-  const headers: Record<string, string> = { Accept: "application/json" };
-  if (body !== undefined) headers["Content-Type"] = "application/json";
+  const { method = "GET", body, conToken = true, form, blob = false } = opciones;
+  const headers: Record<string, string> = { Accept: blob ? "application/pdf" : "application/json" };
+  if (body !== undefined && !form) headers["Content-Type"] = "application/json";
   const sesion = conToken ? leerSesion() : null;
   if (sesion) headers["Authorization"] = `Bearer ${sesion.access_token}`;
 
@@ -202,7 +206,7 @@ async function llamar<T>(ruta: string, opciones: Opciones = {}, reintentar = tru
     respuesta = await fetch(`${API_URL}${ruta}`, {
       method,
       headers,
-      body: body === undefined ? null : JSON.stringify(body),
+      body: form ?? (body === undefined ? null : JSON.stringify(body)),
     });
   } catch {
     throw new ApiError(0, mensajePorEstado[0]!);
@@ -217,6 +221,7 @@ async function llamar<T>(ruta: string, opciones: Opciones = {}, reintentar = tru
   if (!respuesta.ok) throw await errorDeRespuesta(respuesta);
 
   if (respuesta.status === 204) return undefined as T;
+  if (blob) return (await respuesta.blob()) as T;
   // Algunos endpoints responden 200 sin cuerpo: no es un error, se devuelve undefined.
   try {
     return (await respuesta.json()) as T;
@@ -553,9 +558,26 @@ export type CitaPorResenar = {
   atendida_el: string;
 };
 
+export type ResenaMia = {
+  id: number;
+  cita_id: string;
+  odontologo_id: string;
+  calificacion: number;
+  comentario: string | null;
+  creado_en: string;
+};
+
 export const resenasApi = {
   porResenar(): Promise<CitaPorResenar[]> {
     return llamar<CitaPorResenar[]>("/api/citas/por-resenar");
+  },
+
+  /** PATCH /api/citas/{id}/resena — corrige mi reseña (calificación 1..5, comentario hasta 1000). */
+  editar(citaId: string, calificacion: number, comentario?: string): Promise<ResenaMia> {
+    return llamar<ResenaMia>(`/api/citas/${citaId}/resena`, {
+      method: "PATCH",
+      body: { calificacion, comentario: comentario?.trim() ?? "" },
+    });
   },
 
   calificar(citaId: string, calificacion: number, comentario?: string): Promise<unknown> {
@@ -721,7 +743,17 @@ export type ActualizarPerfilOdontologoRequest = {
   nombre_consultorio?: string;
   direccion_consultorio?: string;
   distrito_consultorio?: string;
+  latitud?: number;
+  longitud?: number;
   especialidad_ids?: number[];
+  /** true: las reservas quedan PENDIENTE_CONFIRMACION hasta que el odontólogo confirme. */
+  requiere_confirmacion_manual?: boolean;
+  /** Con qué frecuencia el odontólogo actualiza su disponibilidad (preferencia guardada en su perfil). */
+  frecuencia_disponibilidad?: "DIARIA" | "SEMANAL";
+  /** 11 dígitos; "" borra el valor. */
+  ruc?: string;
+  /** 20 dígitos; "" borra el valor. */
+  cci?: string;
 };
 
 /** Cita vista desde el odontólogo (CitaResponse + paciente). */
@@ -826,5 +858,426 @@ export const horariosApi = {
   /** DELETE /api/odontologos/yo/bloqueos/{id} */
   quitarBloqueo(id: string): Promise<void> {
     return llamar<void>(`/api/odontologos/yo/bloqueos/${id}`, { method: "DELETE" });
+  },
+};
+
+// ===========================================================================
+// Cierre del backend: lo que antes existía solo en el servidor
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// Verificación COP y documentos del odontólogo
+// ---------------------------------------------------------------------------
+export type EstadoVerificacion = {
+  estado: EstadoVerificacionCopa;
+  nota: string | null;
+  intentos_fallidos: number;
+  ultimo_intento: string | null;
+};
+
+export type TipoDocumento = "DNI" | "TITULO_PROFESIONAL" | "COLEGIATURA" | "CV";
+
+/** url_temporal vence en url_expira_en: hay que volver a pedir la lista para renovarla. */
+export type DocumentoOdontologo = {
+  id: string;
+  tipo: TipoDocumento;
+  subido_en: string;
+  url_temporal: string | null;
+  url_expira_en: string | null;
+};
+
+export type FotoConsultorio = {
+  id: string;
+  url: string;
+  descripcion: string | null;
+  orden: number;
+};
+
+const ARCHIVO_MAXIMO_BYTES = 5 * 1024 * 1024;
+
+function validarArchivo(archivo: File, tipos: string[], descripcionTipos: string) {
+  if (!tipos.includes(archivo.type)) {
+    throw new ApiError(400, `Formato no admitido: usa ${descripcionTipos}.`);
+  }
+  if (archivo.size > ARCHIVO_MAXIMO_BYTES) {
+    throw new ApiError(400, "El archivo supera los 5 MB. Elige uno más ligero.");
+  }
+}
+
+export const verificacionApi = {
+  /** GET /api/odontologos/yo/verificacion */
+  estado(): Promise<EstadoVerificacion> {
+    return llamar<EstadoVerificacion>("/api/odontologos/yo/verificacion");
+  },
+  /** POST …/reintentar — solo si sigue PENDIENTE; máximo una vez cada 10 min (429). */
+  reintentar(): Promise<EstadoVerificacion> {
+    return llamar<EstadoVerificacion>("/api/odontologos/yo/verificacion/reintentar", {
+      method: "POST",
+    });
+  },
+};
+
+export const documentosApi = {
+  /** GET /api/odontologos/yo/documentos */
+  listar(): Promise<DocumentoOdontologo[]> {
+    return llamar<DocumentoOdontologo[]>("/api/odontologos/yo/documentos");
+  },
+  /** POST /api/odontologos/yo/documentos — multipart: tipo + archivo (PDF/JPG/PNG hasta 5 MB). */
+  subir(tipo: TipoDocumento, archivo: File): Promise<DocumentoOdontologo> {
+    validarArchivo(
+      archivo,
+      ["application/pdf", "image/jpeg", "image/png"],
+      "un PDF, JPG o PNG",
+    );
+    const form = new FormData();
+    form.append("tipo", tipo);
+    form.append("archivo", archivo);
+    return llamar<DocumentoOdontologo>("/api/odontologos/yo/documentos", { method: "POST", form });
+  },
+};
+
+export const fotosConsultorioApi = {
+  /** GET /api/odontologos/yo/fotos */
+  listar(): Promise<FotoConsultorio[]> {
+    return llamar<FotoConsultorio[]>("/api/odontologos/yo/fotos");
+  },
+  /** POST /api/odontologos/yo/fotos — multipart: archivo (+ descripcion). JPG/PNG/WEBP hasta 5 MB. */
+  subir(archivo: File, descripcion?: string): Promise<FotoConsultorio> {
+    validarArchivo(archivo, FOTO_TIPOS_ADMITIDOS, "una imagen JPG, PNG o WEBP");
+    const form = new FormData();
+    form.append("archivo", archivo);
+    if (descripcion?.trim()) form.append("descripcion", descripcion.trim());
+    return llamar<FotoConsultorio>("/api/odontologos/yo/fotos", { method: "POST", form });
+  },
+  /** DELETE /api/odontologos/yo/fotos/{id} */
+  eliminar(id: string): Promise<void> {
+    return llamar<void>(`/api/odontologos/yo/fotos/${id}`, { method: "DELETE" });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Servicios del odontólogo (MiConsultorioController)
+// ---------------------------------------------------------------------------
+export type ServicioRequest = {
+  categoria_id: number;
+  titulo: string;
+  descripcion?: string;
+  precio_total: number;
+  duracion_minutos: number;
+};
+
+export const serviciosOdontologoApi = {
+  listar(): Promise<ServicioOdontologo[]> {
+    return llamar<ServicioOdontologo[]>("/api/odontologos/yo/servicios");
+  },
+  crear(datos: ServicioRequest): Promise<ServicioOdontologo> {
+    return llamar<ServicioOdontologo>("/api/odontologos/yo/servicios", {
+      method: "POST",
+      body: datos,
+    });
+  },
+  actualizar(id: string, datos: ServicioRequest): Promise<ServicioOdontologo> {
+    return llamar<ServicioOdontologo>(`/api/odontologos/yo/servicios/${id}`, {
+      method: "PUT",
+      body: datos,
+    });
+  },
+  eliminar(id: string): Promise<void> {
+    return llamar<void>(`/api/odontologos/yo/servicios/${id}`, { method: "DELETE" });
+  },
+};
+
+export type CategoriaServicio = { id: number; nombre: string };
+
+// ---------------------------------------------------------------------------
+// Liquidaciones, constancia PDF y reembolsos
+// ---------------------------------------------------------------------------
+export type EstadoLiquidacion = "PENDIENTE" | "LIQUIDADA" | "CANCELADA";
+
+export type Liquidacion = {
+  id: string;
+  cita_id: string;
+  paciente: string;
+  servicio: string;
+  fecha_cita: string;
+  estado_cita: EstadoCita;
+  monto: number;
+  estado: EstadoLiquidacion;
+  /** Qué la retiene (reclamo o apelación pendiente), si aplica. */
+  retenida_por: string | null;
+  pagar_desde: string | null;
+  referencia_pago: string | null;
+  liquidado_en: string | null;
+};
+
+export type MisIngresos = {
+  en_custodia: number;
+  pagado: number;
+  devuelto_a_pacientes: number;
+  liquidaciones: Liquidacion[];
+};
+
+export type EstadoReembolso = "SOLICITADO" | "PROCESANDO" | "REEMBOLSADO" | "RECHAZADO" | "ERROR";
+
+export type Reembolso = {
+  id: string;
+  estado: EstadoReembolso;
+  monto: number;
+  motivo: string | null;
+  id_externo: string | null;
+  solicitado_en: string;
+  procesado_en: string | null;
+  simulado: boolean;
+};
+
+export const liquidacionesApi = {
+  /** GET /api/odontologos/yo/liquidaciones */
+  mias(): Promise<MisIngresos> {
+    return llamar<MisIngresos>("/api/odontologos/yo/liquidaciones");
+  },
+};
+
+export const constanciaApi = {
+  /** GET /api/citas/{id}/constancia — PDF. 409 si todavía no hay depósito pagado. */
+  descargar(citaId: string): Promise<Blob> {
+    return llamar<Blob>(`/api/citas/${citaId}/constancia`, { blob: true });
+  },
+};
+
+/** Descarga un Blob como archivo desde el navegador. */
+export function guardarArchivo(blob: Blob, nombre: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nombre;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+export const reembolsosApi = {
+  /** GET /api/citas/{id}/reembolsos — paciente u odontólogo de la cita. */
+  deCita(citaId: string): Promise<Reembolso[]> {
+    return llamar<Reembolso[]>(`/api/citas/${citaId}/reembolsos`);
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Apelaciones de inasistencia
+// ---------------------------------------------------------------------------
+export type EstadoApelacion = "PENDIENTE" | "APROBADA" | "RECHAZADA";
+
+/** certificado_url es un enlace firmado que vence a los 10 min (certificado_expira_en). */
+export type Apelacion = {
+  id: string;
+  cita_id: string;
+  estado: EstadoApelacion;
+  paciente: string;
+  servicio: string;
+  fecha_cita: string;
+  certificado_url: string | null;
+  certificado_expira_en: string | null;
+  nota_resolucion: string | null;
+  creado_en: string;
+  resuelto_en: string | null;
+  strikes_del_paciente: number | null;
+};
+
+export const apelacionesApi = {
+  /** POST /api/citas/{id}/apelacion — paciente; certificado PDF/JPG/PNG hasta 5 MB. */
+  apelar(citaId: string, certificado: File): Promise<Apelacion> {
+    validarArchivo(certificado, ["application/pdf", "image/jpeg", "image/png"], "un PDF, JPG o PNG");
+    const form = new FormData();
+    form.append("certificado", certificado);
+    return llamar<Apelacion>(`/api/citas/${citaId}/apelacion`, { method: "POST", form });
+  },
+  /** GET /api/citas/{id}/apelacion — estado de mi apelación (404 si no hay). */
+  deMiCita(citaId: string): Promise<Apelacion> {
+    return llamar<Apelacion>(`/api/citas/${citaId}/apelacion`);
+  },
+  /** GET /api/odontologos/yo/apelaciones?estado= */
+  delOdontologo(estado?: EstadoApelacion): Promise<Apelacion[]> {
+    return llamar<Apelacion[]>(`/api/odontologos/yo/apelaciones${consulta({ estado })}`);
+  },
+  /** PATCH /api/odontologos/yo/apelaciones/{id} — aprobar: quita un strike y devuelve el depósito. */
+  resolver(id: string, aprobar: boolean, nota?: string): Promise<Apelacion> {
+    return llamar<Apelacion>(`/api/odontologos/yo/apelaciones/${id}`, {
+      method: "PATCH",
+      body: { aprobar, ...(nota?.trim() ? { nota: nota.trim() } : {}) },
+    });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Libro de reclamaciones
+// ---------------------------------------------------------------------------
+export type TipoReclamo = "CONSULTA" | "INCIDENCIA" | "RECLAMO";
+export type EstadoReclamo = "ABIERTO" | "EN_PROCESO" | "RESUELTO" | "CERRADO";
+
+export type Reclamo = {
+  id: string;
+  /** REC-XXXXXXXX: número de seguimiento. */
+  codigo: string;
+  tipo: TipoReclamo;
+  estado: EstadoReclamo;
+  asunto: string;
+  descripcion: string;
+  reclamante: string;
+  cita_id: string | null;
+  odontologo: string | null;
+  servicio: string | null;
+  fecha_cita: string | null;
+  /** ODONTOLOGO (reclamo sobre una cita) o SOPORTE. */
+  atiende: "ODONTOLOGO" | "SOPORTE";
+  respuesta: string | null;
+  creado_en: string;
+  actualizado_en: string | null;
+  resuelto_en: string | null;
+  /** Fecha límite de respuesta (15 días hábiles), YYYY-MM-DD. */
+  responder_antes: string;
+};
+
+export const reclamosApi = {
+  /** POST /api/reclamos — cita_id opcional (debe ser una cita propia). */
+  registrar(datos: {
+    tipo: TipoReclamo;
+    asunto: string;
+    descripcion: string;
+    cita_id?: string;
+  }): Promise<Reclamo> {
+    return llamar<Reclamo>("/api/reclamos", { method: "POST", body: datos });
+  },
+  mios(): Promise<Reclamo[]> {
+    return llamar<Reclamo[]>("/api/reclamos/mios");
+  },
+  detalle(id: string): Promise<Reclamo> {
+    return llamar<Reclamo>(`/api/reclamos/${id}`);
+  },
+  cerrar(id: string): Promise<Reclamo> {
+    return llamar<Reclamo>(`/api/reclamos/${id}/cerrar`, { method: "PATCH" });
+  },
+  /** GET /api/odontologos/yo/reclamos?estado= — bandeja del odontólogo, los más antiguos primero. */
+  bandeja(estado?: EstadoReclamo): Promise<Reclamo[]> {
+    return llamar<Reclamo[]>(`/api/odontologos/yo/reclamos${consulta({ estado })}`);
+  },
+  /** PATCH /api/odontologos/yo/reclamos/{id} — resuelto=true pasa a RESUELTO; devolver_deposito opcional. */
+  responder(
+    id: string,
+    respuesta: string,
+    resuelto: boolean,
+    devolverDeposito?: boolean,
+  ): Promise<Reclamo> {
+    return llamar<Reclamo>(`/api/odontologos/yo/reclamos/${id}`, {
+      method: "PATCH",
+      body: {
+        respuesta,
+        resuelto,
+        ...(devolverDeposito !== undefined ? { devolver_deposito: devolverDeposito } : {}),
+      },
+    });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Asistencia, agenda de hoy y reportes de ausencia
+// ---------------------------------------------------------------------------
+export type EstadoReporteAusencia = string;
+
+export type RespuestaAsistencia = {
+  cita_id: string;
+  estado_cita: EstadoCita;
+  reporte: EstadoReporteAusencia | null;
+  mensaje: string;
+};
+
+export type AgendaHoy = {
+  fecha: string;
+  /** null: todavía no confirmaste hoy (sin confirmar no se aceptan reservas para hoy). */
+  atiende: boolean | null;
+  respondido_en: string | null;
+  citas_hoy: number;
+  primera_cita: string | null;
+  citas_canceladas: number;
+};
+
+export type ReporteAusencia = {
+  id: string;
+  cita_id: string;
+  paciente: string;
+  servicio: string;
+  fecha_cita: string;
+  estado: EstadoReporteAusencia;
+  distancia_metros: number | null;
+  respuesta_odontologo: string | null;
+  historia_registrada: boolean;
+  responder_antes: string;
+  creado_en: string;
+  resuelto_en: string | null;
+};
+
+export const asistenciaApi = {
+  /**
+   * POST /api/citas/{id}/asistencia — paciente. atendido=true cierra la cita como atendida;
+   * atendido=false reporta que no llegó el odontólogo (durante la cita se envía la ubicación, < 200 m).
+   */
+  responder(
+    citaId: string,
+    atendido: boolean,
+    ubicacion?: { latitud: number; longitud: number },
+  ): Promise<RespuestaAsistencia> {
+    return llamar<RespuestaAsistencia>(`/api/citas/${citaId}/asistencia`, {
+      method: "POST",
+      body: { atendido, ...(ubicacion ?? {}) },
+    });
+  },
+};
+
+export const agendaHoyApi = {
+  /** GET /api/odontologos/yo/agenda-hoy */
+  obtener(): Promise<AgendaHoy> {
+    return llamar<AgendaHoy>("/api/odontologos/yo/agenda-hoy");
+  },
+  /** POST — atiende=false cancela las citas pendientes de hoy con reembolso del 100 %. */
+  confirmar(atiende: boolean, motivo?: string): Promise<AgendaHoy> {
+    return llamar<AgendaHoy>("/api/odontologos/yo/agenda-hoy", {
+      method: "POST",
+      body: { atiende, ...(motivo?.trim() ? { motivo: motivo.trim() } : {}) },
+    });
+  },
+  /** GET /api/odontologos/yo/reportes-ausencia */
+  reportes(): Promise<ReporteAusencia[]> {
+    return llamar<ReporteAusencia[]>("/api/odontologos/yo/reportes-ausencia");
+  },
+  /** POST …/{id}/respuesta — atendi=false admite la falta; atendi=true exige historia clínica registrada. */
+  responderReporte(id: string, atendi: boolean, nota?: string): Promise<ReporteAusencia> {
+    return llamar<ReporteAusencia>(`/api/odontologos/yo/reportes-ausencia/${id}/respuesta`, {
+      method: "POST",
+      body: { atendi, ...(nota?.trim() ? { nota: nota.trim() } : {}) },
+    });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Consentimientos de privacidad (Ley N.º 29733)
+// ---------------------------------------------------------------------------
+export type Consentimiento = { version_politica: string; aceptado_en: string };
+
+export const consentimientosApi = {
+  /** GET /api/public/privacidad — versión vigente (sin login). */
+  politica(): Promise<{ version: string }> {
+    return llamar<{ version: string }>("/api/public/privacidad", { conToken: false });
+  },
+  /** GET /api/usuarios/yo/consentimientos */
+  mios(): Promise<Consentimiento[]> {
+    return llamar<Consentimiento[]>("/api/usuarios/yo/consentimientos");
+  },
+};
+
+/** Catálogo de categorías de servicio (para crear servicios). */
+export const categoriasApi = {
+  /** GET /api/catalogos/categorias-servicio */
+  listar(): Promise<CategoriaServicio[]> {
+    return llamar<CategoriaServicio[]>("/api/catalogos/categorias-servicio", { conToken: false });
   },
 };

@@ -11,6 +11,9 @@ import {
   Users,
   Clock,
   Settings,
+  Stethoscope,
+  Wallet,
+  MessageSquareWarning,
   LogOut,
   ChevronDown,
 } from "lucide-react";
@@ -96,6 +99,7 @@ function PatientHeader() {
     { to: "/paciente/catalogo", label: "Buscar dentista", icon: Search },
     { to: "/paciente/panel", label: "Mi panel", icon: LayoutDashboard },
     { to: "/paciente/perfil", label: "Mi perfil", icon: User },
+    { to: "/reclamos", label: "Reclamos", icon: MessageSquareWarning },
   ] as const;
 
   return (
@@ -240,6 +244,9 @@ function DentistSidebar({ open, onToggle }: { open: boolean; onToggle: () => voi
     { to: "/dentist/agenda", label: "Agenda", icon: Calendar },
     { to: "/dentist/pacientes", label: "Pacientes", icon: Users },
     { to: "/dentist/horarios", label: "Horarios", icon: Clock },
+    { to: "/dentist/consultorio", label: "Consultorio", icon: Stethoscope },
+    { to: "/dentist/liquidaciones", label: "Liquidaciones", icon: Wallet },
+    { to: "/dentist/reclamos", label: "Reclamos", icon: MessageSquareWarning },
     { to: "/dentist/perfil", label: "Mi perfil", icon: User },
     { to: "/odontologo/configuracion", label: "Configuración", icon: Settings },
   ] as const;

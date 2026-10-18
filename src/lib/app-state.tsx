@@ -21,22 +21,6 @@ export type UserRole = "patient" | "dentist";
 /** Usuario con sesión iniciada en el backend (null = nadie inició sesión). */
 export type Usuario = { nombre: string; rol: Rol };
 
-export type DocumentType = "DNI" | "Título" | "Colegiatura" | "CV";
-export type DocumentStatus = "PENDIENTE" | "OBSERVADO" | "RECHAZADO" | "VERIFICADO";
-export type Document = {
-  type: DocumentType;
-  estado: DocumentStatus;
-  url?: string | undefined;
-  motivoRechazo?: string | undefined;
-};
-
-const documentosIniciales: Document[] = [
-  { type: "DNI", estado: "VERIFICADO" },
-  { type: "Título", estado: "VERIFICADO" },
-  { type: "Colegiatura", estado: "PENDIENTE" },
-  { type: "CV", estado: "PENDIENTE" },
-];
-
 export type AppointmentStatus =
   | "PENDING_PAYMENT"
   | "VERIFYING"
@@ -168,14 +152,6 @@ type Ctx = {
   approveVoucher: (id: string) => void;
   blockedToday: boolean;
   setBlockedToday: (v: boolean) => void;
-  documentos: Document[];
-  setDocumentos: React.Dispatch<React.SetStateAction<Document[]>>;
-  frecuenciaDisponibilidad: string;
-  setFrecuenciaDisponibilidad: (v: string) => void;
-  bloqueoExpressActivo: boolean;
-  setBloqueoExpressActivo: (v: boolean) => void;
-  confirmacionManual: boolean;
-  setConfirmacionManual: (v: boolean) => void;
 };
 
 const AppStateContext = React.createContext<Ctx | null>(null);
@@ -203,12 +179,6 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [agenda, setAgenda] = React.useState<Appointment[]>([]);
   const [citasCargando, setCitasCargando] = React.useState(false);
   const [blockedToday, setBlockedTodayEstado] = React.useState(false);
-  const [documentos, setDocumentos] = React.useState<Document[]>(documentosIniciales);
-  const [frecuenciaDisponibilidad, setFrecuenciaDisponibilidad] = React.useState(
-    "Actualizo mi disponibilidad diariamente",
-  );
-  const [bloqueoExpressActivo, setBloqueoExpressActivo] = React.useState(false);
-  const [confirmacionManual, setConfirmacionManual] = React.useState(false);
 
   const rol = usuario?.rol ?? null;
   const nombreUsuario = usuario?.nombre ?? "";
@@ -356,14 +326,6 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     },
     blockedToday,
     setBlockedToday,
-    documentos,
-    setDocumentos,
-    frecuenciaDisponibilidad,
-    setFrecuenciaDisponibilidad,
-    bloqueoExpressActivo,
-    setBloqueoExpressActivo,
-    confirmacionManual,
-    setConfirmacionManual,
   };
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;

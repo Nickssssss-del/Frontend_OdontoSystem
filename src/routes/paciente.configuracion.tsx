@@ -10,6 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { ConsentimientosCard } from "@/components/paciente/ConsentimientosCard";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -494,6 +495,8 @@ function ConfiguracionPaciente() {
               </div>
             </CardContent>
           </Card>
+
+          <ConsentimientosCard />
 
           {/* Cerrar sesión */}
           <Card className="border-destructive/50">

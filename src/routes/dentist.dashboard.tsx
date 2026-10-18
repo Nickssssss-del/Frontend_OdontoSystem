@@ -22,6 +22,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { AgendaHoyCard } from "@/components/odontologo/AgendaHoyCard";
 import { useAppState, statusLabel } from "@/lib/app-state";
 import { fechaLima } from "@/lib/odontologos";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -71,7 +72,7 @@ type KPI = {
 };
 
 function DentistDashboard() {
-  const { agenda, appointments, usuario } = useAppState();
+  const { agenda, appointments, usuario, recargarCitas } = useAppState();
 
   // KPIs con las citas reales del backend (/api/odontologos/yo/citas).
   const hoy = fechaLima(0);
@@ -149,6 +150,10 @@ function DentistDashboard() {
         <div className="mb-8">
           <h1 className="text-3xl font-semibold mb-2">Dashboard</h1>
           <p className="text-muted-foreground">Bienvenido/a, {usuario?.nombre ?? "odontólogo"}</p>
+        </div>
+
+        <div className="mb-8">
+          <AgendaHoyCard onCambio={() => void recargarCitas()} />
         </div>
 
         {/* KPIs */}

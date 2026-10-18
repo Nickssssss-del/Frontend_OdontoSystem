@@ -68,7 +68,6 @@ function Odontologo() {
     setBlockedToday,
     vouchersPorRevisar,
     approveVoucher,
-    bloqueoExpressActivo,
   } = useAppState();
   const [notaFor, setNotaFor] = React.useState<Appointment | null>(null);
   const [nota, setNota] = React.useState("");
@@ -200,7 +199,7 @@ function Odontologo() {
         <Outlet />
       ) : (
         <>
-          {bloqueoExpressActivo && (
+          {blockedToday && (
             <div className="mb-4 p-4 bg-destructive/10 text-destructive rounded-lg border border-destructive/20">
               <div className="flex items-start gap-3">
                 <X className="size-5 shrink-0" />
