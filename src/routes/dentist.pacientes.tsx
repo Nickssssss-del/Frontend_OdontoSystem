@@ -12,7 +12,8 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { useAppState } from "@/lib/app-state";
+import { useAppState, type Appointment } from "@/lib/app-state";
+import { fechaLima } from "@/lib/odontologos";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -50,7 +51,7 @@ export const Route = createFileRoute("/dentist/pacientes")({
 type Patient = {
   id: string;
   name: string;
-  age: number;
+  age: number | null;
   phone: string;
   email: string;
   lastVisit: string;
@@ -63,75 +64,40 @@ function DentistPacientes() {
   const { agenda, appointments } = useAppState();
   const [searchQuery, setSearchQuery] = React.useState("");
 
-  // Mock patients data
-  const patients: Patient[] = [
-    {
-      id: "p1",
-      name: "Nicole Ramírez",
-      age: 24,
-      phone: "+51 987 654 321",
-      email: "nicole@example.com",
-      lastVisit: "2026-09-15",
-      specialty: "Ortodoncia",
-      status: "active",
-      appointmentsCount: 8,
-    },
-    {
-      id: "p2",
-      name: "Marco Ayala",
-      age: 32,
-      phone: "+51 987 654 322",
-      email: "marco@example.com",
-      lastVisit: "2026-09-14",
-      specialty: "Evaluación",
-      status: "active",
-      appointmentsCount: 3,
-    },
-    {
-      id: "p3",
-      name: "Lucía Tenorio",
-      age: 28,
-      phone: "+51 987 654 323",
-      email: "lucia@example.com",
-      lastVisit: "2026-09-13",
-      specialty: "Ortodoncia",
-      status: "active",
-      appointmentsCount: 5,
-    },
-    {
-      id: "p4",
-      name: "Jorge Bermúdez",
-      age: 45,
-      phone: "+51 987 654 324",
-      email: "jorge@example.com",
-      lastVisit: "2026-09-12",
-      specialty: "General",
-      status: "inactive",
-      appointmentsCount: 2,
-    },
-    {
-      id: "p5",
-      name: "Ana Peralta",
-      age: 35,
-      phone: "+51 987 654 325",
-      email: "ana@example.com",
-      lastVisit: "2026-09-15",
-      specialty: "Ortodoncia",
-      status: "active",
-      appointmentsCount: 6,
-    },
-    {
-      id: "p6",
-      name: "Diego Falcón",
-      age: 29,
-      phone: "+51 987 654 326",
-      email: "diego@example.com",
-      lastVisit: "2026-09-15",
-      specialty: "Evaluación",
-      status: "active",
-      appointmentsCount: 4,
-    },
-  ];
+  // Pacientes reales: se derivan de las citas de la agenda (el backend no tiene un listado de pacientes
+  // aparte; /api/odontologos/yo/citas trae id, nombre, teléfono y correo de cada paciente).
+  const patients = React.useMemo<Patient[]>(() => {
+    const hoy = fechaLima(0);
+    const porPaciente = new Map<string, Appointment[]>();
+    for (const cita of [...agenda, ...appointments]) {
+      const clave = cita.patientId ?? cita.patient;
+      const lista = porPaciente.get(clave) ?? [];
+      if (!lista.some((c) => c.id === cita.id)) lista.push(cita);
+      porPaciente.set(clave, lista);
+    }
+    return [...porPaciente.entries()].map(([id, citas]) => {
+      const ordenadas = [...citas].sort((x, y) =>
+        `${y.date}${y.time}`.localeCompare(`${x.date}${x.time}`),
+      );
+      const ultima = ordenadas[0]!;
+      const vigentes = citas.filter((c) => c.status !== "CANCELLED" && c.status !== "NO_SHOW");
+      const ultimaAtendida = ordenadas.find((c) => c.status === "COMPLETED");
+      return {
+        id,
+        name: ultima.patient || "Paciente",
+        age: null,
+        phone: ultima.patientPhone ?? "",
+        email: ultima.patientEmail ?? "",
+        lastVisit: (ultimaAtendida ?? ultima).date,
+        specialty: ultima.service,
+        // Activo = tiene una cita próxima o atendida en la ventana de la agenda.
+        status: vigentes.some((c) => c.date >= hoy || c.status === "COMPLETED")
+          ? ("active" as const)
+          : ("inactive" as const),
+        appointmentsCount: vigentes.length,
+      };
+    });
+  }, [agenda, appointments]);
 
   const filteredPatients = patients.filter((p) =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -261,9 +227,9 @@ function DentistPacientes() {
                               <p className="text-xs text-muted-foreground">{patient.email}</p>
                             </div>
                           </TableCell>
-                          <TableCell className="text-sm">{patient.age}</TableCell>
+                          <TableCell className="text-sm">{patient.age ?? "—"}</TableCell>
                           <TableCell className="text-sm text-muted-foreground hidden md:table-cell">
-                            {new Date(patient.lastVisit).toLocaleDateString("es-PE", {
+                            {new Date(`${patient.lastVisit}T12:00:00`).toLocaleDateString("es-PE", {
                               day: "numeric",
                               month: "short",
                             })}

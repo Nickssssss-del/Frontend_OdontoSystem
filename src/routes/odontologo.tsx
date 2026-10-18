@@ -24,7 +24,9 @@ import {
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { VoucherBadge, VoucherReceipt } from "@/components/VoucherBits";
-import { ingresosMensuales, soles, timeBlocks } from "@/lib/mock-data";
+import { soles } from "@/lib/mock-data";
+import { historiasApi } from "@/lib/api";
+import { fechaLima } from "@/lib/odontologos";
 import {
   motivosRechazo,
   statusClass,
@@ -58,18 +60,21 @@ const dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 function Odontologo() {
   const {
     agenda,
-    updateAgenda,
-    addStrike,
-    strikes,
+    appointments,
+    confirmarCita,
+    completarCita,
+    marcarInasistencia,
     blockedToday,
     setBlockedToday,
     vouchersPorRevisar,
     approveVoucher,
-    rejectVoucher,
     bloqueoExpressActivo,
   } = useAppState();
   const [notaFor, setNotaFor] = React.useState<Appointment | null>(null);
   const [nota, setNota] = React.useState("");
+  const [diagnostico, setDiagnostico] = React.useState("");
+  const [tratamiento, setTratamiento] = React.useState("");
+  const [guardandoNota, setGuardandoNota] = React.useState(false);
   const [revisandoId, setRevisandoId] = React.useState<string | null>(null);
   const [motivo, setMotivo] = React.useState(motivosRechazo[0]!);
   const [modoRechazo, setModoRechazo] = React.useState(false);
@@ -94,39 +99,99 @@ function Odontologo() {
     });
   };
 
-  const rechazar = (a: Appointment) => {
-    rejectVoucher(a.id, motivo);
+  // El backend no maneja comprobantes manuales (la pasarela es simulada), por eso no hay rechazo.
+  const rechazar = (_a: Appointment) => {
     setRevisandoId(null);
     setModoRechazo(false);
-    toast.error("Comprobante rechazado", {
-      description: `${a.patient} podrá subir uno nuevo. Motivo: ${motivo}`,
-    });
+    toast.info("Los pagos se verifican automáticamente en la pasarela.");
   };
 
-  const atendidas = agenda.filter((a) => a.status === "COMPLETED").length;
-  const ingresosMes = ingresosMensuales.at(-1)?.ingresos ?? 0;
-  const ocupacion = Math.round((agenda.length / timeBlocks.length) * 100);
+  const hoy = fechaLima(0);
+  const mesActual = hoy.slice(0, 7);
+  const citasHoy = agenda
+    .filter((a) => a.date === hoy)
+    .sort((x, y) => x.time.localeCompare(y.time));
+  const atendidas = citasHoy.filter((a) => a.status === "COMPLETED").length;
+  const ingresosMes = appointments
+    .filter((a) => a.status === "COMPLETED" && a.date.startsWith(mesActual))
+    .reduce((suma, a) => suma + a.amount, 0);
+  // Ingresos por mes con las citas atendidas que trae la agenda (ventana de ~2 meses).
+  const ingresosMensuales = Object.entries(
+    appointments
+      .filter((a) => a.status === "COMPLETED")
+      .reduce<Record<string, number>>((acc, a) => {
+        const mes = a.date.slice(0, 7);
+        acc[mes] = (acc[mes] ?? 0) + a.amount;
+        return acc;
+      }, {}),
+  )
+    .sort(([m1], [m2]) => m1.localeCompare(m2))
+    .map(([mes, ingresos]) => ({
+      mes: new Intl.DateTimeFormat("es-PE", { month: "short", timeZone: "UTC" })
+        .format(new Date(`${mes}-15T12:00:00Z`))
+        .replace(".", ""),
+      ingresos,
+    }));
+  const pendientesConfirmar = citasHoy.filter((a) => a.status === "VERIFYING").length;
+  const ocupacion = Math.min(100, Math.round((citasHoy.length / 10) * 100));
 
-  const marcarAtendido = (a: Appointment) => {
-    updateAgenda(a.id, { status: "COMPLETED" });
+  const marcarAtendido = async (a: Appointment) => {
+    try {
+      await completarCita(a.id);
+    } catch {
+      return; // el contexto ya mostró el error
+    }
     setNotaFor({ ...a, status: "COMPLETED" });
     setNota("");
+    setDiagnostico("");
+    setTratamiento("");
   };
 
-  const registrarAusencia = (a: Appointment) => {
-    updateAgenda(a.id, { status: "NO_SHOW" });
-    addStrike();
+  const registrarAusencia = async (a: Appointment) => {
+    try {
+      await marcarInasistencia(a.id);
+    } catch {
+      return;
+    }
     toast.warning("Inasistencia registrada", {
-      description: `Se aplicó un strike automático a ${a.patient} (${strikes + 1}/3).`,
+      description: `El sistema aplicó un strike a ${a.patient}.`,
     });
   };
 
-  const guardarNota = () => {
-    if (notaFor) updateAgenda(notaFor.id, { note: nota });
-    setNotaFor(null);
-    toast.success("Nota clínica guardada", {
-      description: "El texto se almacenó cifrado con AES-256.",
-    });
+  const confirmar = async (a: Appointment) => {
+    try {
+      await confirmarCita(a.id);
+      toast.success("Cita confirmada", { description: `${a.patient} · ${a.time}` });
+    } catch {
+      /* el contexto ya mostró el error */
+    }
+  };
+
+  /** POST /api/citas/{id}/historia — diagnóstico y tratamiento son obligatorios en el backend. */
+  const guardarNota = async () => {
+    if (!notaFor || guardandoNota) return;
+    if (!diagnostico.trim() || !tratamiento.trim()) {
+      toast.error("Completa el diagnóstico y el tratamiento");
+      return;
+    }
+    setGuardandoNota(true);
+    try {
+      await historiasApi.registrar(notaFor.id, {
+        diagnostico: diagnostico.trim(),
+        tratamiento: tratamiento.trim(),
+        ...(nota.trim() ? { notas: nota.trim() } : {}),
+      });
+      setNotaFor(null);
+      toast.success("Historia clínica guardada", {
+        description: "Se almacenó cifrada y solo el paciente y tú pueden verla.",
+      });
+    } catch (e) {
+      toast.error("No se pudo guardar la historia clínica", {
+        description: e instanceof Error ? e.message : undefined,
+      });
+    } finally {
+      setGuardandoNota(false);
+    }
   };
 
   return (
@@ -195,7 +260,7 @@ function Odontologo() {
             <Kpi
               icon={<CheckCircle2 className="size-5" />}
               label="Citas atendidas hoy"
-              value={`${atendidas} / ${agenda.length}`}
+              value={`${atendidas} / ${citasHoy.length}`}
               delay={0.06}
             />
             <Kpi
@@ -344,10 +409,18 @@ function Odontologo() {
               transition={{ delay: 0.08 }}
               className="rounded-3xl border border-border bg-card p-6"
             >
-              <h2 className="font-display text-lg font-semibold">Cronograma de hoy · 15 Set</h2>
+              <h2 className="font-display text-lg font-semibold">
+                Cronograma de hoy · {hoy.split("-").reverse().join("/")}
+                {pendientesConfirmar > 0 && ` · ${pendientesConfirmar} por confirmar`}
+              </h2>
               <div className="mt-4 space-y-2">
-                {timeBlocks.map((t) => {
-                  const cita = agenda.find((a) => a.time === t);
+                {citasHoy.length === 0 && (
+                  <p className="rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground">
+                    {blockedToday ? "Agenda bloqueada por hoy." : "No tienes citas para hoy."}
+                  </p>
+                )}
+                {citasHoy.map((cita) => {
+                  const t = cita.time;
                   return (
                     <div key={t} className="flex gap-3">
                       <span className="w-14 pt-3 text-xs font-semibold tabular-nums text-muted-foreground">
@@ -385,22 +458,28 @@ function Odontologo() {
                               Revisar comprobante
                             </button>
                           )}
-                          {[
-                            "CONFIRMED",
-                            "VERIFYING",
-                            "PENDING_PAYMENT",
-                            "PAYMENT_REJECTED",
-                          ].includes(cita.status) && (
+                          {cita.status === "VERIFYING" && (
                             <div className="mt-2 flex flex-wrap gap-2">
                               <button
-                                onClick={() => marcarAtendido(cita)}
+                                onClick={() => void confirmar(cita)}
+                                className="rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground"
+                              >
+                                <CheckCircle2 className="mr-1 inline size-3.5" />
+                                Confirmar cita
+                              </button>
+                            </div>
+                          )}
+                          {cita.status === "CONFIRMED" && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <button
+                                onClick={() => void marcarAtendido(cita)}
                                 className="rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground"
                               >
                                 <CheckCircle2 className="mr-1 inline size-3.5" />
                                 Marcar como atendido
                               </button>
                               <button
-                                onClick={() => registrarAusencia(cita)}
+                                onClick={() => void registrarAusencia(cita)}
                                 className="rounded-full border border-destructive/40 px-3 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10"
                               >
                                 <UserX className="mr-1 inline size-3.5" />
@@ -582,20 +661,35 @@ function Odontologo() {
                     </button>
                   </div>
                   <textarea
+                    value={diagnostico}
+                    onChange={(e) => setDiagnostico(e.target.value)}
+                    rows={2}
+                    placeholder="Diagnóstico (obligatorio)"
+                    className="mt-4 w-full rounded-2xl border border-input bg-background p-3 text-sm outline-none focus:border-primary"
+                  />
+                  <textarea
+                    value={tratamiento}
+                    onChange={(e) => setTratamiento(e.target.value)}
+                    rows={2}
+                    placeholder="Tratamiento realizado (obligatorio)"
+                    className="mt-3 w-full rounded-2xl border border-input bg-background p-3 text-sm outline-none focus:border-primary"
+                  />
+                  <textarea
                     value={nota}
                     onChange={(e) => setNota(e.target.value)}
-                    rows={6}
-                    placeholder="Procedimiento realizado, indicaciones y próximo control…"
-                    className="mt-4 w-full rounded-2xl border border-input bg-background p-3 text-sm outline-none focus:border-primary"
+                    rows={3}
+                    placeholder="Notas: indicaciones y próximo control (opcional)"
+                    className="mt-3 w-full rounded-2xl border border-input bg-background p-3 text-sm outline-none focus:border-primary"
                   />
                   <p className="mt-2 text-xs text-muted-foreground">
                     🔒 El texto se guarda cifrado (AES-256) y solo el paciente y tú pueden verlo.
                   </p>
                   <button
-                    onClick={guardarNota}
-                    className="mt-4 w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground"
+                    onClick={() => void guardarNota()}
+                    disabled={guardandoNota}
+                    className="mt-4 w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-60"
                   >
-                    Guardar nota
+                    {guardandoNota ? "Guardando…" : "Guardar historia clínica"}
                   </button>
                 </motion.div>
               </motion.div>

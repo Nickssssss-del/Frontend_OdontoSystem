@@ -35,9 +35,14 @@ export const Route = createFileRoute("/dentist/agenda")({
 type ViewMode = "day" | "week" | "month";
 
 function DentistAgenda() {
-  const { agenda } = useAppState();
+  const { agenda, citasCargando, confirmarCita } = useAppState();
   const [viewMode, setViewMode] = React.useState<ViewMode>("day");
-  const [currentDate, setCurrentDate] = React.useState(new Date(2026, 8, 15)); // Sept 15
+  const [currentDate, setCurrentDate] = React.useState(() => new Date());
+
+  // "YYYY-MM-DD" en hora local, para comparar con Appointment.date (ya viene en hora de Lima).
+  // No usar new Date(a.date): "YYYY-MM-DD" se interpreta como UTC y corre el día en Lima/Bogotá.
+  const claveDia = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
   // Colores por estado
   const statusColors = {
@@ -50,57 +55,57 @@ function DentistAgenda() {
     NO_SHOW: "bg-destructive/12 border-l-4 border-destructive text-destructive",
   };
 
-  // Horas disponibles
-  const hours = [
-    "08:00",
-    "09:00",
-    "10:00",
-    "11:00",
-    "12:00",
-    "14:00",
-    "15:00",
-    "16:00",
-    "17:00",
-    "18:00",
-  ];
-
-  // View: Day
-  const DayView = () => (
-    <div className="space-y-2">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-        {hours.map((hour) => {
-          const appointment = agenda.find((a) => a.time === hour);
-          return (
+  // View: Day — las citas reales del día, ordenadas por hora (los turnos los define el horario del odontólogo).
+  const DayView = () => {
+    const delDia = agenda
+      .filter((a) => a.date === claveDia(currentDate))
+      .sort((x, y) => x.time.localeCompare(y.time));
+    if (delDia.length === 0) {
+      return (
+        <p className="rounded-lg border border-dashed border-border p-6 text-sm text-muted-foreground">
+          {citasCargando ? "Cargando citas…" : "No tienes citas este día."}
+        </p>
+      );
+    }
+    return (
+      <div className="space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          {delDia.map((appointment) => (
             <motion.div
-              key={hour}
+              key={appointment.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className={cn(
                 "rounded-lg border border-border/70 p-3 transition-all hover:shadow-md",
-                appointment ? statusColors[appointment.status] : "bg-muted/30",
+                statusColors[appointment.status],
               )}
             >
-              <p className="text-xs font-semibold text-muted-foreground mb-2">{hour}</p>
-              {appointment ? (
-                <div className="space-y-1">
-                  <p className="font-semibold text-sm">{appointment.patient}</p>
-                  <p className="text-xs text-muted-foreground">{appointment.service}</p>
-                  <div className="flex items-center justify-between pt-2">
-                    <span className="text-xs font-medium">S/ {appointment.amount}</span>
-                    <Badge variant="outline" className="h-5 text-xs">
-                      {statusLabel[appointment.status]}
-                    </Badge>
-                  </div>
+              <p className="text-xs font-semibold text-muted-foreground mb-2">{appointment.time}</p>
+              <div className="space-y-1">
+                <p className="font-semibold text-sm">{appointment.patient}</p>
+                <p className="text-xs text-muted-foreground">{appointment.service}</p>
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-xs font-medium">S/ {appointment.amount}</span>
+                  <Badge variant="outline" className="h-5 text-xs">
+                    {statusLabel[appointment.status]}
+                  </Badge>
                 </div>
-              ) : (
-                <p className="text-xs text-muted-foreground">Libre</p>
-              )}
+                {appointment.status === "VERIFYING" && (
+                  <Button
+                    size="sm"
+                    className="mt-2 w-full"
+                    onClick={() => void confirmarCita(appointment.id).catch(() => undefined)}
+                  >
+                    Confirmar cita
+                  </Button>
+                )}
+              </div>
             </motion.div>
-          );
-        })}
+          ))}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // View: Week
   const WeekView = () => {
@@ -118,9 +123,9 @@ function DentistAgenda() {
             const date = semana[idx];
             if (!date) return null;
             const isToday = date.toDateString() === currentDate.toDateString();
-            const dayAppointments = agenda.filter(
-              (a) => new Date(a.date).toDateString() === date.toDateString(),
-            );
+            const dayAppointments = agenda
+              .filter((a) => a.date === claveDia(date))
+              .sort((x, y) => x.time.localeCompare(y.time));
 
             return (
               <motion.div
@@ -191,9 +196,9 @@ function DentistAgenda() {
           ))}
           {days.map((day) => {
             const date = new Date(year, month, day);
-            const dayAppointments = agenda.filter(
-              (a) => new Date(a.date).toDateString() === date.toDateString(),
-            );
+            const dayAppointments = agenda
+              .filter((a) => a.date === claveDia(date))
+              .sort((x, y) => x.time.localeCompare(y.time));
             const isToday = date.toDateString() === currentDate.toDateString();
 
             return (
@@ -326,8 +331,8 @@ function DentistAgenda() {
               {[
                 { status: "CONFIRMED", label: "Confirmada", icon: CheckCircle2 },
                 { status: "COMPLETED", label: "Completada", icon: CheckCircle2 },
-                { status: "VERIFYING", label: "Verificando pago", icon: AlertCircle },
-                { status: "PAYMENT_REJECTED", label: "Pago rechazado", icon: AlertCircle },
+                { status: "VERIFYING", label: "Por confirmar", icon: AlertCircle },
+                { status: "NO_SHOW", label: "Inasistencia", icon: AlertCircle },
               ].map((item) => (
                 <div key={item.status} className="flex items-center gap-2">
                   <div
@@ -336,7 +341,7 @@ function DentistAgenda() {
                       item.status === "CONFIRMED" && "bg-primary",
                       item.status === "COMPLETED" && "bg-success",
                       item.status === "VERIFYING" && "bg-warning",
-                      item.status === "PAYMENT_REJECTED" && "bg-destructive",
+                      item.status === "NO_SHOW" && "bg-destructive",
                     )}
                   />
                   <span className="text-sm">{item.label}</span>

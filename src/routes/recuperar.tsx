@@ -3,10 +3,12 @@
 // escudo e indicadores de seguridad) a la izquierda y tarjeta blanca con el
 // flujo real de 4 pasos a la derecha:
 //   1. Correo → 2. Verificación → 3. Nueva contraseña → 4. Confirmación
-// El indicador de progreso refleja el estado real: solo avanza cuando el
-// backend confirma cada etapa (recuperacionApi en src/lib/api.ts). Si el
-// servidor aún no expone los endpoints, se informa con un aviso honesto y
-// jamás se simula el éxito. La contraseña y el código nunca viajan por la URL,
+// Contrato real del backend (recuperacionApi en src/lib/api.ts):
+//   POST /api/auth/recuperar-password   { correo }                         -> 202
+//   POST /api/auth/restablecer-password { correo, codigo, password_nueva } -> 204
+// El backend no tiene un paso "verificar" aparte: el código se valida al
+// restablecer, así que el paso 2 solo comprueba que sean 6 dígitos y el
+// código incorrecto/vencido (400) devuelve al paso 2. Jamás se simula el éxito. La contraseña y el código nunca viajan por la URL,
 // ni quedan en storage ni en consola; al salir del flujo se limpia todo.
 
 import * as React from "react";
@@ -223,7 +225,6 @@ function RecuperarContrasena() {
   const [paso, setPaso] = React.useState(0);
   const [correo, setCorreo] = React.useState("");
   const [codigo, setCodigo] = React.useState("");
-  const [token, setToken] = React.useState<string | null>(null);
   const [clave, setClave] = React.useState("");
   const [confirmacion, setConfirmacion] = React.useState("");
   const [verClave, setVerClave] = React.useState(false);
@@ -244,7 +245,6 @@ function RecuperarContrasena() {
     setPaso(0);
     setCorreo("");
     setCodigo("");
-    setToken(null);
     setClave("");
     setConfirmacion("");
     setVerClave(false);
@@ -278,7 +278,6 @@ function RecuperarContrasena() {
       // Solo se avanza con respuesta satisfactoria del backend; la respuesta es
       // genérica y no revela si la cuenta existe.
       setCodigo("");
-      setToken(null);
       setEspera(ESPERA_REENVIO);
       setAviso(
         "Si el correo pertenece a una cuenta, recibirás un código de verificación en unos minutos.",
@@ -297,7 +296,7 @@ function RecuperarContrasena() {
     setError(null);
     setEnviando(true);
     try {
-      await recuperacionApi.reenviar(correo.trim());
+      await recuperacionApi.solicitar(correo.trim());
       setCodigo("");
       setEspera(ESPERA_REENVIO);
       setAviso("Código reenviado. Revisa tu bandeja de entrada y también la carpeta de spam.");
@@ -308,35 +307,19 @@ function RecuperarContrasena() {
     }
   };
 
-  /** Paso 2: valida el código; sin token del backend no se continúa. */
-  const verificar = async (e: React.FormEvent) => {
+  /** Paso 2: el backend valida el código al restablecer; aquí solo se exigen los 6 dígitos. */
+  const verificar = (e: React.FormEvent) => {
     e.preventDefault();
     if (enviando || codigo.length !== CODIGO_LENGTH) return;
     setError(null);
     setAviso(null);
-    setEnviando(true);
-    try {
-      const respuesta = await recuperacionApi.verificar(correo.trim(), codigo);
-      if (!respuesta?.token) {
-        setError(
-          "El servidor no confirmó la verificación. Intenta de nuevo o solicita otro código.",
-        );
-        return;
-      }
-      setToken(respuesta.token);
-      setPaso(2);
-    } catch (err) {
-      setError(mensajeRecuperacion(err));
-    } finally {
-      setEnviando(false);
-    }
+    setPaso(2);
   };
 
   /** Paso 2: permite cambiar el correo y volver al inicio del flujo. */
   const cambiarCorreo = () => {
     if (enviando) return;
     setCodigo("");
-    setToken(null);
     setError(null);
     setAviso(null);
     setPaso(0);
@@ -350,18 +333,17 @@ function RecuperarContrasena() {
   /** Paso 3: cambia la contraseña solo con el backend confirmando. */
   const restablecer = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token) {
-      setError("La verificación ya no es válida. Solicita un código nuevo.");
-      setPaso(0);
+    if (codigo.length !== CODIGO_LENGTH) {
+      setError("Ingresa el código de 6 dígitos que enviamos a tu correo.");
+      setPaso(1);
       return;
     }
     if (!puedeActualizar) return;
     setError(null);
     setEnviando(true);
     try {
-      await recuperacionApi.restablecer(token, clave);
+      await recuperacionApi.restablecer(correo.trim(), codigo, clave);
       // Limpieza inmediata de los datos sensibles tras la confirmación real.
-      setToken(null);
       setCodigo("");
       setClave("");
       setConfirmacion("");
@@ -374,14 +356,13 @@ function RecuperarContrasena() {
         description: "Ya puedes iniciar sesión con tus nuevas credenciales.",
       });
     } catch (err) {
-      if (err instanceof ApiError && [401, 403, 404, 410].includes(err.status)) {
-        // El token de recuperación expiró o ya fue consumido: se empieza de nuevo.
-        setToken(null);
+      if (err instanceof ApiError && err.status === 400) {
+        // Código incorrecto o vencido (5 intentos máx. por código): se vuelve a pedirlo.
         setCodigo("");
         setClave("");
         setConfirmacion("");
-        setError("La sesión de recuperación expiró. Solicita un código nuevo.");
-        setPaso(0);
+        setError(`${err.message} Revisa el código o solicita uno nuevo.`);
+        setPaso(1);
       } else {
         setError(mensajeRecuperacion(err));
       }

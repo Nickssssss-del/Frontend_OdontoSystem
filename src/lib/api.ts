@@ -41,7 +41,16 @@ export type RegistroRequest = {
 };
 
 export type TipoRespuestaChatbot =
-  "texto_simple" | "lista_odontologos" | "lista_horarios" | "confirmacion";
+  | "texto_simple"
+  | "lista_odontologos"
+  | "lista_servicios"
+  | "lista_horarios"
+  | "confirmacion"
+  | "cita_reservada"
+  | "lista_citas";
+
+/** Botón sugerido por el chatbot (RespuestaChatbot.opciones del backend). */
+export type OpcionChatbot = { etiqueta: string; accion: string; valor?: string };
 
 export type OdontologoResumen = {
   id: string;
@@ -59,6 +68,7 @@ export type RespuestaChatbot = {
   intencion?: string;
   datos?: unknown;
   acciones?: string[];
+  opciones?: OpcionChatbot[];
 };
 
 export type MensajeHistorial = {
@@ -154,8 +164,9 @@ async function renovarToken(): Promise<boolean> {
       });
       guardarSesion(nueva);
       return true;
-    } catch {
-      guardarSesion(null);
+    } catch (e) {
+      // Sin red (status 0) no se cierra la sesión: el refresh token sigue siendo válido.
+      if (!(e instanceof ApiError && e.status === 0)) guardarSesion(null);
       return false;
     } finally {
       renovacionEnCurso = null;
@@ -238,61 +249,46 @@ export const authApi = {
     return sesion;
   },
 
+  /** Cierra la sesión en el navegador y revoca el refresh token en el backend (POST /api/auth/logout). */
   cerrarSesion() {
+    const refresh = leerSesion()?.refresh_token;
     guardarSesion(null);
+    if (refresh) {
+      // Mejor esfuerzo: si falla, el token igual vence solo.
+      void llamar<void>("/api/auth/logout", {
+        method: "POST",
+        body: { refresh_token: refresh },
+        conToken: false,
+      }).catch(() => undefined);
+    }
   },
 };
 
 // ---------------------------------------------------------------------------
-// Recuperación de contraseña (flujo público de 4 pasos)
+// Recuperación de contraseña (contrato real del backend, AuthController)
 // ---------------------------------------------------------------------------
-// Contrato exigido al backend (todo queda bajo /api/auth/**, que SecurityConfig
-// ya deja pasar sin token; los nombres van en snake_case como el resto de la API):
-//
-//   POST /api/auth/recuperar/solicitar   { correo }          -> 200  respuesta genérica (no revela si la cuenta existe)
-//   POST /api/auth/recuperar/reenviar     { correo }          -> 200  respuesta genérica
-//   POST /api/auth/recuperar/verificar    { correo, codigo }  -> 200  { token }  token de un solo uso y corta validez
-//   POST /api/auth/recuperar/restablecer  { token, password } -> 200  marca el token como consumido
-//
-// El backend publicado hoy NO los expone (solo login/refresh/register) y responde
-// 404; la interfaz lo informa con servicioNoDisponible() sin simular el flujo.
-
-export type RespuestaRecuperacion = { mensaje?: string };
-export type VerificacionRecuperacion = { token?: string };
+//   POST /api/auth/recuperar-password   { correo }                              -> 202 (siempre, exista o no la cuenta)
+//        Envía un código de 6 dígitos al correo (vale 15 min; uno cada 60 s).
+//   POST /api/auth/restablecer-password { correo, codigo, password_nueva }      -> 204
+//        400 si el código es incorrecto o venció (máx. 5 intentos por código).
+//        Cierra todas las sesiones abiertas de la cuenta.
+// El backend NO tiene un paso "verificar código" aparte: el código se valida al restablecer.
 
 export const recuperacionApi = {
-  /** Paso 1: pide el código. La respuesta debe ser idéntica exista o no la cuenta. */
-  solicitar(correo: string): Promise<RespuestaRecuperacion> {
-    return llamar<RespuestaRecuperacion>("/api/auth/recuperar/solicitar", {
+  /** Pide (o reenvía) el código de 6 dígitos. 202 genérico: no revela si la cuenta existe. */
+  solicitar(correo: string): Promise<void> {
+    return llamar<void>("/api/auth/recuperar-password", {
       method: "POST",
       body: { correo },
       conToken: false,
     });
   },
 
-  /** Paso 2: reenvía el mismo código (o lo renueva) respetando el tiempo de espera. */
-  reenviar(correo: string): Promise<RespuestaRecuperacion> {
-    return llamar<RespuestaRecuperacion>("/api/auth/recuperar/reenviar", {
+  /** Cambia la contraseña con el código recibido por correo. */
+  restablecer(correo: string, codigo: string, passwordNueva: string): Promise<void> {
+    return llamar<void>("/api/auth/restablecer-password", {
       method: "POST",
-      body: { correo },
-      conToken: false,
-    });
-  },
-
-  /** Paso 2: valida el código y devuelve el token de un solo uso para el paso 3. */
-  verificar(correo: string, codigo: string): Promise<VerificacionRecuperacion> {
-    return llamar<VerificacionRecuperacion>("/api/auth/recuperar/verificar", {
-      method: "POST",
-      body: { correo, codigo },
-      conToken: false,
-    });
-  },
-
-  /** Paso 3: cambia la contraseña consumiendo el token. Nunca se envía por URL. */
-  restablecer(token: string, password: string): Promise<RespuestaRecuperacion> {
-    return llamar<RespuestaRecuperacion>("/api/auth/recuperar/restablecer", {
-      method: "POST",
-      body: { token, password },
+      body: { correo, codigo, password_nueva: passwordNueva },
       conToken: false,
     });
   },
@@ -307,10 +303,22 @@ export function servicioNoDisponible(error: unknown): boolean {
 }
 
 export const chatbotApi = {
-  enviarMensaje(mensaje: string, sesionId?: string): Promise<RespuestaChatbot> {
+  /** `accion`/`valor`: cuando el usuario pulsa un botón (OpcionChatbot) en vez de escribir. */
+  enviarMensaje(
+    mensaje: string,
+    sesionId?: string,
+    opcion?: { accion: string; valor?: string },
+  ): Promise<RespuestaChatbot> {
     return llamar<RespuestaChatbot>("/api/chatbot/mensaje", {
       method: "POST",
-      body: { mensaje, canal: "WEB", ...(sesionId ? { sesion_id: sesionId } : {}) },
+      body: {
+        mensaje,
+        canal: "WEB",
+        ...(sesionId ? { sesion_id: sesionId } : {}),
+        ...(opcion
+          ? { accion: opcion.accion, ...(opcion.valor ? { valor: opcion.valor } : {}) }
+          : {}),
+      },
     });
   },
 
@@ -520,6 +528,11 @@ export const citasApi = {
     return llamar<Cita[]>("/api/citas/mias");
   },
 
+  /** GET /api/citas/{id} — detalle de una cita (paciente u odontólogo dueño). */
+  detalle(citaId: string): Promise<Cita> {
+    return llamar<Cita>(`/api/citas/${citaId}`);
+  },
+
   /** Con 12 h o más de anticipación se devuelve el depósito (CANCELADA_CON_REEMBOLSO); si no, se pierde. */
   cancelar(citaId: string, motivo?: string): Promise<Cita> {
     return llamar<Cita>(`/api/citas/${citaId}/cancelar`, {
@@ -657,6 +670,17 @@ export const usuariosApi = {
 };
 
 export const historiasApi = {
+  /** POST /api/citas/{id}/historia — solo el odontólogo de una cita COMPLETADA. diagnóstico y tratamiento obligatorios. */
+  registrar(
+    citaId: string,
+    datos: { diagnostico: string; tratamiento: string; notas?: string },
+  ): Promise<HistoriaClinica> {
+    return llamar<HistoriaClinica>(`/api/citas/${citaId}/historia`, {
+      method: "POST",
+      body: datos,
+    });
+  },
+
   /** GET /api/historias/mias — mis historias clínicas, la más reciente primero. */
   mias(): Promise<HistoriaClinica[]> {
     return llamar<HistoriaClinica[]>("/api/historias/mias");
@@ -729,5 +753,78 @@ export const miPerfilApi = {
   /** GET /api/odontologos/yo/historias — historiales clínicos que registré. */
   historias(): Promise<HistoriaClinica[]> {
     return llamar<HistoriaClinica[]>("/api/odontologos/yo/historias");
+  },
+};
+
+/** Acciones del odontólogo sobre las citas de su agenda (AgendaOdontologoController). */
+export const agendaApi = {
+  /** PATCH …/confirmar — PENDIENTE_CONFIRMACION → CONFIRMADA. */
+  confirmar(citaId: string): Promise<CitaOdontologo> {
+    return llamar<CitaOdontologo>(`/api/odontologos/yo/citas/${citaId}/confirmar`, {
+      method: "PATCH",
+    });
+  },
+  /** PATCH …/completar — CONFIRMADA → COMPLETADA (habilita historia clínica y reseña). */
+  completar(citaId: string): Promise<CitaOdontologo> {
+    return llamar<CitaOdontologo>(`/api/odontologos/yo/citas/${citaId}/completar`, {
+      method: "PATCH",
+    });
+  },
+  /** PATCH …/inasistencia — el paciente no llegó: strike automático. */
+  inasistencia(citaId: string): Promise<CitaOdontologo> {
+    return llamar<CitaOdontologo>(`/api/odontologos/yo/citas/${citaId}/inasistencia`, {
+      method: "PATCH",
+    });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Odontólogo: horario semanal y bloqueos de agenda (MiConsultorioController)
+// ---------------------------------------------------------------------------
+export type DiaSemana =
+  "LUNES" | "MARTES" | "MIERCOLES" | "JUEVES" | "VIERNES" | "SABADO" | "DOMINGO";
+
+/** hora_inicio / hora_fin: "HH:mm" o "HH:mm:ss". */
+export type Horario = {
+  dia_semana: DiaSemana;
+  hora_inicio: string;
+  hora_fin: string;
+  intervalo_minutos: number | null;
+};
+
+export type Bloqueo = {
+  id: string;
+  inicio: string;
+  fin: string;
+  motivo: string | null;
+  citas_canceladas: number;
+};
+
+export const horariosApi = {
+  /** GET /api/odontologos/yo/horarios */
+  obtener(): Promise<Horario[]> {
+    return llamar<Horario[]>("/api/odontologos/yo/horarios");
+  },
+  /** PUT /api/odontologos/yo/horarios — reemplaza TODO el horario semanal. */
+  guardar(horarios: Horario[]): Promise<Horario[]> {
+    return llamar<Horario[]>("/api/odontologos/yo/horarios", {
+      method: "PUT",
+      body: { horarios },
+    });
+  },
+  /** GET /api/odontologos/yo/bloqueos — bloqueos vigentes y futuros. */
+  bloqueos(): Promise<Bloqueo[]> {
+    return llamar<Bloqueo[]>("/api/odontologos/yo/bloqueos");
+  },
+  /** POST /api/odontologos/yo/bloqueos — cancela con reembolso las citas dentro del rango. */
+  bloquear(inicio: string, fin: string, motivo?: string): Promise<Bloqueo> {
+    return llamar<Bloqueo>("/api/odontologos/yo/bloqueos", {
+      method: "POST",
+      body: { inicio, fin, ...(motivo ? { motivo } : {}) },
+    });
+  },
+  /** DELETE /api/odontologos/yo/bloqueos/{id} */
+  quitarBloqueo(id: string): Promise<void> {
+    return llamar<void>(`/api/odontologos/yo/bloqueos/${id}`, { method: "DELETE" });
   },
 };
