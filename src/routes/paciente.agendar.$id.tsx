@@ -1,4 +1,4 @@
-import * as React from "react";
+﻿import * as React from "react";
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
 import {
@@ -50,8 +50,8 @@ export const Route = createFileRoute("/paciente/agendar/$id")({
     }
   },
   head: ({ loaderData }) => {
-    const name = loaderData?.perfil.nombre ?? "tu odontólogo";
-    const desc = `Reserva con ${name}: aparta el turno y paga el depósito con tarjeta, Yape o Plin (sandbox).`;
+    const name = loaderData?.perfil.nombre ?? "tu odontÃ³logo";
+    const desc = `Reserva con ${name}: aparta el turno y paga el depÃ³sito con tarjeta, Yape o Plin (sandbox).`;
     return {
       meta: [
         { title: `Reservar cita con ${name} | OdontoSystem` },
@@ -64,7 +64,7 @@ export const Route = createFileRoute("/paciente/agendar/$id")({
   component: Agendar,
 });
 
-const pasos = ["Horario", "Pago del depósito", "Confirmación"];
+const pasos = ["Horario", "Pago del depÃ³sito", "ConfirmaciÃ³n"];
 
 function Agendar() {
   const { perfil } = Route.useLoaderData();
@@ -95,7 +95,7 @@ function Agendar() {
   const precio = Number(cita?.precio ?? servicio?.precio_total ?? 0);
   const inicioCita = cita?.inicio ?? inicio;
 
-  // Cuenta regresiva hasta "pagar_antes_de": después el backend libera el turno solo
+  // Cuenta regresiva hasta "pagar_antes_de": despuÃ©s el backend libera el turno solo
   React.useEffect(() => {
     if (!cita?.pagar_antes_de || pago) return;
     const limite = new Date(cita.pagar_antes_de).getTime();
@@ -116,7 +116,7 @@ function Agendar() {
 
   const mensajeError = (e: unknown, porDefecto: string) => {
     if (e instanceof ApiError && (e.status === 401 || e.status === 403))
-      return "Tu sesión expiró o no es de paciente. Vuelve a iniciar sesión.";
+      return "Tu sesiÃ³n expirÃ³ o no es de paciente. Vuelve a iniciar sesiÃ³n.";
     return e instanceof ApiError ? e.message : porDefecto;
   };
 
@@ -129,7 +129,7 @@ function Agendar() {
     } catch (e) {
       setError(mensajeError(e, "No se pudo reservar el turno."));
       if (e instanceof ApiError && e.status === 409) {
-        // Otro paciente lo tomó: se vuelve a pedir la lista de turnos
+        // Otro paciente lo tomÃ³: se vuelve a pedir la lista de turnos
         setInicio(null);
         setRecargar((n) => n + 1);
       }
@@ -172,8 +172,8 @@ function Agendar() {
           <FlaskConical className="size-4" />
           <AlertTitle className="font-semibold">Entorno Sandbox</AlertTitle>
           <AlertDescription>
-            No se realizarán cargos reales: el pago lo aprueba una pasarela simulada. Al pagar el
-            depósito, el turno queda bloqueado en la agenda del especialista sin intervención de un
+            No se realizarÃ¡n cargos reales: el pago lo aprueba una pasarela simulada. Al pagar el
+            depÃ³sito, el turno queda bloqueado en la agenda del especialista sin intervenciÃ³n de un
             administrador.
           </AlertDescription>
         </Alert>
@@ -241,9 +241,9 @@ function Agendar() {
                   <Clock className="size-5" />
                 </motion.span>
                 <p className="flex-1 text-sm font-medium text-warning-foreground">
-                  Tu turno está apartado por{" "}
+                  Tu turno estÃ¡ apartado por{" "}
                   <span className="font-display text-lg font-bold tabular-nums">{mmss}</span>{" "}
-                  mientras pagas el depósito.
+                  mientras pagas el depÃ³sito.
                 </p>
               </div>
               <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-warning/20">
@@ -277,15 +277,15 @@ function Agendar() {
                   <LogIn className="size-8" />
                 </span>
                 <h2 className="mt-4 font-display text-xl font-semibold">
-                  Inicia sesión como paciente para reservar
+                  Inicia sesiÃ³n como paciente para reservar
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {usuario
-                    ? "Tu cuenta es de odontólogo: las reservas se hacen con una cuenta de paciente."
-                    : "Necesitamos saber quién reserva para enviarte la confirmación y los recordatorios."}
+                    ? "Tu cuenta es de odontÃ³logo: las reservas se hacen con una cuenta de paciente."
+                    : "Necesitamos saber quiÃ©n reserva para enviarte la confirmaciÃ³n y los recordatorios."}
                 </p>
                 <Button asChild className="mt-6 rounded-full">
-                  <Link to="/">Ir a iniciar sesión</Link>
+                  <Link to="/">Ir a iniciar sesiÃ³n</Link>
                 </Button>
               </motion.div>
             ) : expired ? (
@@ -299,10 +299,10 @@ function Agendar() {
                   <TimerOff className="size-8" />
                 </span>
                 <h2 className="mt-4 font-display text-xl font-semibold">
-                  Tu tiempo de reserva venció
+                  Tu tiempo de reserva venciÃ³
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  El turno se liberó automáticamente. Elige nuevamente tu horario.
+                  El turno se liberÃ³ automÃ¡ticamente. Elige nuevamente tu horario.
                 </p>
                 <Button
                   onClick={() =>
@@ -329,7 +329,7 @@ function Agendar() {
                   <CheckCircle2 className="size-9" />
                 </motion.span>
                 <h2 className="mt-4 font-display text-xl font-semibold">
-                  {confirmada ? "¡Cita confirmada!" : "Pago recibido"}
+                  {confirmada ? "Â¡Cita confirmada!" : "Pago recibido"}
                 </h2>
                 <span
                   className={cn(
@@ -340,19 +340,19 @@ function Agendar() {
                   )}
                 >
                   {confirmada
-                    ? "CONFIRMADA · Agenda bloqueada"
-                    : "Esperando confirmación del odontólogo"}
+                    ? "CONFIRMADA Â· Agenda bloqueada"
+                    : "Esperando confirmaciÃ³n del odontÃ³logo"}
                 </span>
                 <p className="mt-3 text-sm text-muted-foreground">
-                  {fechaLarga(fechaDe(pago.cita.inicio))} · {horaDe(pago.cita.inicio)} con{" "}
+                  {fechaLarga(fechaDe(pago.cita.inicio))} Â· {horaDe(pago.cita.inicio)} con{" "}
                   {perfil.nombre}.
                   {confirmada
-                    ? " Te enviamos la confirmación por correo y te recordaremos la cita antes."
-                    : " Te avisaremos por correo cuando el odontólogo la confirme."}
+                    ? " Te enviamos la confirmaciÃ³n por correo y te recordaremos la cita antes."
+                    : " Te avisaremos por correo cuando el odontÃ³logo la confirme."}
                 </p>
                 {pago.numero_operacion && (
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Operación {pago.numero_operacion}
+                    OperaciÃ³n {pago.numero_operacion}
                   </p>
                 )}
                 <Button asChild className="mt-6 rounded-full">
@@ -366,7 +366,7 @@ function Agendar() {
                 </h2>
                 {servicios.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    Este odontólogo todavía no publicó servicios.
+                    Este odontÃ³logo todavÃ­a no publicÃ³ servicios.
                   </p>
                 ) : (
                   <SelectorTurnos
@@ -385,13 +385,13 @@ function Agendar() {
                   className="mt-6 w-full rounded-full"
                 >
                   {enviando && <Loader2 className="size-4 animate-spin" />}
-                  {enviando ? "Apartando turno…" : "Apartar turno y continuar al pago"}
+                  {enviando ? "Apartando turnoâ€¦" : "Apartar turno y continuar al pago"}
                 </Button>
               </motion.div>
             ) : (
               <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
                 <h2 className="font-display text-lg font-semibold">
-                  2. Depósito · {soles(deposito)}{" "}
+                  2. DepÃ³sito Â· {soles(deposito)}{" "}
                   <span className="text-sm font-normal text-muted-foreground">
                     (del total de {soles(precio)})
                   </span>
@@ -450,36 +450,56 @@ function Agendar() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -8 }}
                     >
-                      <div className="mt-4 flex gap-2">
-                        {(["yape", "plin"] as const).map((m) => (
-                          <button
-                            key={m}
-                            onClick={() => setBilletera(m)}
-                            className={cn(
-                              "flex-1 rounded-xl border py-2.5 text-sm font-semibold capitalize transition-colors",
-                              billetera === m
-                                ? "border-primary bg-primary/10 text-primary"
-                                : "border-border text-muted-foreground",
-                            )}
-                          >
-                            {m}
-                          </button>
-                        ))}
-                      </div>
-                      <div className="mt-4 rounded-2xl border border-border bg-muted/40 p-6 text-center">
-                        <QrArt />
-                        <p className="mt-3 text-sm text-muted-foreground">
-                          {billetera === "yape" ? "Yape" : "Plin"} · OdontoSystem ·{" "}
-                          {soles(deposito)} (simulado)
-                        </p>
-                      </div>
+                                            <div className="mb-6">
+  <div className="grid gap-4 sm:grid-cols-2">
+    {["yape", "plin"].map((m) => (
+      <label key={m} className={cn(
+        "flex flex-col items-center rounded-2xl border p-4 text-center transition-all hover:shadow-md",
+        billetera === m
+          ? "border-[#00E5C2] bg-[#E0FEFE]/50"
+          : "border-border bg-muted/20"
+      )}>
+        <img src={`/${m}.png`} alt={m.toUpperCase()} className="h-10 w-auto mb-2" />
+        <span className="font-semibold text-sm capitalize">{m}</span>
+        <input type="radio" name="billetera" checked={billetera===m} onChange={()=>setBilletera(m)} className="sr-only" />
+      </label>
+    ))}
+  </div>
+</div>
+                                            <div className="mb-4 rounded-2xl border border-border bg-white p-6 text-center shadow-sm">
+  <QrArt />
+  <p className="mt-4 text-sm text-muted-foreground">
+    Escanea el código desde tu aplicación y verifica el importe antes de pagar
+  </p>
+  <div className="mt-6 space-y-2 text-left">
+    <div className="flex justify-between">
+      <span className="text-muted-foreground">Depósito:</span>
+      <span className="font-mono">{soles(deposito)}</span>
+    </div>
+    <div className="flex justify-between">
+      <span className="text-muted-foreground">Total cita:</span>
+      <span className="font-mono">{soles(precio)}</span>
+    </div>
+    <div className="flex justify-between">
+      <span className="text-muted-foreground">Método:</span>
+      <span className="font-mono capitalize">{billetera}</span>
+    </div>
+  </div>
+  {error ? (
+    <p className="mt-3 text-sm text-destructive">{error}</p>
+  ) : enviando ? (
+    <p className="mt-3 text-sm text-muted-foreground">Verificando pago…</p>
+  ) : (
+    <p className="mt-3 text-sm text-muted-foreground">Estado: Pendiente</p>
+  )}
+</div>
                       <Button
                         disabled={enviando}
                         onClick={() => pagar(billetera === "yape" ? "YAPE" : "PLIN")}
                         className="mt-5 w-full rounded-full"
                       >
                         {enviando && <Loader2 className="size-4 animate-spin" />}
-                        {enviando ? "Verificando pago…" : `Ya pagué ${soles(deposito)}`}
+                        {enviando ? "Verificando pagoâ€¦" : `Ya paguÃ© ${soles(deposito)}`}
                       </Button>
                     </motion.div>
                   ) : (
@@ -491,7 +511,7 @@ function Agendar() {
                       className="mt-4 space-y-3"
                     >
                       <div className="space-y-1.5">
-                        <Label htmlFor="cc-num">Número de tarjeta</Label>
+                        <Label htmlFor="cc-num">NÃºmero de tarjeta</Label>
                         <Input
                           id="cc-num"
                           inputMode="numeric"
@@ -520,7 +540,7 @@ function Agendar() {
                         className="w-full rounded-full"
                       >
                         {enviando && <Loader2 className="size-4 animate-spin" />}
-                        {enviando ? "Procesando pago…" : `Pagar ${soles(deposito)} y confirmar`}
+                        {enviando ? "Procesando pagoâ€¦" : `Pagar ${soles(deposito)} y confirmar`}
                       </Button>
                     </motion.div>
                   )}
@@ -538,19 +558,19 @@ function Agendar() {
             </h2>
             <Row label="Especialista" value={perfil.nombre} />
             {perfil.consultorio && <Row label="Consultorio" value={perfil.consultorio} />}
-            <Row label="Servicio" value={servicio?.titulo ?? "—"} />
-            <Row label="Fecha" value={inicioCita ? fechaLarga(fechaDe(inicioCita)) : "—"} />
-            <Row label="Hora" value={inicioCita ? horaDe(inicioCita) : "—"} />
+            <Row label="Servicio" value={servicio?.titulo ?? "â€”"} />
+            <Row label="Fecha" value={inicioCita ? fechaLarga(fechaDe(inicioCita)) : "â€”"} />
+            <Row label="Hora" value={inicioCita ? horaDe(inicioCita) : "â€”"} />
             <Row label="Total del servicio" value={soles(precio)} />
             <div className="flex items-center justify-between border-t border-border pt-3">
-              <span className="font-semibold">Depósito</span>
+              <span className="font-semibold">DepÃ³sito</span>
               <span className="font-display text-lg font-semibold text-primary">
                 {soles(deposito)}
               </span>
             </div>
             <p className="rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
-              El depósito se descuenta del total en tu consulta. Si cancelas con 12 horas o más de
-              anticipación, se te devuelve.
+              El depÃ³sito se descuenta del total en tu consulta. Si cancelas con 12 horas o mÃ¡s de
+              anticipaciÃ³n, se te devuelve.
             </p>
           </div>
         </aside>
@@ -567,3 +587,4 @@ function Row({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
