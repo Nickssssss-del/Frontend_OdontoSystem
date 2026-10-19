@@ -34,12 +34,18 @@ import { fechaDe, fechaLarga, horaDe } from "@/lib/odontologos";
 import { useAppState } from "@/lib/app-state";
 import { cn } from "@/lib/utils";
 
-type AgendarSearch = { servicio?: string | undefined; inicio?: string | undefined };
+type AgendarSearch = {
+  servicio?: string | undefined;
+  inicio?: string | undefined;
+  /** Cita ya reservada (PENDIENTE_PAGO) cuyo depósito falta pagar: salta directo al paso de pago. */
+  cita?: string | undefined;
+};
 
 export const Route = createFileRoute("/paciente/agendar/$id")({
   validateSearch: (search: Record<string, unknown>): AgendarSearch => ({
     servicio: typeof search["servicio"] === "string" ? search["servicio"] : undefined,
     inicio: typeof search["inicio"] === "string" ? search["inicio"] : undefined,
+    cita: typeof search["cita"] === "string" ? search["cita"] : undefined,
   }),
   loader: async ({ params }) => {
     try {
@@ -94,6 +100,30 @@ function Agendar() {
   const deposito = Number(cita?.deposito_requerido ?? servicio?.monto_deposito ?? 0);
   const precio = Number(cita?.precio ?? servicio?.precio_total ?? 0);
   const inicioCita = cita?.inicio ?? inicio;
+
+  // Llegó con ?cita=: retoma el pago de una reserva que quedó PENDIENTE_PAGO (desde el panel o el chat).
+  React.useEffect(() => {
+    if (!search.cita || !esPaciente) return;
+    let cancelado = false;
+    citasApi
+      .detalle(search.cita)
+      .then((c) => {
+        if (cancelado) return;
+        if (c.estado === "PENDIENTE_PAGO") {
+          setCita(c);
+          setServicioId(c.servicio.id);
+          setInicio(c.inicio);
+        } else {
+          setError("Esta cita ya no tiene un pago pendiente.");
+        }
+      })
+      .catch((e) => {
+        if (!cancelado) setError(mensajeError(e, "No se pudo abrir la cita."));
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [search.cita, esPaciente]);
 
   // Cuenta regresiva hasta "pagar_antes_de": después el backend libera el turno solo
   React.useEffect(() => {

@@ -500,6 +500,17 @@ function CitaProxima({
           libera solo.
         </p>
       )}
+      {cita.estado === "PENDIENTE_PAGO" && (
+        <Button asChild size="sm" className="mt-3 rounded-full">
+          <Link
+            to="/paciente/agendar/$id"
+            params={{ id: cita.odontologo.id }}
+            search={{ cita: cita.id }}
+          >
+            Pagar depósito
+          </Link>
+        </Button>
+      )}
 
       {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
 
