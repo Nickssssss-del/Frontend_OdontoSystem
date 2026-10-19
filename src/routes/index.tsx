@@ -12,7 +12,6 @@ import {
   CreditCard,
   Eye,
   Lock,
-  Mail,
   Shield,
   ShieldCheck,
   Sparkles,
@@ -26,6 +25,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChatbotWidget } from "@/components/ChatbotWidget";
+import { GoogleBoton } from "@/components/GoogleBoton";
 import { ApiError, authApi, type Sesion } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import logoAsset from "@/assets/odontosystem-logo.png.asset.json";
@@ -93,6 +93,8 @@ function LoginScreen() {
   const [login, setLogin] = React.useState({ correo: "", password: "" });
   const [registro, setRegistro] = React.useState<DatosRegistro>(registroVacio);
   const [aceptaPrivacidad, setAceptaPrivacidad] = React.useState(false);
+  // ID token de Google cuando la cuenta no existe: el registro pide solo lo que Google no tiene.
+  const [googleToken, setGoogleToken] = React.useState<string | null>(null);
 
   const campoRegistro =
     (campo: keyof DatosRegistro) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -131,17 +133,30 @@ function LoginScreen() {
     const esOdontologo = role === "odontologo";
     setEnviando(true);
     try {
-      const sesion = await authApi.registrar({
-        nombre_completo: registro.nombre_completo.trim(),
-        tipo_documento: registro.tipo_documento,
-        numero_documento: registro.numero_documento.trim(),
-        telefono: registro.telefono.trim(),
-        correo: registro.correo.trim(),
-        password: registro.password,
-        rol: esOdontologo ? "ODONTOLOGO" : "PACIENTE",
-        ...(esOdontologo ? { numero_colegiatura: registro.numero_colegiatura.trim() } : {}),
-        acepta_privacidad: aceptaPrivacidad,
-      });
+      const sesion = googleToken
+        ? await authApi.registrarConGoogle({
+            id_token: googleToken,
+            ...(registro.nombre_completo.trim()
+              ? { nombre_completo: registro.nombre_completo.trim() }
+              : {}),
+            tipo_documento: registro.tipo_documento,
+            numero_documento: registro.numero_documento.trim(),
+            telefono: registro.telefono.trim(),
+            rol: esOdontologo ? "ODONTOLOGO" : "PACIENTE",
+            ...(esOdontologo ? { numero_colegiatura: registro.numero_colegiatura.trim() } : {}),
+            acepta_privacidad: aceptaPrivacidad,
+          })
+        : await authApi.registrar({
+            nombre_completo: registro.nombre_completo.trim(),
+            tipo_documento: registro.tipo_documento,
+            numero_documento: registro.numero_documento.trim(),
+            telefono: registro.telefono.trim(),
+            correo: registro.correo.trim(),
+            password: registro.password,
+            rol: esOdontologo ? "ODONTOLOGO" : "PACIENTE",
+            ...(esOdontologo ? { numero_colegiatura: registro.numero_colegiatura.trim() } : {}),
+            acepta_privacidad: aceptaPrivacidad,
+          });
       setRegistro(registroVacio);
       setAceptaPrivacidad(false);
       entrar(
@@ -158,10 +173,25 @@ function LoginScreen() {
     }
   };
 
-  const googleLogin = () => {
-    toast.info("El ingreso con Google estará disponible pronto.", {
-      description: "Por ahora usa tu correo y contraseña.",
-    });
+  /** Google entrega el ID token: si hay cuenta entra; si el backend responde 404, pasa al registro. */
+  const googleLogin = async (idToken: string) => {
+    setEnviando(true);
+    try {
+      const sesion = await authApi.entrarConGoogle(idToken);
+      entrar(sesion, "Sesión iniciada");
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        setGoogleToken(idToken);
+        setMode("registro");
+        toast.info("Aún no tienes cuenta con este Google.", {
+          description: "Completa tus datos para terminar el registro.",
+        });
+      } else {
+        toast.error("No se pudo entrar con Google", { description: mensajeDeError(error) });
+      }
+    } finally {
+      setEnviando(false);
+    }
   };
 
   const roles: { value: Role; label: string; icon: React.ReactNode }[] = [
@@ -367,6 +397,18 @@ function LoginScreen() {
                   </form>
                 ) : (
                   <form onSubmit={submitRegistro} className="space-y-4">
+                    {googleToken && (
+                      <div className="flex items-start justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm">
+                        <span>Continúas con tu cuenta de Google: solo faltan estos datos.</span>
+                        <button
+                          type="button"
+                          onClick={() => setGoogleToken(null)}
+                          className="shrink-0 font-semibold text-primary underline-offset-4 hover:underline"
+                        >
+                          Usar correo
+                        </button>
+                      </div>
+                    )}
                     <div className="space-y-2">
                       <Label htmlFor="nombre">
                         {role === "paciente" ? "Nombre completo" : "Nombre profesional"}
@@ -430,34 +472,38 @@ function LoginScreen() {
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="email-reg">Correo electrónico</Label>
-                      <Input
-                        id="email-reg"
-                        type="email"
-                        autoComplete="email"
-                        placeholder={role === "paciente" ? "juan@correo.com" : "ana@correo.com"}
-                        value={registro.correo}
-                        onChange={campoRegistro("correo")}
-                        maxLength={150}
-                        required
-                      />
-                    </div>
+                    {!googleToken && (
+                      <div className="space-y-2">
+                        <Label htmlFor="email-reg">Correo electrónico</Label>
+                        <Input
+                          id="email-reg"
+                          type="email"
+                          autoComplete="email"
+                          placeholder={role === "paciente" ? "juan@correo.com" : "ana@correo.com"}
+                          value={registro.correo}
+                          onChange={campoRegistro("correo")}
+                          maxLength={150}
+                          required
+                        />
+                      </div>
+                    )}
 
-                    <div className="space-y-2">
-                      <Label htmlFor="password-reg">Contraseña</Label>
-                      <Input
-                        id="password-reg"
-                        type="password"
-                        autoComplete="new-password"
-                        placeholder="Mínimo 8 caracteres"
-                        value={registro.password}
-                        onChange={campoRegistro("password")}
-                        minLength={8}
-                        maxLength={100}
-                        required
-                      />
-                    </div>
+                    {!googleToken && (
+                      <div className="space-y-2">
+                        <Label htmlFor="password-reg">Contraseña</Label>
+                        <Input
+                          id="password-reg"
+                          type="password"
+                          autoComplete="new-password"
+                          placeholder="Mínimo 8 caracteres"
+                          value={registro.password}
+                          onChange={campoRegistro("password")}
+                          minLength={8}
+                          maxLength={100}
+                          required
+                        />
+                      </div>
+                    )}
 
                     {role === "odontologo" && (
                       <div className="space-y-2">
@@ -521,15 +567,7 @@ function LoginScreen() {
                       </div>
                     </div>
 
-                    <Button
-                      onClick={googleLogin}
-                      variant="outline"
-                      className="w-full rounded-xl"
-                      type="button"
-                    >
-                      <Mail className="mr-2 size-4" />
-                      Google
-                    </Button>
+                    <GoogleBoton alRecibirToken={googleLogin} deshabilitado={enviando} />
                   </>
                 )}
 
@@ -538,7 +576,10 @@ function LoginScreen() {
                   {mode === "login" ? "¿Sin cuenta? " : "¿Ya tienes cuenta? "}
                   <button
                     type="button"
-                    onClick={() => setMode(mode === "login" ? "registro" : "login")}
+                    onClick={() => {
+                      setGoogleToken(null);
+                      setMode(mode === "login" ? "registro" : "login");
+                    }}
                     className="font-semibold text-primary underline-offset-4 hover:underline"
                   >
                     {mode === "login" ? "Regístrate gratis" : "Inicia sesión"}
