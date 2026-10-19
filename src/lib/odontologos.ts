@@ -112,6 +112,20 @@ export function fechaLima(diasDesdeHoy = 0): string {
   }).format(d);
 }
 
+/** El backend rechaza rangos de agenda mayores a 62 días (`hasta` es exclusivo). */
+export const AGENDA_MAX_DIAS = 62;
+
+/**
+ * Rango válido para GET /api/odontologos/yo/citas: `diasAtras` hacia atrás y `diasAdelante` hacia
+ * adelante desde hoy (hora de Lima). Por defecto 14 + 45 = 59 días. Si la suma supera
+ * AGENDA_MAX_DIAS se recorta primero el tramo futuro, para no pedir un rango que el backend rechaza.
+ */
+export function rangoAgenda(diasAtras = 14, diasAdelante = 45): { desde: string; hasta: string } {
+  const atras = Math.min(Math.max(0, Math.floor(diasAtras)), AGENDA_MAX_DIAS);
+  const adelante = Math.min(Math.max(0, Math.floor(diasAdelante)), AGENDA_MAX_DIAS - atras);
+  return { desde: fechaLima(-atras), hasta: fechaLima(adelante) };
+}
+
 /** Los próximos `cantidad` días (YYYY-MM-DD) empezando hoy. */
 export const proximosDias = (cantidad = 7) =>
   Array.from({ length: cantidad }, (_, i) => fechaLima(i));

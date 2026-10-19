@@ -51,6 +51,7 @@ export function ResumenPaciente() {
   const [reputacion, setReputacion] = React.useState<ReputacionPaciente | null>(null);
   const [errorCitas, setErrorCitas] = React.useState<string | null>(null);
   const [errorHistorias, setErrorHistorias] = React.useState<string | null>(null);
+  const [errorResenas, setErrorResenas] = React.useState(false);
   const [cargando, setCargando] = React.useState(true);
   const [intento, setIntento] = React.useState(0);
 
@@ -59,6 +60,7 @@ export function ResumenPaciente() {
     setCargando(true);
     setErrorCitas(null);
     setErrorHistorias(null);
+    setErrorResenas(false);
     (async () => {
       const [rCitas, rResenas, rHistorias, rReputacion] = await Promise.allSettled([
         citasApi.mias(),
@@ -74,7 +76,11 @@ export function ResumenPaciente() {
         setErrorCitas(mensajeDeError(rCitas.reason, "No se pudieron cargar tus citas."));
       }
       if (rResenas.status === "fulfilled") setPorResenar(rResenas.value);
-      else setPorResenar([]);
+      else {
+        // Un fallo de /api/citas/por-resenar no debe bloquear el resto del resumen.
+        setPorResenar([]);
+        setErrorResenas(true);
+      }
       if (rHistorias.status === "fulfilled") setHistorias(rHistorias.value);
       else {
         setHistorias([]);
@@ -117,7 +123,7 @@ export function ResumenPaciente() {
         />
         <KpiPerfil
           label="Por calificar"
-          valor={porResenar.length}
+          valor={errorResenas ? "—" : porResenar.length}
           icono={<Star className="size-5" />}
           tono="primary"
         />
@@ -200,7 +206,12 @@ export function ResumenPaciente() {
             </Button>
           </CardHeader>
           <CardContent className="space-y-3">
-            {porResenar.length === 0 ? (
+            {errorResenas ? (
+              <AvisoError
+                mensaje="No se pudieron cargar tus calificaciones pendientes."
+                onReintentar={reintentar}
+              />
+            ) : porResenar.length === 0 ? (
               <p className="rounded-xl border border-dashed border-border/70 bg-background p-4 text-sm text-muted-foreground">
                 No tienes citas pendientes de calificar. ¡Buen trabajo!
               </p>

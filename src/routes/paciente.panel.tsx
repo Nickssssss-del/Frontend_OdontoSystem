@@ -103,6 +103,7 @@ function PacientePanel() {
 
   const [citas, setCitas] = React.useState<Cita[]>([]);
   const [porResenar, setPorResenar] = React.useState<CitaPorResenar[]>([]);
+  const [errorResenas, setErrorResenas] = React.useState(false);
   const [cargando, setCargando] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [recargar, setRecargar] = React.useState(0);
@@ -115,7 +116,13 @@ function PacientePanel() {
     let vigente = true;
     setCargando(true);
     setError(null);
-    Promise.all([citasApi.mias(), resenasApi.porResenar().catch((): CitaPorResenar[] => [])])
+    setErrorResenas(false);
+    // Las reseñas pendientes son secundarias: si fallan, el panel de citas se muestra igual.
+    const resenasPendientes = resenasApi.porResenar().catch((): CitaPorResenar[] => {
+      if (vigente) setErrorResenas(true);
+      return [];
+    });
+    Promise.all([citasApi.mias(), resenasPendientes])
       .then(([c, r]) => {
         if (!vigente) return;
         setCitas(c);
@@ -162,7 +169,7 @@ function PacientePanel() {
     {
       id: "resenar",
       label: "Por calificar",
-      value: porResenar.length,
+      value: errorResenas ? "—" : porResenar.length,
       icon: <Star className="size-5" />,
       color: "primary",
     },
