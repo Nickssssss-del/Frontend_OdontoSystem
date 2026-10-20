@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { ApiError, usuariosApi, type EstadoCita, type UsuarioYo } from "@/lib/api";
-import { fechaDe, fechaLima, iniciales } from "@/lib/odontologos";
+import { fechaDe, iniciales, rangoAgenda } from "@/lib/odontologos";
 import { cn } from "@/lib/utils";
 
 /** Mensaje legible de cualquier error de la API (sesión expirada incluida). */
@@ -432,10 +432,11 @@ export function fechaPerfil(valor: string): string {
 
 /**
  * Rango de agenda para GET /api/odontologos/yo/citas (`hasta` es exclusivo).
- * Cubre ~6 meses atrás y ~3 meses adelante, sin fechas ficticias de citas.
+ * Misma ventana que usa app-state (14 días atrás + 45 adelante) y nunca supera los 62 días
+ * que acepta el backend.
  */
 export function rangoAgendaOdontologo(): { desde: string; hasta: string } {
-  return { desde: fechaLima(-180), hasta: fechaLima(91) };
+  return rangoAgenda();
 }
 
 /** Esqueleto de la página de perfil (cabecera + datos + resumen). */

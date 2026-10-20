@@ -52,13 +52,17 @@ export type TipoRespuestaChatbot =
 /** Botón sugerido por el chatbot (RespuestaChatbot.opciones del backend). */
 export type OpcionChatbot = { etiqueta: string; accion: string; valor?: string };
 
+/** Tarjeta de un odontólogo en una respuesta "lista_odontologos" (chatbot.OdontologoResumen). */
 export type OdontologoResumen = {
   id: string;
   nombre: string;
+  foto_url?: string;
   consultorio?: string;
   distrito?: string;
   calificacion?: number;
   total_resenas?: number;
+  especialidades?: string[];
+  precio_desde?: number;
 };
 
 export type RespuestaChatbot = {
@@ -133,10 +137,13 @@ const mensajePorEstado: Record<number, string> = {
   0: "No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.",
   400: "Revisa los datos ingresados.",
   401: "Tu sesión expiró. Vuelve a iniciar sesión.",
-  403: "Tu sesión expiró. Vuelve a iniciar sesión.",
+  403: "No tienes permiso para esta acción.",
   404: "No encontramos lo que buscabas.",
   409: "Ese dato ya está registrado.",
+  413: "El archivo supera el tamaño máximo de 5 MB.",
+  429: "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.",
   500: "Ocurrió un error en el servidor. Inténtalo en unos minutos.",
+  503: "El servicio no está disponible por ahora. Inténtalo en unos minutos.",
 };
 
 // ---------------------------------------------------------------------------
@@ -213,8 +220,9 @@ async function llamar<T>(ruta: string, opciones: Opciones = {}, reintentar = tru
   }
 
   // Token vencido: se renueva una vez y se repite la llamada.
-  // (Hoy el backend responde 403 cuando falta o vence el token; se acepta 401 o 403.)
-  if ((respuesta.status === 401 || respuesta.status === 403) && sesion && reintentar) {
+  // El backend responde 401 cuando falta o vence el token y 403 cuando el rol no tiene permiso
+  // (RespuestasSeguridad): solo el 401 se arregla renovando el token.
+  if (respuesta.status === 401 && sesion && reintentar) {
     if (await renovarToken()) return llamar<T>(ruta, opciones, false);
   }
 
@@ -233,6 +241,19 @@ async function llamar<T>(ruta: string, opciones: Opciones = {}, reintentar = tru
 // ---------------------------------------------------------------------------
 // Endpoints disponibles hoy en el backend
 // ---------------------------------------------------------------------------
+/** POST /api/auth/google/registro: correo y nombre salen del token de Google. */
+export type GoogleRegistroRequest = {
+  id_token: string;
+  numero_documento: string;
+  tipo_documento: "DNI" | "CE";
+  telefono: string;
+  rol: Rol;
+  numero_colegiatura?: string;
+  nombre_completo?: string;
+  /** RNF07 / Ley 29733: el backend rechaza el registro si no llega en true. */
+  acepta_privacidad: boolean;
+};
+
 export const authApi = {
   async login(correo: string, password: string): Promise<Sesion> {
     const sesion = await llamar<AuthResponse>("/api/auth/login", {
@@ -246,6 +267,31 @@ export const authApi = {
 
   async registrar(datos: RegistroRequest): Promise<Sesion> {
     const sesion = await llamar<AuthResponse>("/api/auth/register", {
+      method: "POST",
+      body: datos,
+      conToken: false,
+    });
+    guardarSesion(sesion);
+    return sesion;
+  },
+
+  /**
+   * POST /api/auth/google (RF16) — entra con el ID token de Google Sign-In.
+   * 404 = no hay cuenta con ese Google: mostrar el registro y llamar a registrarConGoogle.
+   */
+  async entrarConGoogle(idToken: string): Promise<Sesion> {
+    const sesion = await llamar<AuthResponse>("/api/auth/google", {
+      method: "POST",
+      body: { id_token: idToken },
+      conToken: false,
+    });
+    guardarSesion(sesion);
+    return sesion;
+  },
+
+  /** POST /api/auth/google/registro (RF16) — 201 con la sesión. */
+  async registrarConGoogle(datos: GoogleRegistroRequest): Promise<Sesion> {
+    const sesion = await llamar<AuthResponse>("/api/auth/google/registro", {
       method: "POST",
       body: datos,
       conToken: false,
@@ -360,6 +406,8 @@ export type Pagina<T> = {
 export type FiltrosBusqueda = {
   distrito?: string;
   especialidad_id?: number;
+  /** Tipo de servicio (GET /api/catalogos/categorias-servicio). */
+  categoria_id?: number;
   q?: string;
   lat?: number;
   lng?: number;
@@ -662,7 +710,7 @@ async function subirFotoPerfil(archivo: File, reintentar = true): Promise<FotoPe
     throw new ApiError(0, mensajePorEstado[0]!);
   }
 
-  if ((respuesta.status === 401 || respuesta.status === 403) && sesion && reintentar) {
+  if (respuesta.status === 401 && sesion && reintentar) {
     if (await renovarToken()) return subirFotoPerfil(archivo, false);
   }
   if (!respuesta.ok) throw await errorDeRespuesta(respuesta);
@@ -703,6 +751,11 @@ export const historiasApi = {
     });
   },
 
+  /** GET /api/citas/{id}/historia — historia de una cita (paciente u odontólogo de la cita). */
+  deCita(citaId: string): Promise<HistoriaClinica> {
+    return llamar<HistoriaClinica>(`/api/citas/${citaId}/historia`);
+  },
+
   /** GET /api/historias/mias — mis historias clínicas, la más reciente primero. */
   mias(): Promise<HistoriaClinica[]> {
     return llamar<HistoriaClinica[]>("/api/historias/mias");
@@ -716,7 +769,13 @@ export const catalogosApi = {
       conToken: false,
     });
   },
+
+  /** GET /api/catalogos/distritos — distritos con odontólogos (para el filtro del buscador). */
+  distritos(): Promise<string[]> {
+    return llamar<string[]>("/api/catalogos/distritos", { conToken: false });
+  },
 };
+
 // ---------------------------------------------------------------------------
 // Odontólogo: mi perfil de consultorio, verificación COP y resumen de actividad
 // ---------------------------------------------------------------------------
@@ -1182,7 +1241,7 @@ export const reclamosApi = {
 // ---------------------------------------------------------------------------
 // Asistencia, agenda de hoy y reportes de ausencia
 // ---------------------------------------------------------------------------
-export type EstadoReporteAusencia = string;
+export type EstadoReporteAusencia = "PENDIENTE" | "CONFIRMADO" | "RECHAZADO" | "EN_RECLAMO";
 
 export type RespuestaAsistencia = {
   cita_id: string;

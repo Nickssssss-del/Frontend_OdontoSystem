@@ -27,14 +27,6 @@ import { VerificacionCOP } from "@/components/VerificacionCOP";
 import { ConsentimientosCard } from "@/components/paciente/ConsentimientosCard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
@@ -150,12 +142,7 @@ function SettingRow({
 }
 
 function ConfiguracionOdontologo() {
-  const {
-    blockedToday,
-    setBlockedToday,
-    cerrarSesion,
-    usuario: sesion,
-  } = useAppState();
+  const { blockedToday, setBlockedToday, cerrarSesion, usuario: sesion } = useAppState();
   const navigate = useNavigate();
   const sesionBackend = leerSesion();
   const clavePrefs = `odontosystem.prefs:${sesionBackend?.rol ?? "odontologo"}`;
@@ -336,7 +323,9 @@ function ConfiguracionOdontologo() {
       setMiPerfil(await miPerfilApi.actualizar(cambios));
       toast.success(exito);
     } catch (err) {
-      toast.error("No se pudo guardar", { description: mensajeDeError(err, "Inténtalo de nuevo.") });
+      toast.error("No se pudo guardar", {
+        description: mensajeDeError(err, "Inténtalo de nuevo."),
+      });
     }
   };
 
@@ -841,8 +830,8 @@ function ConfiguracionOdontologo() {
               <AlertDialogHeader>
                 <AlertDialogTitle>¿Activar bloqueo express?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Se cancelarán con reembolso del 100 % las citas que quedan hoy y se dejará de ofrecer
-                  cupos hasta que termine el día. Puedes quitar el bloqueo cuando quieras.
+                  Se cancelarán con reembolso del 100 % las citas que quedan hoy y se dejará de
+                  ofrecer cupos hasta que termine el día. Puedes quitar el bloqueo cuando quieras.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

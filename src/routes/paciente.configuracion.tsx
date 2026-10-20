@@ -25,7 +25,6 @@ import {
   Select,
   SelectContent,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -381,7 +380,7 @@ function ConfiguracionPaciente() {
               {!preferencias.recordatorios ? null : (
                 <>
                   <div className="space-y-2">
-                    <Label>Anticipación del aviso</Label>
+                    <Label htmlFor="pref-anticipacion">Anticipación del aviso</Label>
                     <Select
                       value={preferencias.anticipacion}
                       onValueChange={(valor) => {
@@ -389,8 +388,7 @@ function ConfiguracionPaciente() {
                       }}
                       disabled={!preferencias.recordatorios}
                     >
-                      <SelectLabel className="sr-only">Anticipación del aviso</SelectLabel>
-                      <SelectTrigger className="w-[220px]">
+                      <SelectTrigger id="pref-anticipacion" className="w-[220px]">
                         <SelectValue placeholder="Elige una opción" />
                       </SelectTrigger>
                       <SelectContent>

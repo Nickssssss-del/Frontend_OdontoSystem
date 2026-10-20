@@ -14,7 +14,7 @@ import {
   type EstadoCita,
   type Rol,
 } from "@/lib/api";
-import { fechaDe, fechaLima, horaDe } from "@/lib/odontologos";
+import { fechaDe, fechaLima, horaDe, rangoAgenda } from "@/lib/odontologos";
 
 export type UserRole = "patient" | "dentist";
 
@@ -193,27 +193,39 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     try {
       if (rol === "ODONTOLOGO") {
         // El backend limita el rango de la agenda a 62 días (hasta es exclusivo): 14 atrás + 45 adelante.
-        const [citas, bloqueos] = await Promise.all([
-          miPerfilApi.citas(fechaLima(-14), fechaLima(45)),
-          horariosApi.bloqueos().catch(() => []),
+        const { desde, hasta } = rangoAgenda();
+        // Cada parte falla por separado: si la agenda no carga, los bloqueos igual se actualizan.
+        const [rCitas, rBloqueos] = await Promise.allSettled([
+          miPerfilApi.citas(desde, hasta),
+          horariosApi.bloqueos(),
         ]);
-        const lista = citas.map((c) => citaAAppointment(c));
-        setAgenda(lista);
-        setAppointments(lista);
+        if (rCitas.status === "fulfilled") {
+          const lista = rCitas.value.map((c) => citaAAppointment(c));
+          setAgenda(lista);
+          setAppointments(lista);
+        } else {
+          console.error("No se pudo cargar la agenda", rCitas.reason);
+        }
+        const bloqueos = rBloqueos.status === "fulfilled" ? rBloqueos.value : [];
         const ahora = Date.now();
         setBlockedTodayEstado(
           bloqueos.some((b) => Date.parse(b.inicio) <= ahora && ahora < Date.parse(b.fin)),
         );
       } else {
-        const [citas, reputacion] = await Promise.all([
+        // Cada parte falla por separado: la reputación no depende de que carguen las citas.
+        const [rCitas, rReputacion] = await Promise.allSettled([
           citasApi.mias(),
-          usuariosApi.reputacion().catch(() => null),
+          usuariosApi.reputacion(),
         ]);
-        setAppointments(citas.map((c) => citaAAppointment(c, nombreUsuario)));
-        setAgenda([]);
-        if (reputacion) {
-          setStrikes(reputacion.strikes);
-          setPuedeReservar(reputacion.puede_reservar);
+        if (rCitas.status === "fulfilled") {
+          setAppointments(rCitas.value.map((c) => citaAAppointment(c, nombreUsuario)));
+          setAgenda([]);
+        } else {
+          console.error("No se pudieron cargar las citas", rCitas.reason);
+        }
+        if (rReputacion.status === "fulfilled") {
+          setStrikes(rReputacion.value.strikes);
+          setPuedeReservar(rReputacion.value.puede_reservar);
         }
       }
     } catch (e) {

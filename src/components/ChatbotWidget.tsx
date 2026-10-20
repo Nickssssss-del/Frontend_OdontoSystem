@@ -1,8 +1,15 @@
 import * as React from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { Bot, MapPin, MessageSquare, Send, Star, X } from "lucide-react";
-import { ApiError, chatbotApi, type OdontologoResumen, type RespuestaChatbot } from "@/lib/api";
+import {
+  ApiError,
+  chatbotApi,
+  citasApi,
+  type OdontologoResumen,
+  type OpcionChatbot,
+  type RespuestaChatbot,
+} from "@/lib/api";
 import { useAppState } from "@/lib/app-state";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -19,6 +26,9 @@ type Mensaje = {
   from: "user" | "bot";
   text: string;
   odontologos?: OdontologoResumen[];
+  /** Botones de la respuesta (accion + valor): son los que llevan el flujo de reserva. */
+  opciones?: OpcionChatbot[];
+  /** Nombres de acciones sin valor (compatibilidad con respuestas antiguas). */
   acciones?: string[];
 };
 
@@ -30,7 +40,14 @@ const accionesConocidas: Record<string, { etiqueta: string; mensaje: string }> =
   elegir_distrito: { etiqueta: "Elegir distrito", mensaje: "Quiero elegir un distrito" },
 };
 
-const accionesIniciales = ["buscar_odontologo", "agendar_cita", "ver_historial"];
+const opcionesIniciales: OpcionChatbot[] = [
+  { etiqueta: "Buscar odontólogo", accion: "buscar_odontologo" },
+  { etiqueta: "Agendar una cita", accion: "agendar_cita" },
+  { etiqueta: "Ver mis citas", accion: "ver_historial" },
+];
+
+/** Acción que el chat no resuelve: el frontend lleva al pago del depósito (valor = id de la cita). */
+const ACCION_PAGAR = "pagar_deposito";
 
 const describirAccion = (accion: string) =>
   accionesConocidas[accion] ?? {
@@ -51,7 +68,10 @@ function aMensajeBot(respuesta: RespuestaChatbot): Mensaje {
     from: "bot",
     text: respuesta.mensaje,
     ...(odontologos ? { odontologos } : {}),
-    ...(respuesta.acciones?.length ? { acciones: respuesta.acciones } : {}),
+    ...(respuesta.opciones?.length ? { opciones: respuesta.opciones } : {}),
+    ...(!respuesta.opciones?.length && respuesta.acciones?.length
+      ? { acciones: respuesta.acciones }
+      : {}),
   };
 }
 
@@ -62,6 +82,7 @@ export function ChatbotWidget() {
   const [sesionId, setSesionId] = React.useState<string | undefined>();
   const [loading, setLoading] = React.useState(false);
   const { usuario } = useAppState();
+  const navigate = useNavigate();
   const scroller = React.useRef<HTMLDivElement>(null);
 
   // Si cambia el usuario (login/logout), la conversación empieza de cero.
@@ -74,12 +95,12 @@ export function ChatbotWidget() {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
   }, [mensajes, loading, open]);
 
-  const ask = async (text: string) => {
+  const ask = async (text: string, opcion?: { accion: string; valor?: string }) => {
     if (loading || !usuario) return;
     setMensajes((prev) => [...prev, { id: nuevoId(), from: "user", text }]);
     setLoading(true);
     try {
-      const respuesta = await chatbotApi.enviarMensaje(text, sesionId);
+      const respuesta = await chatbotApi.enviarMensaje(text, sesionId, opcion);
       setSesionId(respuesta.sesion_id);
       setMensajes((prev) => [...prev, aMensajeBot(respuesta)]);
     } catch (error) {
@@ -94,6 +115,34 @@ export function ChatbotWidget() {
     }
   };
 
+  /** El chat no cobra: lleva a la pantalla de pago de la cita ya reservada (PENDIENTE_PAGO). */
+  const irAPagar = async (citaId: string) => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const cita = await citasApi.detalle(citaId);
+      setOpen(false);
+      await navigate({
+        to: "/paciente/agendar/$id",
+        params: { id: cita.odontologo.id },
+        search: { cita: cita.id },
+      });
+    } catch (error) {
+      const detalle = error instanceof ApiError ? error.message : "Inténtalo de nuevo.";
+      setMensajes((prev) => [
+        ...prev,
+        { id: nuevoId(), from: "bot", text: `No pude abrir el pago. ${detalle}` },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const pulsar = (o: OpcionChatbot) => {
+    if (o.accion === ACCION_PAGAR && o.valor) void irAPagar(o.valor);
+    else void ask(o.etiqueta, { accion: o.accion, ...(o.valor ? { valor: o.valor } : {}) });
+  };
+
   const send = (e: React.FormEvent) => {
     e.preventDefault();
     const text = input.trim();
@@ -104,7 +153,10 @@ export function ChatbotWidget() {
 
   // Botones sugeridos: los de la última respuesta del bot, o los iniciales.
   const ultimoBot = [...mensajes].reverse().find((m) => m.from === "bot");
-  const sugeridas = ultimoBot?.acciones ?? (mensajes.length === 0 ? accionesIniciales : []);
+  const sugeridas: OpcionChatbot[] =
+    ultimoBot?.opciones ??
+    ultimoBot?.acciones?.map((accion) => ({ etiqueta: describirAccion(accion).etiqueta, accion })) ??
+    (mensajes.length === 0 ? opcionesIniciales : []);
 
   return (
     <>
@@ -202,20 +254,17 @@ export function ChatbotWidget() {
             </div>
 
             {usuario && sugeridas.length > 0 && (
-              <div className="flex gap-2 overflow-x-auto border-t border-border px-3 py-2">
-                {sugeridas.map((accion) => {
-                  const { etiqueta, mensaje } = describirAccion(accion);
-                  return (
-                    <button
-                      key={accion}
-                      onClick={() => void ask(mensaje)}
-                      disabled={loading}
-                      className="shrink-0 rounded-full border border-primary/30 bg-primary/5 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/15 disabled:opacity-50"
-                    >
-                      {etiqueta}
-                    </button>
-                  );
-                })}
+              <div className="flex max-h-28 flex-wrap gap-2 overflow-y-auto border-t border-border px-3 py-2">
+                {sugeridas.map((o, i) => (
+                  <button
+                    key={`${o.accion}-${o.valor ?? i}`}
+                    onClick={() => pulsar(o)}
+                    disabled={loading}
+                    className="rounded-full border border-primary/30 bg-primary/5 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/15 disabled:opacity-50"
+                  >
+                    {o.etiqueta}
+                  </button>
+                ))}
               </div>
             )}
 
