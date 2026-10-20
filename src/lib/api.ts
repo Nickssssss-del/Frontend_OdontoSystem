@@ -983,7 +983,11 @@ export const documentosApi = {
   },
   /** POST /api/odontologos/yo/documentos — multipart: tipo + archivo (PDF/JPG/PNG hasta 5 MB). */
   subir(tipo: TipoDocumento, archivo: File): Promise<DocumentoOdontologo> {
-    validarArchivo(archivo, ["application/pdf", "image/jpeg", "image/png"], "un PDF, JPG o PNG");
+    validarArchivo(
+      archivo,
+      ["application/pdf", "image/jpeg", "image/png"],
+      "un PDF, JPG o PNG",
+    );
     const form = new FormData();
     form.append("tipo", tipo);
     form.append("archivo", archivo);
@@ -1142,11 +1146,7 @@ export type Apelacion = {
 export const apelacionesApi = {
   /** POST /api/citas/{id}/apelacion — paciente; certificado PDF/JPG/PNG hasta 5 MB. */
   apelar(citaId: string, certificado: File): Promise<Apelacion> {
-    validarArchivo(
-      certificado,
-      ["application/pdf", "image/jpeg", "image/png"],
-      "un PDF, JPG o PNG",
-    );
+    validarArchivo(certificado, ["application/pdf", "image/jpeg", "image/png"], "un PDF, JPG o PNG");
     const form = new FormData();
     form.append("certificado", certificado);
     return llamar<Apelacion>(`/api/citas/${citaId}/apelacion`, { method: "POST", form });
