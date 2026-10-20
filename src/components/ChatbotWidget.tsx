@@ -155,7 +155,10 @@ export function ChatbotWidget() {
   const ultimoBot = [...mensajes].reverse().find((m) => m.from === "bot");
   const sugeridas: OpcionChatbot[] =
     ultimoBot?.opciones ??
-    ultimoBot?.acciones?.map((accion) => ({ etiqueta: describirAccion(accion).etiqueta, accion })) ??
+    ultimoBot?.acciones?.map((accion) => ({
+      etiqueta: describirAccion(accion).etiqueta,
+      accion,
+    })) ??
     (mensajes.length === 0 ? opcionesIniciales : []);
 
   return (
