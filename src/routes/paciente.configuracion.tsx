@@ -18,8 +18,8 @@ import {
   DatoSoloLectura,
   FormularioDatosContacto,
   IconoSoloLectura,
-  mensajeDeError,
 } from "@/components/perfil/PerfilComunes";
+import { mensajeDeError } from "@/components/perfil";
 import { Label } from "@/components/ui/label";
 import {
   Select,

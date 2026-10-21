@@ -20,8 +20,8 @@ import {
   DatoSoloLectura,
   EsqueletoPaginaPerfil,
   IconoSoloLectura,
-  mensajeDeError,
 } from "@/components/perfil/PerfilComunes";
+import { mensajeDeError } from "@/components/perfil";
 import { ResumenOdontologo } from "@/components/perfil/ResumenOdontologo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

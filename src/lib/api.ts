@@ -164,7 +164,11 @@ let renovacionEnCurso: Promise<boolean> | null = null;
 
 async function renovarToken(): Promise<boolean> {
   const sesion = leerSesion();
-  if (!sesion?.refresh_token) return false;
+  if (!sesion?.refresh_token) {
+    // Sesión guardada sin refresh token (de una versión anterior): no se puede renovar, se cierra.
+    guardarSesion(null);
+    return false;
+  }
   // Si varias llamadas vencen a la vez, todas esperan la misma renovación.
   renovacionEnCurso ??= (async () => {
     try {
@@ -224,6 +228,9 @@ async function llamar<T>(ruta: string, opciones: Opciones = {}, reintentar = tru
   // (RespuestasSeguridad): solo el 401 se arregla renovando el token.
   if (respuesta.status === 401 && sesion && reintentar) {
     if (await renovarToken()) return llamar<T>(ruta, opciones, false);
+  } else if (respuesta.status === 401 && sesion && !reintentar) {
+    // Ya se renovó y el servidor sigue rechazando el token: la sesión no sirve, se cierra.
+    guardarSesion(null);
   }
 
   if (!respuesta.ok) throw await errorDeRespuesta(respuesta);
@@ -841,9 +848,14 @@ export const miPerfilApi = {
     return llamar<CitaOdontologo[]>(`/api/odontologos/yo/citas${consulta({ desde, hasta })}`);
   },
 
-  /** GET /api/odontologos/yo/historias — historiales clínicos que registré. */
-  historias(): Promise<HistoriaClinica[]> {
-    return llamar<HistoriaClinica[]>("/api/odontologos/yo/historias");
+  /**
+   * GET /api/odontologos/yo/historias?paciente_id= — historias que registré para UN paciente
+   * (el backend exige paciente_id: sin él responde 400).
+   */
+  historias(pacienteId: string): Promise<HistoriaClinica[]> {
+    return llamar<HistoriaClinica[]>(
+      `/api/odontologos/yo/historias${consulta({ paciente_id: pacienteId })}`,
+    );
   },
 };
 

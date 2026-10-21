@@ -21,8 +21,8 @@ import {
   DatoSoloLectura,
   FormularioDatosContacto,
   IconoSoloLectura,
-  mensajeDeError,
 } from "@/components/perfil/PerfilComunes";
+import { mensajeDeError } from "@/components/perfil";
 import { VerificacionCOP } from "@/components/VerificacionCOP";
 import { ConsentimientosCard } from "@/components/paciente/ConsentimientosCard";
 import { Input } from "@/components/ui/input";

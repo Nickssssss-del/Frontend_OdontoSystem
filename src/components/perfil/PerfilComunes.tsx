@@ -27,16 +27,6 @@ import {
   rangoAgendaOdontologo,
 } from "./perfilUtils";
 
-// Re-export utilities for other components to use
-export {
-  mensajeDeError,
-  etiquetaEstadoCita,
-  claseEstadoCita,
-  etiquetaDocumento,
-  fechaPerfil,
-  rangoAgendaOdontologo,
-} from "./perfilUtils";
-
 /**
  * Avatar con la foto de perfil del backend (GET /api/usuarios/yo), iniciales
  * de respaldo y botón para subir una nueva imagen (PUT /api/usuarios/yo/foto).
