@@ -52,9 +52,7 @@ export function AgendaHoyCard({ onCambio }: { onCambio?: () => void }) {
         <CardTitle className="flex items-center gap-2">
           <CalendarCheck className="size-5" /> ¿Atiendes hoy?
         </CardTitle>
-        <CardDescription>
-          Sin confirmar, los pacientes no pueden reservar para hoy.
-        </CardDescription>
+        <CardDescription>Sin confirmar, los pacientes no pueden reservar para hoy.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {error && <p className="text-sm text-destructive">{error}</p>}
@@ -87,8 +85,8 @@ export function AgendaHoyCard({ onCambio }: { onCambio?: () => void }) {
             {cancelando && (
               <div className="space-y-3 rounded-xl border border-destructive/40 p-4">
                 <p className="text-sm">
-                  Se cancelarán tus citas pendientes de hoy con reembolso del 100 % y se bloqueará el
-                  resto del día. Cada paciente recibirá un correo.
+                  Se cancelarán tus citas pendientes de hoy con reembolso del 100 % y se bloqueará
+                  el resto del día. Cada paciente recibirá un correo.
                 </p>
                 <textarea
                   className="w-full rounded-md border border-input bg-background p-2 text-sm"
@@ -99,7 +97,11 @@ export function AgendaHoyCard({ onCambio }: { onCambio?: () => void }) {
                   onChange={(e) => setMotivo(e.target.value)}
                 />
                 <div className="flex gap-2">
-                  <Button variant="destructive" disabled={enviando} onClick={() => void responder(false)}>
+                  <Button
+                    variant="destructive"
+                    disabled={enviando}
+                    onClick={() => void responder(false)}
+                  >
                     {enviando && <Loader2 className="mr-2 size-4 animate-spin" />}
                     Confirmar y cancelar citas
                   </Button>

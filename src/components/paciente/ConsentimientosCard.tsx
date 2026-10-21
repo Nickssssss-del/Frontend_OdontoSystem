@@ -27,15 +27,20 @@ export function ConsentimientosCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2"><ShieldCheck className="size-5" /> Privacidad</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <ShieldCheck className="size-5" /> Privacidad
+        </CardTitle>
         <CardDescription>Política vigente{vigente ? `: versión ${vigente}` : ""}.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-1 text-sm">
         {error && <p className="text-destructive">{error}</p>}
-        {lista?.length === 0 && <p className="text-muted-foreground">Sin consentimientos registrados.</p>}
+        {lista?.length === 0 && (
+          <p className="text-muted-foreground">Sin consentimientos registrados.</p>
+        )}
         {lista?.map((c) => (
           <p key={`${c.version_politica}-${c.aceptado_en}`}>
-            Aceptaste la versión <strong>{c.version_politica}</strong> el {fechaHora(c.aceptado_en)}.
+            Aceptaste la versión <strong>{c.version_politica}</strong> el {fechaHora(c.aceptado_en)}
+            .
           </p>
         ))}
       </CardContent>

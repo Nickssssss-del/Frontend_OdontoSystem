@@ -1,4 +1,5 @@
-/** Barrel export for perfil utilities - separate from components for React Fast Refresh */ export {
+/** Barrel de utilidades de perfil: separado de los componentes para el Fast Refresh de React. */
+export {
   mensajeDeError,
   etiquetaEstadoCita,
   claseEstadoCita,

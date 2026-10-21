@@ -15,17 +15,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
-import { usuariosApi, type EstadoCita, type UsuarioYo } from "@/lib/api";
+import { usuariosApi, type UsuarioYo } from "@/lib/api";
 import { iniciales } from "@/lib/odontologos";
 import { cn } from "@/lib/utils";
-import {
-  mensajeDeError,
-  etiquetaEstadoCita,
-  claseEstadoCita,
-  etiquetaDocumento,
-  fechaPerfil,
-  rangoAgendaOdontologo,
-} from "./perfilUtils";
+import { mensajeDeError } from "./perfilUtils";
 
 /**
  * Avatar con la foto de perfil del backend (GET /api/usuarios/yo), iniciales

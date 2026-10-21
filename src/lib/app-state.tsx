@@ -154,7 +154,7 @@ type Ctx = {
   setBlockedToday: (v: boolean) => void;
 };
 
-const AppStateContext = React.createContext<Ctx | null>(null);
+export const AppStateContext = React.createContext<Ctx | null>(null);
 
 export const STRIKE_LIMIT = 3;
 
@@ -343,8 +343,4 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;
 }
 
-export function useAppState() {
-  const ctx = React.useContext(AppStateContext);
-  if (!ctx) throw new Error("useAppState debe usarse dentro de AppStateProvider");
-  return ctx;
-}
+export { useAppState } from "./hooks/useAppState";
