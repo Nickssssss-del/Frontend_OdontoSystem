@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChatbotWidget } from "@/components/ChatbotWidget";
 import { GoogleBoton } from "@/components/GoogleBoton";
+import { TerminosModal } from "@/components/TerminosModal";
 import { ApiError, authApi, type Sesion } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import logoAsset from "@/assets/odontosystem-logo.png.asset.json";
@@ -593,7 +594,7 @@ function LoginScreen() {
             Al continuar aceptas los{" "}
             <button
               type="button"
-              onClick={() => toast.info("Términos y condiciones próximamente.")}
+              onClick={() => setTerminosAbiertos(true)}
               className="font-semibold text-foreground underline-offset-4 hover:underline"
             >
               Términos
@@ -611,6 +612,15 @@ function LoginScreen() {
       </section>
 
       <ChatbotWidget />
+
+      {/* Modal de Términos y condiciones — compartido entre el enlace del pie
+          y el flujo de registro. El checkbox de privacidad sigue siendo independiente:
+          el usuario debe marcarlo por su propia voluntad. */}
+      <TerminosModal
+        open={terminosAbiertos}
+        onOpenChange={setTerminosAbiertos}
+        mostrarAceptar={false}
+      />
     </div>
   );
 }

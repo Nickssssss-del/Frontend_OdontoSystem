@@ -3,15 +3,22 @@ import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-ro
 import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowLeft,
+  BadgeCheck,
+  Calendar,
   CheckCircle2,
   Clock,
   CreditCard,
+  Eye,
   FlaskConical,
   Loader2,
   LogIn,
+  Mail,
   ShieldCheck,
   Smartphone,
+  Stethoscope,
   TimerOff,
+  User,
+  Wallet,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { QrArt } from "@/components/ChatbotWidget";
@@ -348,46 +355,155 @@ function Agendar() {
                 key="done"
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="py-8 text-center"
+                className="py-6"
               >
-                <motion.span
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 260, damping: 14 }}
-                  className="mx-auto flex size-16 items-center justify-center rounded-full bg-success/15 text-success"
+                {/* Icono de éxito */}
+                <div className="flex flex-col items-center text-center">
+                  <motion.span
+                    initial={{ scale: 0, rotate: -30 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ type: "spring", stiffness: 280, damping: 16 }}
+                    className="flex size-20 items-center justify-center rounded-full bg-teal-50 text-teal-500 ring-8 ring-teal-50/60"
+                  >
+                    <CheckCircle2 className="size-11" strokeWidth={1.8} />
+                  </motion.span>
+
+                  <motion.h2
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.15 }}
+                    className="mt-4 font-display text-2xl font-bold tracking-tight text-gray-900"
+                  >
+                    {confirmada ? "¡Cita confirmada!" : "Pago recibido"}
+                  </motion.h2>
+
+                  {/* Badge de estado */}
+                  <motion.span
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.22 }}
+                    className={cn(
+                      "mt-3 inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1 text-xs font-semibold",
+                      confirmada
+                        ? "border-teal-200 bg-teal-50 text-teal-700"
+                        : "border-amber-200 bg-amber-50 text-amber-700",
+                    )}
+                  >
+                    <BadgeCheck className="size-3.5" />
+                    {confirmada ? "CONFIRMADA · Agenda bloqueada" : "Esperando confirmación del odontólogo"}
+                  </motion.span>
+                </div>
+
+                {/* Tarjeta de detalles */}
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="mt-6 overflow-hidden rounded-2xl border border-teal-100 bg-white shadow-sm"
                 >
-                  <CheckCircle2 className="size-9" />
-                </motion.span>
-                <h2 className="mt-4 font-display text-xl font-semibold">
-                  {confirmada ? "¡Cita confirmada!" : "Pago recibido"}
-                </h2>
-                <span
-                  className={cn(
-                    "mt-3 inline-block rounded-full border px-3 py-1 text-xs font-semibold",
-                    confirmada
-                      ? "border-primary/40 bg-primary/15 text-primary"
-                      : "border-warning/40 bg-warning/15 text-warning-foreground",
+                  {/* Odontólogo */}
+                  <div className="flex items-center gap-3 border-b border-teal-50 px-5 py-4">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-teal-50 text-teal-500">
+                      <User className="size-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-gray-400">Odontólogo</p>
+                      <p className="truncate font-semibold text-gray-800">{pago.cita.odontologo.nombre}</p>
+                    </div>
+                  </div>
+
+                  {/* Especialidad */}
+                  {perfil.especialidades.length > 0 && (
+                    <div className="flex items-center gap-3 border-b border-teal-50 px-5 py-4">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-teal-50 text-teal-500">
+                        <Stethoscope className="size-4" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-gray-400">Especialidad</p>
+                        <p className="truncate font-semibold text-gray-800">
+                          {perfil.especialidades.map((e) => e.nombre).join(" · ")}
+                        </p>
+                      </div>
+                    </div>
                   )}
+
+                  {/* Servicio */}
+                  <div className="flex items-center gap-3 border-b border-teal-50 px-5 py-4">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-teal-50 text-teal-500">
+                      <ShieldCheck className="size-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-gray-400">Servicio</p>
+                      <p className="truncate font-semibold text-gray-800">{pago.cita.servicio.titulo}</p>
+                    </div>
+                  </div>
+
+                  {/* Fecha y hora */}
+                  <div className="flex items-center gap-3 border-b border-teal-50 px-5 py-4">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-teal-50 text-teal-500">
+                      <Calendar className="size-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-gray-400">Fecha y hora</p>
+                      <p className="font-semibold text-gray-800">
+                        {fechaLarga(fechaDe(pago.cita.inicio))} · {horaDe(pago.cita.inicio)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Depósito y pago */}
+                  <div className="flex items-center gap-3 border-b border-teal-50 px-5 py-4">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-teal-50 text-teal-500">
+                      <Wallet className="size-4" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium text-gray-400">Depósito pagado</p>
+                      <div className="flex items-center justify-between">
+                        <p className="font-semibold text-gray-800">{soles(pago.monto)}</p>
+                        <span className="ml-3 rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-semibold text-teal-600">
+                          {pago.metodo === "TARJETA" ? "Tarjeta" : pago.metodo === "YAPE" ? "Yape" : "Plin"}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-xs text-gray-400">
+                        Total del servicio: {soles(pago.cita.precio)} · el depósito se descuenta en consulta
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Confirmación por correo — solo cuando fue confirmada por el backend */}
+                  {confirmada && (
+                    <div className="flex items-center gap-3 px-5 py-4">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-teal-50 text-teal-500">
+                        <Mail className="size-4" />
+                      </span>
+                      <p className="text-sm text-gray-600">
+                        Te enviamos la confirmación por correo y te recordaremos antes de tu cita.
+                      </p>
+                    </div>
+                  )}
+                </motion.div>
+
+                {/* Botones de acción */}
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.42 }}
+                  className="mt-5 flex flex-col gap-3 sm:flex-row"
                 >
-                  {confirmada
-                    ? "CONFIRMADA · Agenda bloqueada"
-                    : "Esperando confirmación del odontólogo"}
-                </span>
-                <p className="mt-3 text-sm text-muted-foreground">
-                  {fechaLarga(fechaDe(pago.cita.inicio))} · {horaDe(pago.cita.inicio)} con{" "}
-                  {perfil.nombre}.
-                  {confirmada
-                    ? " Te enviamos la confirmación por correo y te recordaremos la cita antes."
-                    : " Te avisaremos por correo cuando el odontólogo la confirme."}
-                </p>
-                {pago.numero_operacion && (
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Operación {pago.numero_operacion}
-                  </p>
-                )}
-                <Button asChild className="mt-6 rounded-full">
-                  <Link to="/paciente/panel">Ir a mi panel</Link>
-                </Button>
+                  <Button asChild className="flex-1 rounded-full bg-teal-600 hover:bg-teal-700">
+                    <Link to="/paciente/panel">Ir a mi panel</Link>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="flex-1 rounded-full border-teal-200 text-teal-700 hover:bg-teal-50"
+                  >
+                    <Link to="/paciente/panel">
+                      <Eye className="size-4" />
+                      Ver detalles de la cita
+                    </Link>
+                  </Button>
+                </motion.div>
               </motion.div>
             ) : step === 1 ? (
               <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
