@@ -390,7 +390,9 @@ function Agendar() {
                     )}
                   >
                     <BadgeCheck className="size-3.5" />
-                    {confirmada ? "CONFIRMADA · Agenda bloqueada" : "Esperando confirmación del odontólogo"}
+                    {confirmada
+                      ? "CONFIRMADA · Agenda bloqueada"
+                      : "Esperando confirmación del odontólogo"}
                   </motion.span>
                 </div>
 
@@ -408,7 +410,9 @@ function Agendar() {
                     </span>
                     <div className="min-w-0">
                       <p className="text-xs font-medium text-gray-400">Odontólogo</p>
-                      <p className="truncate font-semibold text-gray-800">{pago.cita.odontologo.nombre}</p>
+                      <p className="truncate font-semibold text-gray-800">
+                        {pago.cita.odontologo.nombre}
+                      </p>
                     </div>
                   </div>
 
@@ -434,7 +438,9 @@ function Agendar() {
                     </span>
                     <div className="min-w-0">
                       <p className="text-xs font-medium text-gray-400">Servicio</p>
-                      <p className="truncate font-semibold text-gray-800">{pago.cita.servicio.titulo}</p>
+                      <p className="truncate font-semibold text-gray-800">
+                        {pago.cita.servicio.titulo}
+                      </p>
                     </div>
                   </div>
 
@@ -461,11 +467,16 @@ function Agendar() {
                       <div className="flex items-center justify-between">
                         <p className="font-semibold text-gray-800">{soles(pago.monto)}</p>
                         <span className="ml-3 rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-semibold text-teal-600">
-                          {pago.metodo === "TARJETA" ? "Tarjeta" : pago.metodo === "YAPE" ? "Yape" : "Plin"}
+                          {pago.metodo === "TARJETA"
+                            ? "Tarjeta"
+                            : pago.metodo === "YAPE"
+                              ? "Yape"
+                              : "Plin"}
                         </span>
                       </div>
                       <p className="mt-0.5 text-xs text-gray-400">
-                        Total del servicio: {soles(pago.cita.precio)} · el depósito se descuenta en consulta
+                        Total del servicio: {soles(pago.cita.precio)} · el depósito se descuenta en
+                        consulta
                       </p>
                     </div>
                   </div>

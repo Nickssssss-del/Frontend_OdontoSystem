@@ -134,7 +134,7 @@ function IndicadoresSeguridad({ className }: { className?: string }) {
   const items = [
     { icono: <Lock className="size-4" />, texto: "Conexión cifrada" },
     { icono: <ShieldCheck className="size-4" />, texto: "Verificación COP" },
-    { icono: <Database className="size-4" />, texto: "Datos protegidos · Ley 29733" },
+    { icono: <Database className="size-4" />, texto: "Datos protegidos" },
   ];
   return (
     <ul
