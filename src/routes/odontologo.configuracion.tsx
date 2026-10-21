@@ -25,6 +25,8 @@ import {
 import { mensajeDeError } from "@/components/perfil";
 import { VerificacionCOP } from "@/components/VerificacionCOP";
 import { ConsentimientosCard } from "@/components/paciente/ConsentimientosCard";
+import { MapaConsultorio } from "@/components/MapaConsultorio";
+import { SelectorUbicacionMapa } from "@/components/SelectorUbicacionMapa";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -206,6 +208,8 @@ function ConfiguracionOdontologo() {
   const [consultorioInput, setConsultorioInput] = React.useState("");
   const [direccionInput, setDireccionInput] = React.useState("");
   const [distritoInput, setDistritoInput] = React.useState("");
+  const [latitudInput, setLatitudInput] = React.useState<number | null>(null);
+  const [longitudInput, setLongitudInput] = React.useState<number | null>(null);
   const [rucInput, setRucInput] = React.useState("");
   const [cciInput, setCciInput] = React.useState("");
 
@@ -220,6 +224,8 @@ function ConfiguracionOdontologo() {
     setConsultorioInput(perfil.consultorio ?? "");
     setDireccionInput(perfil.direccion ?? "");
     setDistritoInput(perfil.distrito ?? "");
+    setLatitudInput(perfil.latitud ?? null);
+    setLongitudInput(perfil.longitud ?? null);
   }, [perfil]);
 
   if (sesion?.rol !== "ODONTOLOGO") {
@@ -286,6 +292,10 @@ function ConfiguracionOdontologo() {
     if (consultorioLimpio) datos.nombre_consultorio = consultorioLimpio;
     if (direccionLimpia) datos.direccion_consultorio = direccionLimpia;
     if (distritoLimpio) datos.distrito_consultorio = distritoLimpio;
+    if (typeof latitudInput === "number" && typeof longitudInput === "number") {
+      datos.latitud = latitudInput;
+      datos.longitud = longitudInput;
+    }
     datos.especialidad_ids = idsEspecialidades;
 
     setEditandoProfesional(false);
@@ -627,6 +637,18 @@ function ConfiguracionOdontologo() {
                       placeholder="Av. Lima 123"
                     />
                   </div>
+                  <div className="space-y-2 pt-2">
+                    <Label>Ubicación geográfica en el mapa (GPS)</Label>
+                    <SelectorUbicacionMapa
+                      latitud={latitudInput}
+                      longitud={longitudInput}
+                      onChange={(coords) => {
+                        setLatitudInput(coords ? coords.lat : null);
+                        setLongitudInput(coords ? coords.lng : null);
+                      }}
+                      altura={250}
+                    />
+                  </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="prof-ruc">RUC</Label>
@@ -686,6 +708,8 @@ function ConfiguracionOdontologo() {
                         setConsultorioInput(perfil?.consultorio ?? "");
                         setDireccionInput(perfil?.direccion ?? "");
                         setDistritoInput(perfil?.distrito ?? "");
+                        setLatitudInput(perfil?.latitud ?? null);
+                        setLongitudInput(perfil?.longitud ?? null);
                         setRucInput(miPerfil?.ruc ?? "");
                         setCciInput(miPerfil?.cci ?? "");
                         setIdsEspecialidades(perfil?.especialidades.map((e) => e.id) ?? []);
@@ -701,32 +725,49 @@ function ConfiguracionOdontologo() {
                   </div>
                 </form>
               ) : (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {perfil?.consultorio ? (
-                    <DatoSoloLectura
-                      label="Clínica o consultorio"
-                      valor={perfil.consultorio}
-                      icono={<Building2 className="size-3" />}
+                <div className="space-y-6">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {perfil?.consultorio ? (
+                      <DatoSoloLectura
+                        label="Clínica o consultorio"
+                        valor={perfil.consultorio}
+                        icono={<Building2 className="size-3" />}
+                      />
+                    ) : null}
+                    {perfil?.direccion ? (
+                      <DatoSoloLectura
+                        label="Dirección"
+                        valor={perfil.direccion}
+                        icono={<MapPin className="size-3" />}
+                      />
+                    ) : null}
+                    {perfil?.distrito ? (
+                      <DatoSoloLectura label="Distrito" valor={perfil.distrito} />
+                    ) : null}
+                    {miPerfil?.ruc ? <DatoSoloLectura label="RUC" valor={miPerfil.ruc} /> : null}
+                    {miPerfil?.cci ? <DatoSoloLectura label="CCI" valor={miPerfil.cci} /> : null}
+                    {!perfil?.consultorio && !perfil?.direccion && !perfil?.distrito ? (
+                      <p className="text-sm text-muted-foreground sm:col-span-2">
+                        Aún no has publicado datos de consultorio. Pulsa «Editar datos
+                        profesionales» para completarlos.
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="border-t border-border/70 pt-5">
+                    <h3 className="mb-3 text-sm font-semibold flex items-center gap-2">
+                      <MapPin className="size-4 text-primary" />
+                      Ubicación del consultorio en el mapa
+                    </h3>
+                    <MapaConsultorio
+                      latitud={perfil?.latitud}
+                      longitud={perfil?.longitud}
+                      nombreConsultorio={perfil?.consultorio}
+                      direccion={perfil?.direccion}
+                      distrito={perfil?.distrito}
+                      altura={230}
                     />
-                  ) : null}
-                  {perfil?.direccion ? (
-                    <DatoSoloLectura
-                      label="Dirección"
-                      valor={perfil.direccion}
-                      icono={<MapPin className="size-3" />}
-                    />
-                  ) : null}
-                  {perfil?.distrito ? (
-                    <DatoSoloLectura label="Distrito" valor={perfil.distrito} />
-                  ) : null}
-                  {miPerfil?.ruc ? <DatoSoloLectura label="RUC" valor={miPerfil.ruc} /> : null}
-                  {miPerfil?.cci ? <DatoSoloLectura label="CCI" valor={miPerfil.cci} /> : null}
-                  {!perfil?.consultorio && !perfil?.direccion && !perfil?.distrito ? (
-                    <p className="text-sm text-muted-foreground sm:col-span-2">
-                      Aún no has publicado datos de consultorio. Pulsa «Editar datos profesionales»
-                      para completarlos.
-                    </p>
-                  ) : null}
+                  </div>
                 </div>
               )}
               {!editandoProfesional && (

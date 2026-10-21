@@ -9,6 +9,7 @@ import { soles } from "@/lib/mock-data";
 import { ApiError, odontologosApi, type ResenasOdontologo } from "@/lib/api";
 import { fechaDe, horaDe, iniciales, partesDia } from "@/lib/odontologos";
 import { SelectorTurnos } from "@/components/SelectorTurnos";
+import { MapaConsultorio } from "@/components/MapaConsultorio";
 import { useAppState } from "@/lib/app-state";
 import { cn } from "@/lib/utils";
 
@@ -239,8 +240,8 @@ function PerfilDentista() {
           </Card>
         </div>
 
-        {/* Servicios */}
-        <aside className="lg:sticky lg:top-24 lg:h-fit">
+        {/* Servicios y Ubicación */}
+        <aside className="space-y-6 lg:sticky lg:top-24 lg:h-fit">
           <Card className="rounded-3xl border-mint/60 shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="font-display text-lg">Servicios y precios</CardTitle>
@@ -267,6 +268,25 @@ function PerfilDentista() {
                   ? " Este odontólogo confirma cada cita después del pago."
                   : " La cita se confirma apenas se verifica el pago."}
               </p>
+            </CardContent>
+          </Card>
+
+          {/* Ubicación y mapa del consultorio */}
+          <Card className="rounded-3xl border-mint/60 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 font-display text-lg">
+                <MapPin className="size-5 text-primary" /> Ubicación del consultorio
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <MapaConsultorio
+                latitud={perfil.latitud}
+                longitud={perfil.longitud}
+                nombreConsultorio={perfil.consultorio}
+                direccion={perfil.direccion}
+                distrito={perfil.distrito}
+                altura={230}
+              />
             </CardContent>
           </Card>
         </aside>

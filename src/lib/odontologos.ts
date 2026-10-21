@@ -29,6 +29,22 @@ const PINES_DISTRITO: Record<string, { x: number; y: number }> = {
   tate: { x: 86, y: 74 },
 };
 
+/** Coordenadas geográficas reales (lat, lng) de los distritos de Ica, Perú */
+export const COORDENADAS_DISTRITO_ICA: Record<string, { lat: number; lng: number }> = {
+  "ica centro": { lat: -14.06777, lng: -75.72861 },
+  ica: { lat: -14.06777, lng: -75.72861 },
+  parcona: { lat: -14.0531, lng: -75.7042 },
+  "la tinguina": { lat: -14.0381, lng: -75.7144 },
+  subtanjalla: { lat: -14.0189, lng: -75.7592 },
+  "san juan bautista": { lat: -14.0136, lng: -75.7364 },
+  "los aquijes": { lat: -14.0956, lng: -75.6908 },
+  pachacutec: { lat: -14.15, lng: -75.69 },
+  salas: { lat: -13.9875, lng: -75.7878 },
+  santiago: { lat: -14.18, lng: -75.71 },
+  tate: { lat: -14.135, lng: -75.7 },
+  "pueblo nuevo": { lat: -14.1167, lng: -75.7167 },
+};
+
 export const sinTildes = (texto: string) =>
   texto.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().trim();
 
@@ -93,6 +109,8 @@ export function perfilADentist(p: PerfilOdontologo): Dentist {
     bio: [p.consultorio, p.direccion].filter(Boolean).join(" · "),
     pin: pin(p.distrito, 0),
     fotoUrl: p.foto_url,
+    latitud: p.latitud,
+    longitud: p.longitud,
   };
 }
 

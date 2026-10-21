@@ -17,7 +17,10 @@ export type Dentist = {
   /** Posición relativa (0-100) dentro del mapa estilizado de Ica */
   pin: { x: number; y: number };
   /** Foto de perfil real (Cloudinary); si no hay, se muestran las iniciales. */
-  fotoUrl?: string | null;
+  fotoUrl?: string | null | undefined;
+  /** Coordenadas reales GPS (si el consultorio las tiene configuradas) */
+  latitud?: number | null | undefined;
+  longitud?: number | null | undefined;
 };
 
 export const especialidades = [
