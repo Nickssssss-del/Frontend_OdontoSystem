@@ -56,7 +56,7 @@ function Sec1() {
       </p>
       <p className="mt-2">
         Estos Términos regulan el acceso, registro, publicación de servicios, reserva y pago de
-        citas, así como cualquier otra funcionalidad ofrecida a traves del sitio web y la API de
+        citas, así como cualquier otra funcionalidad ofrecida a través del sitio web y la API de
         OdontoSystem.
       </p>
     </>
@@ -97,13 +97,13 @@ function Sec3() {
         automáticamente.
       </p>
       <p className="mt-2">
-        El depósito se descuenta del total de la consulta. OdontoSystem actua como intermediario
+        El depósito se descuenta del total de la consulta. OdontoSystem actúa como intermediario
         técnico del pago; los pagos son procesados por pasarelas de terceros (Yape, Plin o tarjeta).
         En el entorno sandbox no se realizan cargos reales.
       </p>
       <p className="mt-2">
-        <strong>Cancelaciones:</strong> si cancelas con 12 horas o mas de anticipación, se devuelve
-        el depósito. Las cancelaciónes tardias o las inasistencias no dan derecho a reembolso.
+        <strong>Cancelaciones:</strong> si cancelas con 12 horas o más de anticipación, se devuelve
+        el depósito. Las cancelaciones tardías o las inasistencias no dan derecho a reembolso.
       </p>
     </>
   );
@@ -143,12 +143,12 @@ function Sec5() {
     <>
       <p>
         OdontoSystem es una plataforma de intermediación. No presta servicios odontológicos ni es
-        responsable de la calidad o resultado de la atencion clínica brindada por los odontólogos
+        responsable de la calidad o resultado de la atención clínica brindada por los odontólogos
         registrados.
       </p>
       <p className="mt-2">
         Los odontólogos son profesionales independientes y asumen plena responsabilidad por su
-        practica clínica, en cumplimiento de la normativa sanitaria y deontologica vigente.
+        práctica clínica, en cumplimiento de la normativa sanitaria y deontológica vigente.
       </p>
       <p className="mt-2">
         OdontoSystem no garantiza la disponibilidad ininterrumpida del servicio ni se responsabiliza

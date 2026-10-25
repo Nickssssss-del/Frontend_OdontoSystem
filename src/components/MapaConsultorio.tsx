@@ -21,8 +21,7 @@ export type MapaConsultorioProps = {
  * Valida si las coordenadas corresponden a valores numéricos geográficamente válidos.
  * No acepta nulos, indefinidos, NaN ni el punto neutro [0, 0].
  */
-function esCoordenadaValida(lat?: number | null, lng?: number | null): lat is number {
-  if (typeof lat !== "number" || typeof lng !== "number") return false;
+function esCoordenadaValida(lat: number, lng: number): boolean {
   if (Number.isNaN(lat) || Number.isNaN(lng)) return false;
   if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return false;
   if (lat === 0 && lng === 0) return false;
@@ -63,8 +62,14 @@ export function MapaConsultorio({
   mostrarDetalles = true,
   className,
 }: MapaConsultorioProps) {
-  const tieneUbicacion =
-    esCoordenadaValida(latitud, longitud) && esCoordenadaValida(longitud, latitud);
+  // Se estrecha el tipo aquí: latitud y longitud se validan juntas, cada una en su propio rango.
+  const coordenadas =
+    typeof latitud === "number" &&
+    typeof longitud === "number" &&
+    esCoordenadaValida(latitud, longitud)
+      ? { lat: latitud, lng: longitud }
+      : null;
+  const tieneUbicacion = coordenadas !== null;
 
   // Carga dinámica de Leaflet solo en el navegador para evitar ReferenceError: window is not defined en SSR
   const [ComponenteMapa, setComponenteMapa] =
@@ -94,7 +99,7 @@ export function MapaConsultorio({
   const direccionCompleta = [direccion, distrito].filter(Boolean).join(" · ");
 
   // Caso: Sin coordenadas válidas registradas en el backend
-  if (!tieneUbicacion) {
+  if (!coordenadas) {
     return (
       <div
         className={cn(
@@ -123,8 +128,8 @@ export function MapaConsultorio({
   }
 
   // Coordenadas válidas reales aseguradas por TypeScript
-  const latReal = latitud;
-  const lngReal = longitud;
+  const latReal = coordenadas.lat;
+  const lngReal = coordenadas.lng;
   const urlRuta = obtenerUrlRutaOSM(latReal, lngReal);
   const urlPunto = obtenerUrlPuntoOSM(latReal, lngReal);
 

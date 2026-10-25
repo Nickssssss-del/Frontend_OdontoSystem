@@ -560,14 +560,41 @@ export type Cita = {
 
 export type MetodoPago = "TARJETA" | "YAPE" | "PLIN";
 
+/**
+ * Respuesta de POST /api/citas/{id}/pagar. Ojo: con una pasarela real el backend responde 200 también
+ * cuando el pago es RECHAZADO (se puede reintentar con otro medio) o PENDIENTE (la pasarela no
+ * respondió: se confirma sola en minutos, NO hay que volver a pagar). Solo VERIFICADO es pago hecho.
+ */
 export type Pago = {
   pago_id: string;
   estado: "PENDIENTE" | "VERIFICADO" | "RECHAZADO" | "REEMBOLSADO";
   metodo: MetodoPago;
   monto: number;
   numero_operacion: string | null;
+  verificado_en: string | null;
   simulado: boolean;
   cita: Cita;
+  /** Texto del backend para mostrar al paciente (motivo del rechazo, aviso de pago pendiente…). */
+  mensaje: string | null;
+};
+
+/** GET /api/public/pagos/config — qué pasarela está activa y su llave pública (no es secreta). */
+export type ConfiguracionPagos = {
+  modo: "simulado" | "culqi" | "mercadopago";
+  culqi_llave_publica: string | null;
+  mercadopago_llave_publica: string | null;
+  /** true: ningún cobro es real (tarjetas de prueba). */
+  modo_prueba: boolean;
+  moneda: string;
+};
+
+/** Lo que entrega la pasarela al tokenizar (Culqi: tkn_… / ype_…; Mercado Pago: token del Brick + medio). */
+export type DatosPasarela = { token?: string; medio_pago_id?: string };
+
+export const pagosApi = {
+  config(): Promise<ConfiguracionPagos> {
+    return llamar<ConfiguracionPagos>("/api/public/pagos/config", { conToken: false });
+  },
 };
 
 export const citasApi = {
@@ -579,9 +606,19 @@ export const citasApi = {
     });
   },
 
-  /** Pasarela simulada (sandbox): aprueba el pago y la cita queda CONFIRMADA (o PENDIENTE_CONFIRMACION). */
-  pagar(citaId: string, metodo: MetodoPago): Promise<Pago> {
-    return llamar<Pago>(`/api/citas/${citaId}/pagar`, { method: "POST", body: { metodo } });
+  /**
+   * Paga el depósito. Modo simulado: solo `metodo`. Con pasarela real hay que enviar además el `token`
+   * (y `medio_pago_id` en Mercado Pago) que entrega su formulario; ver pagosApi.config().
+   */
+  pagar(citaId: string, metodo: MetodoPago, pasarela?: DatosPasarela): Promise<Pago> {
+    return llamar<Pago>(`/api/citas/${citaId}/pagar`, {
+      method: "POST",
+      body: {
+        metodo,
+        ...(pasarela?.token ? { token: pasarela.token } : {}),
+        ...(pasarela?.medio_pago_id ? { medio_pago_id: pasarela.medio_pago_id } : {}),
+      },
+    });
   },
 
   mias(): Promise<Cita[]> {
