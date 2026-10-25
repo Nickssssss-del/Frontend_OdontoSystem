@@ -39,6 +39,10 @@ function cargarScript(): Promise<void> {
   });
 }
 
+// Google solo admite un initialize(): se hace una vez y el callback apunta siempre al botón montado.
+let inicializado = false;
+let alToken: (idToken: string) => void = () => undefined;
+
 export function GoogleBoton({
   alRecibirToken,
   deshabilitado = false,
@@ -47,8 +51,7 @@ export function GoogleBoton({
   deshabilitado?: boolean;
 }) {
   const contenedor = React.useRef<HTMLDivElement>(null);
-  const callback = React.useRef(alRecibirToken);
-  callback.current = alRecibirToken;
+  alToken = alRecibirToken;
   const [fallo, setFallo] = React.useState(false);
 
   React.useEffect(() => {
@@ -58,12 +61,15 @@ export function GoogleBoton({
       .then(() => {
         const id = googleId();
         if (!activo || !id || !contenedor.current) return;
-        id.initialize({
-          client_id: CLIENT_ID,
-          callback: (r) => {
-            if (r.credential) callback.current(r.credential);
-          },
-        });
+        if (!inicializado) {
+          id.initialize({
+            client_id: CLIENT_ID,
+            callback: (r) => {
+              if (r.credential) alToken(r.credential);
+            },
+          });
+          inicializado = true;
+        }
         id.renderButton(contenedor.current, {
           type: "standard",
           theme: "outline",

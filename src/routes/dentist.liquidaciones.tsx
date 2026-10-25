@@ -36,7 +36,11 @@ function DentistLiquidaciones() {
   }, [cargar]);
 
   const resumen: [string, number | undefined, string][] = [
-    ["En custodia", datos?.en_custodia, "Se paga 72 h después de la cita, salvo reclamo o apelación pendiente."],
+    [
+      "En custodia",
+      datos?.en_custodia,
+      "Se paga 72 h después de la cita, salvo reclamo o apelación pendiente.",
+    ],
     ["Pagado", datos?.pagado, "Ya transferido a tu cuenta (simulado)."],
     ["Devuelto a pacientes", datos?.devuelto_a_pacientes, "Depósitos que terminaron devueltos."],
   ];
@@ -51,7 +55,9 @@ function DentistLiquidaciones() {
       {error && (
         <p className="mb-6 flex items-center gap-2 text-sm text-destructive">
           <AlertCircle className="size-4" /> {error}
-          <Button variant="outline" size="sm" onClick={() => void cargar()}>Reintentar</Button>
+          <Button variant="outline" size="sm" onClick={() => void cargar()}>
+            Reintentar
+          </Button>
         </p>
       )}
       {!datos && !error && <Loader2 className="size-5 animate-spin text-muted-foreground" />}
@@ -94,15 +100,20 @@ function DentistLiquidaciones() {
                         <tr key={l.id} className="border-b border-border/50 align-top">
                           <td className="py-3 pr-4">
                             {l.servicio}
-                            <span className="block text-xs text-muted-foreground">{fechaHora(l.fecha_cita)}</span>
+                            <span className="block text-xs text-muted-foreground">
+                              {fechaHora(l.fecha_cita)}
+                            </span>
                           </td>
                           <td className="py-3 pr-4">{l.paciente}</td>
                           <td className="py-3 pr-4 font-medium">{soles(l.monto)}</td>
                           <td className="py-3 pr-4">
-                            <Badge variant={l.estado === "LIQUIDADA" ? "default" : "outline"}>{ETIQUETA[l.estado]}</Badge>
+                            <Badge variant={l.estado === "LIQUIDADA" ? "default" : "outline"}>
+                              {ETIQUETA[l.estado]}
+                            </Badge>
                           </td>
                           <td className="py-3 text-xs text-muted-foreground">
-                            {l.estado === "LIQUIDADA" && `Pagado ${fechaHora(l.liquidado_en)}${l.referencia_pago ? ` · ref. ${l.referencia_pago}` : ""}`}
+                            {l.estado === "LIQUIDADA" &&
+                              `Pagado ${fechaHora(l.liquidado_en)}${l.referencia_pago ? ` · ref. ${l.referencia_pago}` : ""}`}
                             {l.estado === "PENDIENTE" &&
                               (l.retenida_por
                                 ? `Retenida por ${l.retenida_por.toLowerCase()}`

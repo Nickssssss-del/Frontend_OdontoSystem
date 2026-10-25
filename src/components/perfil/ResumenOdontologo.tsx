@@ -7,16 +7,14 @@
 import * as React from "react";
 import { Link } from "@tanstack/react-router";
 import { Calendar, CalendarClock, CheckCircle2, ChevronRight, FileText, Star } from "lucide-react";
+import { AvisoError, KpiPerfil, ResumenSkeleton } from "@/components/perfil/PerfilComunes";
 import {
-  AvisoError,
   claseEstadoCita,
   etiquetaEstadoCita,
   fechaPerfil,
-  KpiPerfil,
   mensajeDeError,
   rangoAgendaOdontologo,
-  ResumenSkeleton,
-} from "@/components/perfil/PerfilComunes";
+} from "@/components/perfil";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,9 +49,24 @@ export function ResumenOdontologo({ odontologoId }: { odontologoId: string }) {
     setErrorResenas(null);
     const { desde, hasta } = rangoAgendaOdontologo();
     (async () => {
+      // El backend entrega las historias de a un paciente: se piden las de los pacientes
+      // atendidos más recientes (máximo 10) y se juntan.
+      const cargarHistorias = async (lista: CitaOdontologo[]) => {
+        const ids = [
+          ...new Set(
+            lista
+              .filter((c) => c.estado === "COMPLETADA" && c.paciente?.id)
+              .sort((a, b) => b.inicio.localeCompare(a.inicio))
+              .map((c) => c.paciente!.id),
+          ),
+        ].slice(0, 10);
+        const partes = await Promise.all(ids.map((id) => miPerfilApi.historias(id)));
+        return partes.flat().sort((a, b) => b.creado_en.localeCompare(a.creado_en));
+      };
+      const pCitas = miPerfilApi.citas(desde, hasta);
       const [rCitas, rHistorias, rResenas] = await Promise.allSettled([
-        miPerfilApi.citas(desde, hasta),
-        miPerfilApi.historias(),
+        pCitas,
+        pCitas.then(cargarHistorias),
         odontologosApi.resenas(odontologoId),
       ]);
       if (!vigente) return;

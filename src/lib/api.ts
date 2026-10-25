@@ -164,7 +164,11 @@ let renovacionEnCurso: Promise<boolean> | null = null;
 
 async function renovarToken(): Promise<boolean> {
   const sesion = leerSesion();
-  if (!sesion?.refresh_token) return false;
+  if (!sesion?.refresh_token) {
+    // Sesión guardada sin refresh token (de una versión anterior): no se puede renovar, se cierra.
+    guardarSesion(null);
+    return false;
+  }
   // Si varias llamadas vencen a la vez, todas esperan la misma renovación.
   renovacionEnCurso ??= (async () => {
     try {
@@ -224,6 +228,9 @@ async function llamar<T>(ruta: string, opciones: Opciones = {}, reintentar = tru
   // (RespuestasSeguridad): solo el 401 se arregla renovando el token.
   if (respuesta.status === 401 && sesion && reintentar) {
     if (await renovarToken()) return llamar<T>(ruta, opciones, false);
+  } else if (respuesta.status === 401 && sesion && !reintentar) {
+    // Ya se renovó y el servidor sigue rechazando el token: la sesión no sirve, se cierra.
+    guardarSesion(null);
   }
 
   if (!respuesta.ok) throw await errorDeRespuesta(respuesta);
@@ -553,14 +560,41 @@ export type Cita = {
 
 export type MetodoPago = "TARJETA" | "YAPE" | "PLIN";
 
+/**
+ * Respuesta de POST /api/citas/{id}/pagar. Ojo: con una pasarela real el backend responde 200 también
+ * cuando el pago es RECHAZADO (se puede reintentar con otro medio) o PENDIENTE (la pasarela no
+ * respondió: se confirma sola en minutos, NO hay que volver a pagar). Solo VERIFICADO es pago hecho.
+ */
 export type Pago = {
   pago_id: string;
   estado: "PENDIENTE" | "VERIFICADO" | "RECHAZADO" | "REEMBOLSADO";
   metodo: MetodoPago;
   monto: number;
   numero_operacion: string | null;
+  verificado_en: string | null;
   simulado: boolean;
   cita: Cita;
+  /** Texto del backend para mostrar al paciente (motivo del rechazo, aviso de pago pendiente…). */
+  mensaje: string | null;
+};
+
+/** GET /api/public/pagos/config — qué pasarela está activa y su llave pública (no es secreta). */
+export type ConfiguracionPagos = {
+  modo: "simulado" | "culqi" | "mercadopago";
+  culqi_llave_publica: string | null;
+  mercadopago_llave_publica: string | null;
+  /** true: ningún cobro es real (tarjetas de prueba). */
+  modo_prueba: boolean;
+  moneda: string;
+};
+
+/** Lo que entrega la pasarela al tokenizar (Culqi: tkn_… / ype_…; Mercado Pago: token del Brick + medio). */
+export type DatosPasarela = { token?: string; medio_pago_id?: string };
+
+export const pagosApi = {
+  config(): Promise<ConfiguracionPagos> {
+    return llamar<ConfiguracionPagos>("/api/public/pagos/config", { conToken: false });
+  },
 };
 
 export const citasApi = {
@@ -572,9 +606,19 @@ export const citasApi = {
     });
   },
 
-  /** Pasarela simulada (sandbox): aprueba el pago y la cita queda CONFIRMADA (o PENDIENTE_CONFIRMACION). */
-  pagar(citaId: string, metodo: MetodoPago): Promise<Pago> {
-    return llamar<Pago>(`/api/citas/${citaId}/pagar`, { method: "POST", body: { metodo } });
+  /**
+   * Paga el depósito. Modo simulado: solo `metodo`. Con pasarela real hay que enviar además el `token`
+   * (y `medio_pago_id` en Mercado Pago) que entrega su formulario; ver pagosApi.config().
+   */
+  pagar(citaId: string, metodo: MetodoPago, pasarela?: DatosPasarela): Promise<Pago> {
+    return llamar<Pago>(`/api/citas/${citaId}/pagar`, {
+      method: "POST",
+      body: {
+        metodo,
+        ...(pasarela?.token ? { token: pasarela.token } : {}),
+        ...(pasarela?.medio_pago_id ? { medio_pago_id: pasarela.medio_pago_id } : {}),
+      },
+    });
   },
 
   mias(): Promise<Cita[]> {
@@ -841,9 +885,14 @@ export const miPerfilApi = {
     return llamar<CitaOdontologo[]>(`/api/odontologos/yo/citas${consulta({ desde, hasta })}`);
   },
 
-  /** GET /api/odontologos/yo/historias — historiales clínicos que registré. */
-  historias(): Promise<HistoriaClinica[]> {
-    return llamar<HistoriaClinica[]>("/api/odontologos/yo/historias");
+  /**
+   * GET /api/odontologos/yo/historias?paciente_id= — historias que registré para UN paciente
+   * (el backend exige paciente_id: sin él responde 400).
+   */
+  historias(pacienteId: string): Promise<HistoriaClinica[]> {
+    return llamar<HistoriaClinica[]>(
+      `/api/odontologos/yo/historias${consulta({ paciente_id: pacienteId })}`,
+    );
   },
 };
 
@@ -983,11 +1032,7 @@ export const documentosApi = {
   },
   /** POST /api/odontologos/yo/documentos — multipart: tipo + archivo (PDF/JPG/PNG hasta 5 MB). */
   subir(tipo: TipoDocumento, archivo: File): Promise<DocumentoOdontologo> {
-    validarArchivo(
-      archivo,
-      ["application/pdf", "image/jpeg", "image/png"],
-      "un PDF, JPG o PNG",
-    );
+    validarArchivo(archivo, ["application/pdf", "image/jpeg", "image/png"], "un PDF, JPG o PNG");
     const form = new FormData();
     form.append("tipo", tipo);
     form.append("archivo", archivo);
@@ -1146,7 +1191,11 @@ export type Apelacion = {
 export const apelacionesApi = {
   /** POST /api/citas/{id}/apelacion — paciente; certificado PDF/JPG/PNG hasta 5 MB. */
   apelar(citaId: string, certificado: File): Promise<Apelacion> {
-    validarArchivo(certificado, ["application/pdf", "image/jpeg", "image/png"], "un PDF, JPG o PNG");
+    validarArchivo(
+      certificado,
+      ["application/pdf", "image/jpeg", "image/png"],
+      "un PDF, JPG o PNG",
+    );
     const form = new FormData();
     form.append("certificado", certificado);
     return llamar<Apelacion>(`/api/citas/${citaId}/apelacion`, { method: "POST", form });

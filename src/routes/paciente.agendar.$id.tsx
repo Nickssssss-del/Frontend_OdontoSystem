@@ -3,18 +3,26 @@ import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-ro
 import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowLeft,
+  BadgeCheck,
+  Calendar,
   CheckCircle2,
   Clock,
   CreditCard,
+  Eye,
   FlaskConical,
   Loader2,
   LogIn,
+  Mail,
   ShieldCheck,
   Smartphone,
+  Stethoscope,
   TimerOff,
+  User,
+  Wallet,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { QrArt } from "@/components/ChatbotWidget";
+import { PasarelaPago } from "@/components/PasarelaPago";
 import { SelectorTurnos } from "@/components/SelectorTurnos";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -26,7 +34,10 @@ import {
   ApiError,
   citasApi,
   odontologosApi,
+  pagosApi,
   type Cita,
+  type ConfiguracionPagos,
+  type DatosPasarela,
   type MetodoPago,
   type Pago,
 } from "@/lib/api";
@@ -93,6 +104,23 @@ function Agendar() {
   const [segundos, setSegundos] = React.useState(0);
   const [metodoPago, setMetodoPago] = React.useState<"billetera" | "tarjeta">("billetera");
   const [billetera, setBilletera] = React.useState<"yape" | "plin">("yape");
+  // Pasarela activa del backend (simulado, Culqi o Mercado Pago). null = aún cargando o sin respuesta.
+  const [config, setConfig] = React.useState<ConfiguracionPagos | null>(null);
+  React.useEffect(() => {
+    let cancelado = false;
+    pagosApi
+      .config()
+      .then((c) => {
+        if (!cancelado) setConfig(c);
+      })
+      .catch(() => {
+        // Sin config se muestra el flujo simulado; el backend rechazará el pago si no corresponde.
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+  const pasarelaReal = config !== null && config.modo !== "simulado";
 
   const servicio = servicios.find((s) => s.id === servicioId);
   const step = pago ? 3 : cita ? 2 : 1;
@@ -168,20 +196,41 @@ function Agendar() {
     }
   };
 
-  const pagar = async (metodo: MetodoPago) => {
-    if (!cita) return;
+  /**
+   * Devuelve true si el backend aceptó el pago (VERIFICADO) o lo dejó en verificación (PENDIENTE).
+   * Con pasarela real el backend responde 200 también al RECHAZADO: ahí se muestra el motivo y se
+   * deja reintentar con otro medio.
+   */
+  const pagar = async (metodo: MetodoPago, pasarela?: DatosPasarela): Promise<boolean> => {
+    if (!cita) return false;
     setEnviando(true);
     setError(null);
     try {
-      setPago(await citasApi.pagar(cita.id, metodo));
+      const respuesta = await citasApi.pagar(cita.id, metodo, pasarela);
+      if (respuesta.estado === "RECHAZADO") {
+        setError(respuesta.mensaje ?? "El pago fue rechazado. Prueba con otro medio de pago.");
+        return false;
+      }
+      setPago(respuesta);
+      return true;
     } catch (e) {
-      if (e instanceof ApiError && e.status === 409) setExpired(true);
+      // 409 tiene tres causas: plazo vencido, cita que ya no está pendiente o pago en confirmación.
+      // Solo en las dos primeras el turno se perdió; con un pago en confirmación NO hay que reservar de nuevo.
+      const pagoEnConfirmacion = e instanceof ApiError && /en confirmaci[oó]n/i.test(e.message);
+      if (e instanceof ApiError && e.status === 409 && !pagoEnConfirmacion) setExpired(true);
       setError(mensajeError(e, "No se pudo procesar el pago."));
+      return false;
     } finally {
       setEnviando(false);
     }
   };
 
+  /** Callback del formulario de la pasarela: si falla, se rechaza para que el formulario deje reintentar. */
+  const pagarConPasarela = async (metodo: MetodoPago, datos: DatosPasarela): Promise<void> => {
+    if (!(await pagar(metodo, datos))) throw new Error("El pago no se completó");
+  };
+
+  const pendiente = pago?.estado === "PENDIENTE";
   const confirmada = pago?.cita.estado === "CONFIRMADA";
 
   return (
@@ -196,18 +245,24 @@ function Agendar() {
 
       <h1 className="mt-4 font-display text-3xl font-semibold">Reservar con {perfil.nombre}</h1>
 
-      {/* Alerta Sandbox */}
-      <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
-        <Alert className="mt-4 rounded-2xl border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
-          <FlaskConical className="size-4" />
-          <AlertTitle className="font-semibold">Entorno Sandbox</AlertTitle>
-          <AlertDescription>
-            No se realizarán cargos reales: el pago lo aprueba una pasarela simulada. Al pagar el
-            depósito, el turno queda bloqueado en la agenda del especialista sin intervención de un
-            administrador.
-          </AlertDescription>
-        </Alert>
-      </motion.div>
+      {/* Aviso de entorno: simulado (sin pasarela) o modo de prueba de una pasarela real */}
+      {(!pasarelaReal || config?.modo_prueba) && (
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
+          <Alert className="mt-4 rounded-2xl border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+            <FlaskConical className="size-4" />
+            <AlertTitle className="font-semibold">
+              {pasarelaReal ? "Modo de prueba" : "Entorno Sandbox"}
+            </AlertTitle>
+            <AlertDescription>
+              {pasarelaReal
+                ? "No se realizarán cargos reales: usa una tarjeta de prueba de la pasarela. "
+                : "No se realizarán cargos reales: el pago lo aprueba una pasarela simulada. "}
+              Al pagar el depósito, el turno queda bloqueado en la agenda del especialista sin
+              intervención de un administrador.
+            </AlertDescription>
+          </Alert>
+        </motion.div>
+      )}
 
       {/* Stepper */}
       <div className="mt-6 flex items-center gap-2">
@@ -348,46 +403,180 @@ function Agendar() {
                 key="done"
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="py-8 text-center"
+                className="py-6"
               >
-                <motion.span
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 260, damping: 14 }}
-                  className="mx-auto flex size-16 items-center justify-center rounded-full bg-success/15 text-success"
-                >
-                  <CheckCircle2 className="size-9" />
-                </motion.span>
-                <h2 className="mt-4 font-display text-xl font-semibold">
-                  {confirmada ? "¡Cita confirmada!" : "Pago recibido"}
-                </h2>
-                <span
-                  className={cn(
-                    "mt-3 inline-block rounded-full border px-3 py-1 text-xs font-semibold",
-                    confirmada
-                      ? "border-primary/40 bg-primary/15 text-primary"
-                      : "border-warning/40 bg-warning/15 text-warning-foreground",
+                {/* Icono de éxito */}
+                <div className="flex flex-col items-center text-center">
+                  <motion.span
+                    initial={{ scale: 0, rotate: -30 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ type: "spring", stiffness: 280, damping: 16 }}
+                    className="flex size-20 items-center justify-center rounded-full bg-teal-50 text-teal-500 ring-8 ring-teal-50/60"
+                  >
+                    <CheckCircle2 className="size-11" strokeWidth={1.8} />
+                  </motion.span>
+
+                  <motion.h2
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.15 }}
+                    className="mt-4 font-display text-2xl font-bold tracking-tight text-gray-900"
+                  >
+                    {pendiente
+                      ? "Pago en verificación"
+                      : confirmada
+                        ? "¡Cita confirmada!"
+                        : "Pago recibido"}
+                  </motion.h2>
+
+                  {/* Badge de estado */}
+                  <motion.span
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.22 }}
+                    className={cn(
+                      "mt-3 inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1 text-xs font-semibold",
+                      confirmada && !pendiente
+                        ? "border-teal-200 bg-teal-50 text-teal-700"
+                        : "border-amber-200 bg-amber-50 text-amber-700",
+                    )}
+                  >
+                    <BadgeCheck className="size-3.5" />
+                    {pendiente
+                      ? "Verificando con la pasarela"
+                      : confirmada
+                        ? "CONFIRMADA · Agenda bloqueada"
+                        : "Esperando confirmación del odontólogo"}
+                  </motion.span>
+                  {pendiente && (
+                    <p className="mt-3 max-w-md text-sm text-gray-600">
+                      {pago.mensaje ??
+                        "La pasarela aún no confirmó tu pago. Se confirmará solo en unos minutos: no vuelvas a pagar."}
+                    </p>
                   )}
+                </div>
+
+                {/* Tarjeta de detalles */}
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="mt-6 overflow-hidden rounded-2xl border border-teal-100 bg-white shadow-sm"
                 >
-                  {confirmada
-                    ? "CONFIRMADA · Agenda bloqueada"
-                    : "Esperando confirmación del odontólogo"}
-                </span>
-                <p className="mt-3 text-sm text-muted-foreground">
-                  {fechaLarga(fechaDe(pago.cita.inicio))} · {horaDe(pago.cita.inicio)} con{" "}
-                  {perfil.nombre}.
-                  {confirmada
-                    ? " Te enviamos la confirmación por correo y te recordaremos la cita antes."
-                    : " Te avisaremos por correo cuando el odontólogo la confirme."}
-                </p>
-                {pago.numero_operacion && (
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Operación {pago.numero_operacion}
-                  </p>
-                )}
-                <Button asChild className="mt-6 rounded-full">
-                  <Link to="/paciente/panel">Ir a mi panel</Link>
-                </Button>
+                  {/* Odontólogo */}
+                  <div className="flex items-center gap-3 border-b border-teal-50 px-5 py-4">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-teal-50 text-teal-500">
+                      <User className="size-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-gray-400">Odontólogo</p>
+                      <p className="truncate font-semibold text-gray-800">
+                        {pago.cita.odontologo.nombre}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Especialidad */}
+                  {perfil.especialidades.length > 0 && (
+                    <div className="flex items-center gap-3 border-b border-teal-50 px-5 py-4">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-teal-50 text-teal-500">
+                        <Stethoscope className="size-4" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-gray-400">Especialidad</p>
+                        <p className="truncate font-semibold text-gray-800">
+                          {perfil.especialidades.map((e) => e.nombre).join(" · ")}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Servicio */}
+                  <div className="flex items-center gap-3 border-b border-teal-50 px-5 py-4">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-teal-50 text-teal-500">
+                      <ShieldCheck className="size-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-gray-400">Servicio</p>
+                      <p className="truncate font-semibold text-gray-800">
+                        {pago.cita.servicio.titulo}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Fecha y hora */}
+                  <div className="flex items-center gap-3 border-b border-teal-50 px-5 py-4">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-teal-50 text-teal-500">
+                      <Calendar className="size-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-gray-400">Fecha y hora</p>
+                      <p className="font-semibold text-gray-800">
+                        {fechaLarga(fechaDe(pago.cita.inicio))} · {horaDe(pago.cita.inicio)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Depósito y pago */}
+                  <div className="flex items-center gap-3 border-b border-teal-50 px-5 py-4">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-teal-50 text-teal-500">
+                      <Wallet className="size-4" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium text-gray-400">
+                        {pendiente ? "Depósito en verificación" : "Depósito pagado"}
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <p className="font-semibold text-gray-800">{soles(pago.monto)}</p>
+                        <span className="ml-3 rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-semibold text-teal-600">
+                          {pago.metodo === "TARJETA"
+                            ? "Tarjeta"
+                            : pago.metodo === "YAPE"
+                              ? "Yape"
+                              : "Plin"}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-xs text-gray-400">
+                        Total del servicio: {soles(pago.cita.precio)} · el depósito se descuenta en
+                        consulta
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Confirmación por correo — solo cuando fue confirmada por el backend */}
+                  {confirmada && !pendiente && (
+                    <div className="flex items-center gap-3 px-5 py-4">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-teal-50 text-teal-500">
+                        <Mail className="size-4" />
+                      </span>
+                      <p className="text-sm text-gray-600">
+                        Te enviamos la confirmación por correo y te recordaremos antes de tu cita.
+                      </p>
+                    </div>
+                  )}
+                </motion.div>
+
+                {/* Botones de acción */}
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.42 }}
+                  className="mt-5 flex flex-col gap-3 sm:flex-row"
+                >
+                  <Button asChild className="flex-1 rounded-full bg-teal-600 hover:bg-teal-700">
+                    <Link to="/paciente/panel">Ir a mi panel</Link>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="flex-1 rounded-full border-teal-200 text-teal-700 hover:bg-teal-50"
+                  >
+                    <Link to="/paciente/panel">
+                      <Eye className="size-4" />
+                      Ver detalles de la cita
+                    </Link>
+                  </Button>
+                </motion.div>
               </motion.div>
             ) : step === 1 ? (
               <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
@@ -427,134 +616,155 @@ function Agendar() {
                   </span>
                 </h2>
 
-                <RadioGroup
-                  value={metodoPago}
-                  onValueChange={(v) => setMetodoPago(v as "billetera" | "tarjeta")}
-                  className="mt-4 grid gap-3 sm:grid-cols-2"
-                >
-                  <Label
-                    htmlFor="mp-billetera"
-                    className={cn(
-                      "flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-colors",
-                      metodoPago === "billetera"
-                        ? "border-primary bg-primary/8"
-                        : "border-border hover:border-primary/50",
-                    )}
-                  >
-                    <RadioGroupItem id="mp-billetera" value="billetera" className="mt-0.5" />
-                    <span>
-                      <span className="flex items-center gap-1.5 text-sm font-semibold">
-                        <Smartphone className="size-4 text-primary" /> Billetera Digital
-                      </span>
-                      <span className="mt-0.5 block text-xs text-muted-foreground">
-                        Yape o Plin
-                      </span>
-                    </span>
-                  </Label>
-                  <Label
-                    htmlFor="mp-tarjeta"
-                    className={cn(
-                      "flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-colors",
-                      metodoPago === "tarjeta"
-                        ? "border-primary bg-primary/8"
-                        : "border-border hover:border-primary/50",
-                    )}
-                  >
-                    <RadioGroupItem id="mp-tarjeta" value="tarjeta" className="mt-0.5" />
-                    <span>
-                      <span className="flex items-center gap-1.5 text-sm font-semibold">
-                        <CreditCard className="size-4 text-primary" /> Tarjeta
-                      </span>
-                      <span className="mt-0.5 block text-xs text-muted-foreground">
-                        Visa o Mastercard
-                      </span>
-                    </span>
-                  </Label>
-                </RadioGroup>
+                {pasarelaReal && config ? (
+                  <PasarelaPago
+                    config={config}
+                    monto={deposito}
+                    onToken={pagarConPasarela}
+                    enviando={enviando}
+                  />
+                ) : (
+                  <>
+                    <RadioGroup
+                      value={metodoPago}
+                      onValueChange={(v) => setMetodoPago(v as "billetera" | "tarjeta")}
+                      className="mt-4 grid gap-3 sm:grid-cols-2"
+                    >
+                      <Label
+                        htmlFor="mp-billetera"
+                        className={cn(
+                          "flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-colors",
+                          metodoPago === "billetera"
+                            ? "border-primary bg-primary/8"
+                            : "border-border hover:border-primary/50",
+                        )}
+                      >
+                        <RadioGroupItem id="mp-billetera" value="billetera" className="mt-0.5" />
+                        <span>
+                          <span className="flex items-center gap-1.5 text-sm font-semibold">
+                            <Smartphone className="size-4 text-primary" /> Billetera Digital
+                          </span>
+                          <span className="mt-0.5 block text-xs text-muted-foreground">
+                            Yape o Plin
+                          </span>
+                        </span>
+                      </Label>
+                      <Label
+                        htmlFor="mp-tarjeta"
+                        className={cn(
+                          "flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-colors",
+                          metodoPago === "tarjeta"
+                            ? "border-primary bg-primary/8"
+                            : "border-border hover:border-primary/50",
+                        )}
+                      >
+                        <RadioGroupItem id="mp-tarjeta" value="tarjeta" className="mt-0.5" />
+                        <span>
+                          <span className="flex items-center gap-1.5 text-sm font-semibold">
+                            <CreditCard className="size-4 text-primary" /> Tarjeta
+                          </span>
+                          <span className="mt-0.5 block text-xs text-muted-foreground">
+                            Visa o Mastercard
+                          </span>
+                        </span>
+                      </Label>
+                    </RadioGroup>
 
-                <AnimatePresence mode="wait">
-                  {metodoPago === "billetera" ? (
-                    <motion.div
-                      key="billetera"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                    >
-                      <div className="mt-4 flex gap-2">
-                        {(["yape", "plin"] as const).map((m) => (
-                          <button
-                            key={m}
-                            onClick={() => setBilletera(m)}
-                            className={cn(
-                              "flex-1 rounded-xl border py-2.5 text-sm font-semibold capitalize transition-colors",
-                              billetera === m
-                                ? "border-primary bg-primary/10 text-primary"
-                                : "border-border text-muted-foreground",
-                            )}
+                    <AnimatePresence mode="wait">
+                      {metodoPago === "billetera" ? (
+                        <motion.div
+                          key="billetera"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -8 }}
+                        >
+                          <div className="mt-4 flex gap-2">
+                            {(["yape", "plin"] as const).map((m) => (
+                              <button
+                                key={m}
+                                onClick={() => setBilletera(m)}
+                                className={cn(
+                                  "flex-1 rounded-xl border py-2.5 text-sm font-semibold capitalize transition-colors",
+                                  billetera === m
+                                    ? "border-primary bg-primary/10 text-primary"
+                                    : "border-border text-muted-foreground",
+                                )}
+                              >
+                                {m}
+                              </button>
+                            ))}
+                          </div>
+                          <div className="mt-4 rounded-2xl border border-border bg-muted/40 p-6 text-center">
+                            <QrArt />
+                            <p className="mt-3 text-sm text-muted-foreground">
+                              {billetera === "yape" ? "Yape" : "Plin"} · OdontoSystem ·{" "}
+                              {soles(deposito)} (simulado)
+                            </p>
+                          </div>
+                          <Button
+                            disabled={enviando}
+                            onClick={() => pagar(billetera === "yape" ? "YAPE" : "PLIN")}
+                            className="mt-5 w-full rounded-full"
                           >
-                            {m}
-                          </button>
-                        ))}
-                      </div>
-                      <div className="mt-4 rounded-2xl border border-border bg-muted/40 p-6 text-center">
-                        <QrArt />
-                        <p className="mt-3 text-sm text-muted-foreground">
-                          {billetera === "yape" ? "Yape" : "Plin"} · OdontoSystem ·{" "}
-                          {soles(deposito)} (simulado)
-                        </p>
-                      </div>
-                      <Button
-                        disabled={enviando}
-                        onClick={() => pagar(billetera === "yape" ? "YAPE" : "PLIN")}
-                        className="mt-5 w-full rounded-full"
-                      >
-                        {enviando && <Loader2 className="size-4 animate-spin" />}
-                        {enviando ? "Verificando pago…" : `Ya pagué ${soles(deposito)}`}
-                      </Button>
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="tarjeta"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      className="mt-4 space-y-3"
-                    >
-                      <div className="space-y-1.5">
-                        <Label htmlFor="cc-num">Número de tarjeta</Label>
-                        <Input
-                          id="cc-num"
-                          inputMode="numeric"
-                          defaultValue="4242 4242 4242 4242"
-                          className="rounded-xl"
-                          readOnly
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <Label htmlFor="cc-exp">Vencimiento</Label>
-                          <Input id="cc-exp" defaultValue="12/28" className="rounded-xl" readOnly />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label htmlFor="cc-cvv">CVV</Label>
-                          <Input id="cc-cvv" defaultValue="123" className="rounded-xl" readOnly />
-                        </div>
-                      </div>
-                      <p className="rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
-                        Tarjeta de prueba del sandbox. El cargo de {soles(deposito)} es simulado: no
-                        escribas datos de una tarjeta real.
-                      </p>
-                      <Button
-                        disabled={enviando}
-                        onClick={() => pagar("TARJETA")}
-                        className="w-full rounded-full"
-                      >
-                        {enviando && <Loader2 className="size-4 animate-spin" />}
-                        {enviando ? "Procesando pago…" : `Pagar ${soles(deposito)} y confirmar`}
-                      </Button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                            {enviando && <Loader2 className="size-4 animate-spin" />}
+                            {enviando ? "Verificando pago…" : `Ya pagué ${soles(deposito)}`}
+                          </Button>
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="tarjeta"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -8 }}
+                          className="mt-4 space-y-3"
+                        >
+                          <div className="space-y-1.5">
+                            <Label htmlFor="cc-num">Número de tarjeta</Label>
+                            <Input
+                              id="cc-num"
+                              inputMode="numeric"
+                              defaultValue="4242 4242 4242 4242"
+                              className="rounded-xl"
+                              readOnly
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <Label htmlFor="cc-exp">Vencimiento</Label>
+                              <Input
+                                id="cc-exp"
+                                defaultValue="12/28"
+                                className="rounded-xl"
+                                readOnly
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label htmlFor="cc-cvv">CVV</Label>
+                              <Input
+                                id="cc-cvv"
+                                defaultValue="123"
+                                className="rounded-xl"
+                                readOnly
+                              />
+                            </div>
+                          </div>
+                          <p className="rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
+                            Tarjeta de prueba del sandbox. El cargo de {soles(deposito)} es
+                            simulado: no escribas datos de una tarjeta real.
+                          </p>
+                          <Button
+                            disabled={enviando}
+                            onClick={() => pagar("TARJETA")}
+                            className="w-full rounded-full"
+                          >
+                            {enviando && <Loader2 className="size-4 animate-spin" />}
+                            {enviando ? "Procesando pago…" : `Pagar ${soles(deposito)} y confirmar`}
+                          </Button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </>
+                )}
               </motion.div>
             )}
           </AnimatePresence>

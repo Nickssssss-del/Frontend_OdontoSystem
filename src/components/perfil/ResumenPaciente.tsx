@@ -16,15 +16,13 @@ import {
   ShieldAlert,
   Star,
 } from "lucide-react";
+import { AvisoError, KpiPerfil, ResumenSkeleton } from "@/components/perfil/PerfilComunes";
 import {
-  AvisoError,
   claseEstadoCita,
   etiquetaEstadoCita,
   fechaPerfil,
-  KpiPerfil,
   mensajeDeError,
-  ResumenSkeleton,
-} from "@/components/perfil/PerfilComunes";
+} from "@/components/perfil";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

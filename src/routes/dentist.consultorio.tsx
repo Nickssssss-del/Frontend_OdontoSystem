@@ -22,8 +22,20 @@ export const Route = createFileRoute("/dentist/consultorio")({
   component: DentistConsultorio,
 });
 
-type Form = { categoria_id: string; titulo: string; descripcion: string; precio: string; duracion: string };
-const FORM_VACIO: Form = { categoria_id: "", titulo: "", descripcion: "", precio: "", duracion: "30" };
+type Form = {
+  categoria_id: string;
+  titulo: string;
+  descripcion: string;
+  precio: string;
+  duracion: string;
+};
+const FORM_VACIO: Form = {
+  categoria_id: "",
+  titulo: "",
+  descripcion: "",
+  precio: "",
+  duracion: "30",
+};
 
 function DentistConsultorio() {
   const [servicios, setServicios] = React.useState<ServicioOdontologo[]>([]);
@@ -146,13 +158,17 @@ function DentistConsultorio() {
     <AppShell>
       <div className="mb-8">
         <h1 className="mb-2 text-3xl font-semibold">Mi consultorio</h1>
-        <p className="text-muted-foreground">Servicios que ofreces y fotos que ven los pacientes en tu perfil.</p>
+        <p className="text-muted-foreground">
+          Servicios que ofreces y fotos que ven los pacientes en tu perfil.
+        </p>
       </div>
 
       {error && (
         <p className="mb-6 flex items-center gap-2 text-sm text-destructive">
           <AlertCircle className="size-4" /> {error}
-          <Button variant="outline" size="sm" onClick={() => void cargar()}>Reintentar</Button>
+          <Button variant="outline" size="sm" onClick={() => void cargar()}>
+            Reintentar
+          </Button>
         </p>
       )}
       {cargando && <Loader2 className="mb-6 size-5 animate-spin text-muted-foreground" />}
@@ -161,9 +177,15 @@ function DentistConsultorio() {
         <CardHeader className="flex flex-row items-center justify-between gap-3">
           <div>
             <CardTitle>Servicios</CardTitle>
-            <CardDescription>El depósito se calcula automáticamente a partir del precio.</CardDescription>
+            <CardDescription>
+              El depósito se calcula automáticamente a partir del precio.
+            </CardDescription>
           </div>
-          <Button size="sm" onClick={abrirNuevo} disabled={editando !== null || categorias.length === 0}>
+          <Button
+            size="sm"
+            onClick={abrirNuevo}
+            disabled={editando !== null || categorias.length === 0}
+          >
             <Plus className="mr-1 size-4" /> Nuevo
           </Button>
         </CardHeader>
@@ -171,14 +193,23 @@ function DentistConsultorio() {
           {editando && (
             <div className="space-y-3 rounded-xl border border-primary/40 p-4">
               <div className="flex items-center justify-between">
-                <p className="font-medium">{editando === "nuevo" ? "Nuevo servicio" : "Editar servicio"}</p>
-                <Button variant="ghost" size="sm" onClick={() => setEditando(null)} aria-label="Cerrar">
+                <p className="font-medium">
+                  {editando === "nuevo" ? "Nuevo servicio" : "Editar servicio"}
+                </p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setEditando(null)}
+                  aria-label="Cerrar"
+                >
                   <X className="size-4" />
                 </Button>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
-                  <label className="text-sm font-medium" htmlFor="s-cat">Categoría</label>
+                  <label className="text-sm font-medium" htmlFor="s-cat">
+                    Categoría
+                  </label>
                   <select
                     id="s-cat"
                     className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
@@ -186,21 +217,48 @@ function DentistConsultorio() {
                     onChange={(e) => setForm({ ...form, categoria_id: e.target.value })}
                   >
                     {categorias.map((c) => (
-                      <option key={c.id} value={c.id}>{c.nombre}</option>
+                      <option key={c.id} value={c.id}>
+                        {c.nombre}
+                      </option>
                     ))}
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-sm font-medium" htmlFor="s-tit">Título</label>
-                  <Input id="s-tit" maxLength={150} value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} />
+                  <label className="text-sm font-medium" htmlFor="s-tit">
+                    Título
+                  </label>
+                  <Input
+                    id="s-tit"
+                    maxLength={150}
+                    value={form.titulo}
+                    onChange={(e) => setForm({ ...form, titulo: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-sm font-medium" htmlFor="s-precio">Precio total (S/)</label>
-                  <Input id="s-precio" type="number" min={0} step="0.01" value={form.precio} onChange={(e) => setForm({ ...form, precio: e.target.value })} />
+                  <label className="text-sm font-medium" htmlFor="s-precio">
+                    Precio total (S/)
+                  </label>
+                  <Input
+                    id="s-precio"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={form.precio}
+                    onChange={(e) => setForm({ ...form, precio: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-sm font-medium" htmlFor="s-dur">Duración (min)</label>
-                  <Input id="s-dur" type="number" min={5} max={480} value={form.duracion} onChange={(e) => setForm({ ...form, duracion: e.target.value })} />
+                  <label className="text-sm font-medium" htmlFor="s-dur">
+                    Duración (min)
+                  </label>
+                  <Input
+                    id="s-dur"
+                    type="number"
+                    min={5}
+                    max={480}
+                    value={form.duracion}
+                    onChange={(e) => setForm({ ...form, duracion: e.target.value })}
+                  />
                 </div>
               </div>
               <textarea
@@ -218,24 +276,40 @@ function DentistConsultorio() {
           )}
 
           {!cargando && servicios.length === 0 && (
-            <p className="text-sm text-muted-foreground">Aún no tienes servicios. Agrega el primero.</p>
+            <p className="text-sm text-muted-foreground">
+              Aún no tienes servicios. Agrega el primero.
+            </p>
           )}
           {servicios.map((s) => (
-            <div key={s.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 p-4">
+            <div
+              key={s.id}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 p-4"
+            >
               <div>
                 <p className="flex items-center gap-2 font-medium">
                   {s.titulo} <Badge variant="outline">{s.categoria}</Badge>
                   {!s.activo && <Badge variant="destructive">Inactivo</Badge>}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  {soles(s.precio_total)} · depósito {soles(s.monto_deposito)} · {s.duracion_minutos} min
+                  {soles(s.precio_total)} · depósito {soles(s.monto_deposito)} ·{" "}
+                  {s.duracion_minutos} min
                 </p>
               </div>
               <div className="flex gap-1">
-                <Button variant="ghost" size="sm" onClick={() => abrirEdicion(s)} aria-label={`Editar ${s.titulo}`}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => abrirEdicion(s)}
+                  aria-label={`Editar ${s.titulo}`}
+                >
                   <Pencil className="size-4" />
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => void eliminar(s)} aria-label={`Eliminar ${s.titulo}`}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => void eliminar(s)}
+                  aria-label={`Eliminar ${s.titulo}`}
+                >
                   <Trash2 className="size-4 text-destructive" />
                 </Button>
               </div>
@@ -259,7 +333,11 @@ function DentistConsultorio() {
               aria-label="Descripción de la foto"
             />
             <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-input px-3 py-1.5 text-sm hover:bg-accent">
-              {subiendoFoto ? <Loader2 className="size-4 animate-spin" /> : <ImagePlus className="size-4" />}
+              {subiendoFoto ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <ImagePlus className="size-4" />
+              )}
               Subir foto
               <input
                 type="file"
@@ -278,9 +356,21 @@ function DentistConsultorio() {
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {fotos.map((f) => (
-                <figure key={f.id} className="group relative overflow-hidden rounded-xl border border-border/70">
-                  <img src={f.url} alt={f.descripcion ?? "Foto del consultorio"} className="aspect-[4/3] w-full object-cover" loading="lazy" />
-                  {f.descripcion && <figcaption className="p-2 text-xs text-muted-foreground">{f.descripcion}</figcaption>}
+                <figure
+                  key={f.id}
+                  className="group relative overflow-hidden rounded-xl border border-border/70"
+                >
+                  <img
+                    src={f.url}
+                    alt={f.descripcion ?? "Foto del consultorio"}
+                    className="aspect-[4/3] w-full object-cover"
+                    loading="lazy"
+                  />
+                  {f.descripcion && (
+                    <figcaption className="p-2 text-xs text-muted-foreground">
+                      {f.descripcion}
+                    </figcaption>
+                  )}
                   <Button
                     variant="destructive"
                     size="sm"

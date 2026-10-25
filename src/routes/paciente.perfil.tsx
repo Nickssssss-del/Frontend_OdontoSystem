@@ -9,11 +9,10 @@ import {
   AvatarPerfil,
   DatoSoloLectura,
   EsqueletoPaginaPerfil,
-  etiquetaDocumento,
   FormularioDatosContacto,
   IconoSoloLectura,
-  mensajeDeError,
 } from "@/components/perfil/PerfilComunes";
+import { etiquetaDocumento, mensajeDeError } from "@/components/perfil";
 import { ResumenPaciente } from "@/components/perfil/ResumenPaciente";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

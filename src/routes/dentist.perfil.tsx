@@ -20,9 +20,11 @@ import {
   DatoSoloLectura,
   EsqueletoPaginaPerfil,
   IconoSoloLectura,
-  mensajeDeError,
 } from "@/components/perfil/PerfilComunes";
+import { mensajeDeError } from "@/components/perfil";
 import { ResumenOdontologo } from "@/components/perfil/ResumenOdontologo";
+import { MapaConsultorio } from "@/components/MapaConsultorio";
+import { SelectorUbicacionMapa } from "@/components/SelectorUbicacionMapa";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -243,40 +245,57 @@ function PerfilOdontologo() {
                   onCancelar={() => setEditando(false)}
                 />
               ) : (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <DatoSoloLectura
-                    label="Teléfono"
-                    valor={usuario.telefono}
-                    icono={<Phone className="size-3" />}
-                  />
-                  <DatoSoloLectura
-                    label="Correo"
-                    valor={usuario.correo}
-                    icono={<IconoSoloLectura />}
-                  />
-                  {perfil.consultorio ? (
+                <div className="space-y-6">
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <DatoSoloLectura
-                      label="Clínica o consultorio"
-                      valor={perfil.consultorio}
-                      icono={<Building2 className="size-3" />}
+                      label="Teléfono"
+                      valor={usuario.telefono}
+                      icono={<Phone className="size-3" />}
                     />
-                  ) : null}
-                  {perfil.direccion ? (
                     <DatoSoloLectura
-                      label="Dirección"
-                      valor={perfil.direccion}
-                      icono={<MapPin className="size-3" />}
+                      label="Correo"
+                      valor={usuario.correo}
+                      icono={<IconoSoloLectura />}
                     />
-                  ) : null}
-                  {perfil.distrito ? (
-                    <DatoSoloLectura label="Ubicación" valor={perfil.distrito} />
-                  ) : null}
-                  {!perfil.consultorio && !perfil.direccion && !perfil.distrito ? (
-                    <p className="text-sm text-muted-foreground sm:col-span-2">
-                      Aún no has publicado datos de consultorio. Usa «Editar perfil» para
-                      completarlos.
-                    </p>
-                  ) : null}
+                    {perfil.consultorio ? (
+                      <DatoSoloLectura
+                        label="Clínica o consultorio"
+                        valor={perfil.consultorio}
+                        icono={<Building2 className="size-3" />}
+                      />
+                    ) : null}
+                    {perfil.direccion ? (
+                      <DatoSoloLectura
+                        label="Dirección"
+                        valor={perfil.direccion}
+                        icono={<MapPin className="size-3" />}
+                      />
+                    ) : null}
+                    {perfil.distrito ? (
+                      <DatoSoloLectura label="Ubicación" valor={perfil.distrito} />
+                    ) : null}
+                    {!perfil.consultorio && !perfil.direccion && !perfil.distrito ? (
+                      <p className="text-sm text-muted-foreground sm:col-span-2">
+                        Aún no has publicado datos de consultorio. Usa «Editar perfil» para
+                        completarlos.
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="border-t border-border/70 pt-6">
+                    <h3 className="mb-3 text-sm font-semibold flex items-center gap-2">
+                      <MapPin className="size-4 text-primary" />
+                      Ubicación del consultorio en el mapa
+                    </h3>
+                    <MapaConsultorio
+                      latitud={perfil.latitud}
+                      longitud={perfil.longitud}
+                      nombreConsultorio={perfil.consultorio}
+                      direccion={perfil.direccion}
+                      distrito={perfil.distrito}
+                      altura={240}
+                    />
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -317,6 +336,8 @@ function FormularioPerfilOdontologo({
   const [consultorio, setConsultorio] = React.useState(perfil.perfil.consultorio ?? "");
   const [direccion, setDireccion] = React.useState(perfil.perfil.direccion ?? "");
   const [distrito, setDistrito] = React.useState(perfil.perfil.distrito ?? "");
+  const [latitud, setLatitud] = React.useState<number | null>(perfil.perfil.latitud ?? null);
+  const [longitud, setLongitud] = React.useState<number | null>(perfil.perfil.longitud ?? null);
   const [ids, setIds] = React.useState<number[]>(perfil.perfil.especialidades.map((e) => e.id));
   const [catalogo, setCatalogo] = React.useState<{ id: number; nombre: string }[]>([]);
   const [errorCatalogo, setErrorCatalogo] = React.useState<string | null>(null);
@@ -381,6 +402,9 @@ function FormularioPerfilOdontologo({
           ...(direccionLimpia ? { direccion_consultorio: direccionLimpia } : {}),
           ...(distritoLimpio ? { distrito_consultorio: distritoLimpio } : {}),
           ...(catalogo.length > 0 ? { especialidad_ids: ids } : {}),
+          ...(typeof latitud === "number" && typeof longitud === "number"
+            ? { latitud, longitud }
+            : {}),
         }),
       ]);
       toast.success("Perfil actualizado", {
@@ -470,6 +494,18 @@ function FormularioPerfilOdontologo({
             error={errores.direccion}
             maxLength={200}
             disabled={guardando}
+          />
+        </div>
+        <div className="sm:col-span-2 space-y-2 pt-2">
+          <Label>Ubicación geográfica en el mapa (GPS)</Label>
+          <SelectorUbicacionMapa
+            latitud={latitud}
+            longitud={longitud}
+            onChange={(coords) => {
+              setLatitud(coords ? coords.lat : null);
+              setLongitud(coords ? coords.lng : null);
+            }}
+            altura={260}
           />
         </div>
       </div>

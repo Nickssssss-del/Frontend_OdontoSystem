@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChatbotWidget } from "@/components/ChatbotWidget";
 import { GoogleBoton } from "@/components/GoogleBoton";
+import { TerminosModal } from "@/components/TerminosModal";
 import { ApiError, authApi, type Sesion } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import logoAsset from "@/assets/odontosystem-logo.png.asset.json";
@@ -93,6 +94,7 @@ function LoginScreen() {
   const [login, setLogin] = React.useState({ correo: "", password: "" });
   const [registro, setRegistro] = React.useState<DatosRegistro>(registroVacio);
   const [aceptaPrivacidad, setAceptaPrivacidad] = React.useState(false);
+  const [terminosAbiertos, setTerminosAbiertos] = React.useState(false);
   // ID token de Google cuando la cuenta no existe: el registro pide solo lo que Google no tiene.
   const [googleToken, setGoogleToken] = React.useState<string | null>(null);
 
@@ -537,9 +539,16 @@ function LoginScreen() {
                       />
                       <span>
                         Acepto la{" "}
-                        <span className="font-semibold text-foreground">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setTerminosAbiertos(true);
+                          }}
+                          className="font-semibold text-foreground underline underline-offset-4"
+                        >
                           política de privacidad
-                        </span>{" "}
+                        </button>{" "}
                         y el tratamiento de mis datos personales (Ley N.º 29733).
                       </span>
                     </label>
@@ -590,10 +599,10 @@ function LoginScreen() {
           </motion.div>
 
           <p className="mt-6 text-center text-xs text-muted-foreground">
-            Al continuar aceptas los{" "}
+            Consulta los{" "}
             <button
               type="button"
-              onClick={() => toast.info("Términos y condiciones próximamente.")}
+              onClick={() => setTerminosAbiertos(true)}
               className="font-semibold text-foreground underline-offset-4 hover:underline"
             >
               Términos
@@ -601,7 +610,7 @@ function LoginScreen() {
             y la{" "}
             <button
               type="button"
-              onClick={() => toast.info("Política de privacidad próximamente.")}
+              onClick={() => setTerminosAbiertos(true)}
               className="font-semibold text-foreground underline-offset-4 hover:underline"
             >
               Privacidad
@@ -611,6 +620,15 @@ function LoginScreen() {
       </section>
 
       <ChatbotWidget />
+
+      {/* Modal de Términos y condiciones — compartido entre el enlace del pie
+          y el flujo de registro. El checkbox de privacidad sigue siendo independiente:
+          el usuario debe marcarlo por su propia voluntad. */}
+      <TerminosModal
+        open={terminosAbiertos}
+        onOpenChange={setTerminosAbiertos}
+        mostrarAceptar={false}
+      />
     </div>
   );
 }

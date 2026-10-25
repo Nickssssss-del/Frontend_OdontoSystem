@@ -32,7 +32,10 @@ function Reclamos() {
   const cargar = React.useCallback(async () => {
     setError(null);
     try {
-      const [r, c] = await Promise.all([reclamosApi.mios(), citasApi.mias().catch(() => [] as Cita[])]);
+      const [r, c] = await Promise.all([
+        reclamosApi.mios(),
+        citasApi.mias().catch(() => [] as Cita[]),
+      ]);
       setLista(r);
       setCitas(c);
     } catch (e) {
@@ -82,7 +85,8 @@ function Reclamos() {
       <div className="mb-8">
         <h1 className="mb-2 text-3xl font-semibold">Libro de reclamaciones</h1>
         <p className="text-muted-foreground">
-          Te respondemos en un máximo de 15 días hábiles. Si es sobre una cita, lo atiende tu odontólogo.
+          Te respondemos en un máximo de 15 días hábiles. Si es sobre una cita, lo atiende tu
+          odontólogo.
         </p>
       </div>
 
@@ -95,25 +99,66 @@ function Reclamos() {
           <form onSubmit={(e) => void enviar(e)} className="space-y-3">
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
-                <label htmlFor="r-tipo" className="text-sm font-medium">Tipo</label>
-                <select id="r-tipo" className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm" value={tipo} onChange={(e) => setTipo(e.target.value as TipoReclamo)}>
-                  {TIPOS.map((t) => <option key={t} value={t}>{t.charAt(0) + t.slice(1).toLowerCase()}</option>)}
+                <label htmlFor="r-tipo" className="text-sm font-medium">
+                  Tipo
+                </label>
+                <select
+                  id="r-tipo"
+                  className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                  value={tipo}
+                  onChange={(e) => setTipo(e.target.value as TipoReclamo)}
+                >
+                  {TIPOS.map((t) => (
+                    <option key={t} value={t}>
+                      {t.charAt(0) + t.slice(1).toLowerCase()}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="space-y-1">
-                <label htmlFor="r-cita" className="text-sm font-medium">Cita relacionada (opcional)</label>
-                <select id="r-cita" className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm" value={citaId} onChange={(e) => setCitaId(e.target.value)}>
+                <label htmlFor="r-cita" className="text-sm font-medium">
+                  Cita relacionada (opcional)
+                </label>
+                <select
+                  id="r-cita"
+                  className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                  value={citaId}
+                  onChange={(e) => setCitaId(e.target.value)}
+                >
                   <option value="">Ninguna</option>
                   {citas.map((c) => (
-                    <option key={c.id} value={c.id}>{c.servicio.titulo} — {c.odontologo.nombre} ({fechaHora(c.inicio)})</option>
+                    <option key={c.id} value={c.id}>
+                      {c.servicio.titulo} — {c.odontologo.nombre} ({fechaHora(c.inicio)})
+                    </option>
                   ))}
                 </select>
               </div>
             </div>
-            <Input required maxLength={150} placeholder="Asunto" value={asunto} onChange={(e) => setAsunto(e.target.value)} aria-label="Asunto" />
-            <textarea required className="w-full rounded-md border border-input bg-background p-2 text-sm" rows={4} maxLength={4000} placeholder="Cuéntanos qué pasó" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} aria-label="Descripción" />
+            <Input
+              required
+              maxLength={150}
+              placeholder="Asunto"
+              value={asunto}
+              onChange={(e) => setAsunto(e.target.value)}
+              aria-label="Asunto"
+            />
+            <textarea
+              required
+              className="w-full rounded-md border border-input bg-background p-2 text-sm"
+              rows={4}
+              maxLength={4000}
+              placeholder="Cuéntanos qué pasó"
+              value={descripcion}
+              onChange={(e) => setDescripcion(e.target.value)}
+              aria-label="Descripción"
+            />
             <Button type="submit" disabled={enviando || !asunto.trim() || !descripcion.trim()}>
-              {enviando ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Send className="mr-2 size-4" />} Enviar
+              {enviando ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : (
+                <Send className="mr-2 size-4" />
+              )}{" "}
+              Enviar
             </Button>
           </form>
         </CardContent>
@@ -122,28 +167,46 @@ function Reclamos() {
       {error && (
         <p className="mb-6 flex items-center gap-2 text-sm text-destructive">
           <AlertCircle className="size-4" /> {error}
-          <Button variant="outline" size="sm" onClick={() => void cargar()}>Reintentar</Button>
+          <Button variant="outline" size="sm" onClick={() => void cargar()}>
+            Reintentar
+          </Button>
         </p>
       )}
       {cargando && <Loader2 className="size-5 animate-spin text-muted-foreground" />}
 
       <div className="space-y-4">
-        {!cargando && lista.length === 0 && <p className="text-sm text-muted-foreground">Aún no registraste nada.</p>}
+        {!cargando && lista.length === 0 && (
+          <p className="text-sm text-muted-foreground">Aún no registraste nada.</p>
+        )}
         {lista.map((r) => (
           <Card key={r.id}>
             <CardContent className="space-y-2 pt-6">
               <div className="flex flex-wrap items-center gap-2">
                 <p className="font-semibold">{r.asunto}</p>
                 <Badge variant="outline">{r.codigo}</Badge>
-                <Badge variant={r.estado === "RESUELTO" ? "default" : "outline"}>{r.estado.replace("_", " ")}</Badge>
+                <Badge variant={r.estado === "RESUELTO" ? "default" : "outline"}>
+                  {r.estado.replace("_", " ")}
+                </Badge>
               </div>
               <p className="text-sm text-muted-foreground">
-                Atiende: {r.atiende === "ODONTOLOGO" ? r.odontologo ?? "tu odontólogo" : "soporte de OdontoSystem"} · {fechaHora(r.creado_en)}
-                {(r.estado === "ABIERTO" || r.estado === "EN_PROCESO") && ` · respuesta antes del ${soloFecha(r.responder_antes)}`}
+                Atiende:{" "}
+                {r.atiende === "ODONTOLOGO"
+                  ? (r.odontologo ?? "tu odontólogo")
+                  : "soporte de OdontoSystem"}{" "}
+                · {fechaHora(r.creado_en)}
+                {(r.estado === "ABIERTO" || r.estado === "EN_PROCESO") &&
+                  ` · respuesta antes del ${soloFecha(r.responder_antes)}`}
               </p>
-              {r.respuesta && <p className="rounded-lg border border-border/70 p-3 text-sm"><span className="font-medium">Respuesta: </span>{r.respuesta}</p>}
+              {r.respuesta && (
+                <p className="rounded-lg border border-border/70 p-3 text-sm">
+                  <span className="font-medium">Respuesta: </span>
+                  {r.respuesta}
+                </p>
+              )}
               {r.estado !== "CERRADO" && (
-                <Button variant="outline" size="sm" onClick={() => void cerrar(r)}>Cerrar reclamo</Button>
+                <Button variant="outline" size="sm" onClick={() => void cerrar(r)}>
+                  Cerrar reclamo
+                </Button>
               )}
             </CardContent>
           </Card>
