@@ -1,11 +1,17 @@
 import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, FileSpreadsheet, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { liquidacionesApi, type EstadoLiquidacion, type MisIngresos } from "@/lib/api";
+import {
+  guardarArchivo,
+  liquidacionesApi,
+  type EstadoLiquidacion,
+  type MisIngresos,
+} from "@/lib/api";
 import { fechaHora, mensajeDe, soles } from "@/lib/formato";
 
 export const Route = createFileRoute("/dentist/liquidaciones")({
@@ -22,6 +28,18 @@ const ETIQUETA: Record<EstadoLiquidacion, string> = {
 function DentistLiquidaciones() {
   const [datos, setDatos] = React.useState<MisIngresos | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [exportando, setExportando] = React.useState(false);
+
+  const descargarExcel = async () => {
+    setExportando(true);
+    try {
+      guardarArchivo(await liquidacionesApi.excel(), "mis-ingresos-odontosystem.xlsx");
+    } catch (e) {
+      toast.error(mensajeDe(e));
+    } finally {
+      setExportando(false);
+    }
+  };
 
   const cargar = React.useCallback(async () => {
     setError(null);
@@ -47,9 +65,24 @@ function DentistLiquidaciones() {
 
   return (
     <AppShell>
-      <div className="mb-8">
-        <h1 className="mb-2 text-3xl font-semibold">Liquidaciones</h1>
-        <p className="text-muted-foreground">Tus ingresos por los depósitos de las citas.</p>
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="mb-2 text-3xl font-semibold">Liquidaciones</h1>
+          <p className="text-muted-foreground">Tus ingresos por los depósitos de las citas.</p>
+        </div>
+        <Button
+          variant="outline"
+          className="rounded-xl"
+          disabled={exportando || !datos}
+          onClick={() => void descargarExcel()}
+        >
+          {exportando ? (
+            <Loader2 className="mr-2 size-4 animate-spin" />
+          ) : (
+            <FileSpreadsheet className="mr-2 size-4" aria-hidden="true" />
+          )}
+          Descargar Excel
+        </Button>
       </div>
 
       {error && (
@@ -81,7 +114,7 @@ function DentistLiquidaciones() {
               <CardTitle>Detalle</CardTitle>
             </CardHeader>
             <CardContent>
-              {datos.liquidaciones.length === 0 ? (
+              {(datos.liquidaciones ?? []).length === 0 ? (
                 <p className="text-sm text-muted-foreground">Todavía no tienes depósitos.</p>
               ) : (
                 <div className="overflow-x-auto">
@@ -96,7 +129,7 @@ function DentistLiquidaciones() {
                       </tr>
                     </thead>
                     <tbody>
-                      {datos.liquidaciones.map((l) => (
+                      {(datos.liquidaciones ?? []).map((l) => (
                         <tr key={l.id} className="border-b border-border/50 align-top">
                           <td className="py-3 pr-4">
                             {l.servicio}

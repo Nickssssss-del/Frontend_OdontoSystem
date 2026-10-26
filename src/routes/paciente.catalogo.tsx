@@ -191,7 +191,10 @@ function Catalogo() {
             {/* View Mode Toggle */}
             <div className="flex border border-border rounded-lg overflow-hidden bg-muted/30">
               <button
+                type="button"
                 onClick={() => setViewMode("grid")}
+                aria-label="Ver en cuadrícula"
+                aria-pressed={viewMode === "grid"}
                 className={cn(
                   "p-2 transition-colors",
                   viewMode === "grid"
@@ -202,7 +205,10 @@ function Catalogo() {
                 <LayoutGrid className="size-4" />
               </button>
               <button
+                type="button"
                 onClick={() => setViewMode("list")}
+                aria-label="Ver en lista"
+                aria-pressed={viewMode === "list"}
                 className={cn(
                   "p-2 transition-colors border-l border-border",
                   viewMode === "list"
@@ -259,6 +265,7 @@ function Catalogo() {
                   <div>
                     <h3 className="font-semibold text-sm mb-3">Precio máximo</h3>
                     <Slider
+                      aria-label="Precio máximo"
                       value={maxPrecio}
                       onValueChange={setMaxPrecio}
                       min={0}

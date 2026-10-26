@@ -156,8 +156,10 @@ type Opciones = {
   conToken?: boolean;
   /** multipart/form-data (el navegador pone el boundary; no se fija Content-Type). */
   form?: FormData;
-  /** true para descargas binarias (PDF): devuelve un Blob. */
+  /** true para descargas binarias (PDF, Excel): devuelve un Blob. */
   blob?: boolean;
+  /** Tipo aceptado en descargas binarias (por defecto, cualquiera). */
+  aceptar?: string;
 };
 
 let renovacionEnCurso: Promise<boolean> | null = null;
@@ -206,8 +208,8 @@ async function errorDeRespuesta(respuesta: Response): Promise<ApiError> {
 }
 
 async function llamar<T>(ruta: string, opciones: Opciones = {}, reintentar = true): Promise<T> {
-  const { method = "GET", body, conToken = true, form, blob = false } = opciones;
-  const headers: Record<string, string> = { Accept: blob ? "application/pdf" : "application/json" };
+  const { method = "GET", body, conToken = true, form, blob = false, aceptar = "*/*" } = opciones;
+  const headers: Record<string, string> = { Accept: blob ? aceptar : "application/json" };
   if (body !== undefined && !form) headers["Content-Type"] = "application/json";
   const sesion = conToken ? leerSesion() : null;
   if (sesion) headers["Authorization"] = `Bearer ${sesion.access_token}`;
@@ -556,6 +558,8 @@ export type Cita = {
     distrito: string | null;
   };
   servicio: { id: string; titulo: string };
+  /** Si nació de una reprogramación: la cita original (que quedó REPROGRAMADA). */
+  cita_origen_id?: string | null;
 };
 
 export type MetodoPago = "TARJETA" | "YAPE" | "PLIN";
@@ -580,15 +584,14 @@ export type Pago = {
 
 /** GET /api/public/pagos/config — qué pasarela está activa y su llave pública (no es secreta). */
 export type ConfiguracionPagos = {
-  modo: "simulado" | "culqi" | "mercadopago";
-  culqi_llave_publica: string | null;
+  modo: "simulado" | "mercadopago";
   mercadopago_llave_publica: string | null;
   /** true: ningún cobro es real (tarjetas de prueba). */
   modo_prueba: boolean;
   moneda: string;
 };
 
-/** Lo que entrega la pasarela al tokenizar (Culqi: tkn_… / ype_…; Mercado Pago: token del Brick + medio). */
+/** Lo que entrega la pasarela al tokenizar (Mercado Pago: token del Brick + medio de pago). */
 export type DatosPasarela = { token?: string; medio_pago_id?: string };
 
 export const pagosApi = {
@@ -635,6 +638,18 @@ export const citasApi = {
     return llamar<Cita>(`/api/citas/${citaId}/cancelar`, {
       method: "PATCH",
       body: motivo ? { motivo } : {},
+    });
+  },
+
+  /**
+   * POST /api/citas/{id}/reprogramar (RF05) — mueve una cita pagada a otro turno libre del mismo
+   * odontólogo y servicio, con 24 h o más de anticipación y una sola vez por cita. Devuelve la cita
+   * nueva (201); la original queda REPROGRAMADA y el depósito pasa a la nueva. 409 si no se puede.
+   */
+  reprogramar(citaId: string, inicio: string): Promise<Cita> {
+    return llamar<Cita>(`/api/citas/${citaId}/reprogramar`, {
+      method: "POST",
+      body: { inicio },
     });
   },
 };
@@ -695,6 +710,8 @@ export type UsuarioYo = {
   numero_documento: string;
   rol: Rol;
   foto_perfil_url: string | null;
+  /** false hasta ingresar el código que llega al correo; sin verificar no se puede reservar. */
+  correo_verificado: boolean;
 };
 
 /** PATCH /api/usuarios/yo — solo nombre (3..150) y teléfono (\+?\d{9,15}). */
@@ -726,6 +743,15 @@ export type HistoriaClinica = {
   tratamiento: string;
   notas: string | null;
   creado_en: string;
+};
+
+/** Detalle de paciente para el historial clínico. */
+export type PacienteDetalle = {
+  id: string;
+  nombre: string;
+  apellido: string;
+  alergias: string | null;
+  antecedentes: string | null;
 };
 
 const FOTO_TIPOS_ADMITIDOS = ["image/jpeg", "image/png", "image/webp"];
@@ -780,6 +806,30 @@ export const usuariosApi = {
   /** GET /api/usuarios/yo/reputacion — estado de strikes (solo pacientes). */
   reputacion(): Promise<ReputacionPaciente> {
     return llamar<ReputacionPaciente>("/api/usuarios/yo/reputacion");
+  },
+
+  /** POST /api/usuarios/yo/verificar-correo/codigo — envía un código de 6 dígitos (vale 15 min). 409 si ya está verificado. */
+  pedirCodigoCorreo(): Promise<void> {
+    return llamar<void>("/api/usuarios/yo/verificar-correo/codigo", { method: "POST" });
+  },
+
+  /** POST /api/usuarios/yo/verificar-correo — confirma el código; devuelve mis datos con correo_verificado = true. */
+  verificarCorreo(codigo: string): Promise<UsuarioYo> {
+    return llamar<UsuarioYo>("/api/usuarios/yo/verificar-correo", {
+      method: "POST",
+      body: { codigo },
+    });
+  },
+
+  /**
+   * POST /api/usuarios/yo/eliminar-cuenta — confirmacion = "ELIMINAR" y la contraseña (las cuentas de
+   * Google solo confirman). Cancela las citas futuras y anonimiza los datos personales. 204.
+   */
+  eliminarCuenta(confirmacion: string, password?: string): Promise<void> {
+    return llamar<void>("/api/usuarios/yo/eliminar-cuenta", {
+      method: "POST",
+      body: { confirmacion, ...(password ? { password } : {}) },
+    });
   },
 };
 
@@ -893,6 +943,14 @@ export const miPerfilApi = {
     return llamar<HistoriaClinica[]>(
       `/api/odontologos/yo/historias${consulta({ paciente_id: pacienteId })}`,
     );
+  },
+};
+
+/** API para obtener datos de pacientes (usado en historial clínico). */
+export const pacientesApi = {
+  /** GET /api/pacientes/{pacienteId} — detalle de un paciente. */
+  detalle(pacienteId: string): Promise<PacienteDetalle> {
+    return llamar<PacienteDetalle>(`/api/pacientes/${pacienteId}`);
   },
 };
 
@@ -1139,12 +1197,23 @@ export const liquidacionesApi = {
   mias(): Promise<MisIngresos> {
     return llamar<MisIngresos>("/api/odontologos/yo/liquidaciones");
   },
+
+  /** GET /api/odontologos/yo/liquidaciones/excel — lo mismo en una hoja de cálculo (.xlsx, Apache POI). */
+  excel(): Promise<Blob> {
+    return llamar<Blob>("/api/odontologos/yo/liquidaciones/excel", {
+      blob: true,
+      aceptar: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+  },
 };
 
 export const constanciaApi = {
   /** GET /api/citas/{id}/constancia — PDF. 409 si todavía no hay depósito pagado. */
   descargar(citaId: string): Promise<Blob> {
-    return llamar<Blob>(`/api/citas/${citaId}/constancia`, { blob: true });
+    return llamar<Blob>(`/api/citas/${citaId}/constancia`, {
+      blob: true,
+      aceptar: "application/pdf",
+    });
   },
 };
 

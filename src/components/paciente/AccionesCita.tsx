@@ -1,19 +1,31 @@
 import * as React from "react";
-import { FileDown, Loader2, Star, Upload } from "lucide-react";
+import { CalendarClock, FileDown, Loader2, Star, Upload, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { SelectorTurnos } from "@/components/SelectorTurnos";
+import {
   ApiError,
   apelacionesApi,
   asistenciaApi,
+  citasApi,
   constanciaApi,
   guardarArchivo,
   reembolsosApi,
+  odontologosApi,
   resenasApi,
   type Apelacion,
   type Cita,
   type Reembolso,
+  type ServicioOdontologo,
 } from "@/lib/api";
 import { fechaHora, mensajeDe, soles } from "@/lib/formato";
 
@@ -57,6 +69,32 @@ export function AccionesCita({ cita, onCambio }: { cita: Cita; onCambio?: () => 
   const puedeResponderAsistencia =
     cita.estado === "CONFIRMADA" && ahora >= inicio + 15 * 60_000 && ahora <= fin + 72 * 3_600_000;
   const duranteLaCita = ahora <= fin + 2 * 3_600_000;
+  // RF05: solo citas pagadas, con 24 h o más de anticipación y una sola vez por cita.
+  const puedeReprogramar =
+    (cita.estado === "CONFIRMADA" || cita.estado === "PENDIENTE_CONFIRMACION") &&
+    inicio - ahora >= 24 * 3_600_000 &&
+    !cita.cita_origen_id;
+  const [reprogramar, setReprogramar] = React.useState<{
+    abierto: boolean;
+    servicios: ServicioOdontologo[];
+    nuevoInicio: string | null;
+    recargar: number;
+  }>({ abierto: false, servicios: [], nuevoInicio: null, recargar: 0 });
+
+  // Cancelar cita
+  const cancelarCita = async () => {
+    if (!window.confirm("¿Estás seguro de cancelar esta cita?")) return;
+    setOcupado("cancelar");
+    try {
+      await citasApi.cancelar(cita.id, "Cancelada por el paciente desde la web");
+      toast.success("Cita cancelada", { description: "Se ha cancelado correctamente." });
+      onCambio?.();
+    } catch (e) {
+      toast.error("No se pudo cancelar", { description: mensajeDe(e) });
+    } finally {
+      setOcupado(null);
+    }
+  };
 
   React.useEffect(() => {
     if (cita.estado !== "INASISTENCIA_PENALIZADA") return;
@@ -107,6 +145,30 @@ export function AccionesCita({ cita, onCambio }: { cita: Cita; onCambio?: () => 
     });
   };
 
+  const abrirReprogramar = () =>
+    correr("reprogramar-abrir", async () => {
+      const perfil = await odontologosApi.perfil(cita.odontologo.id);
+      const servicios = perfil.servicios.filter((s) => s.id === cita.servicio.id);
+      if (servicios.length === 0) throw new Error("Este servicio ya no está disponible.");
+      setReprogramar({ abierto: true, servicios, nuevoInicio: null, recargar: 0 });
+    });
+
+  const confirmarReprogramar = () =>
+    correr("reprogramar", async () => {
+      if (!reprogramar.nuevoInicio) return;
+      try {
+        await citasApi.reprogramar(cita.id, reprogramar.nuevoInicio);
+      } catch (e) {
+        // Otro paciente tomó el turno: se vuelven a pedir los horarios.
+        if (e instanceof ApiError && e.status === 409)
+          setReprogramar((r) => ({ ...r, nuevoInicio: null, recargar: r.recargar + 1 }));
+        throw e;
+      }
+      toast.success("Cita reprogramada", { description: "Tu depósito pasa a la nueva fecha." });
+      setReprogramar((r) => ({ ...r, abierto: false }));
+      onCambio?.();
+    });
+
   const guardarResena = () =>
     correr("resena", async () => {
       await resenasApi.editar(cita.id, resena.nota, resena.comentario);
@@ -142,6 +204,31 @@ export function AccionesCita({ cita, onCambio }: { cita: Cita; onCambio?: () => 
           >
             Ver reembolso
           </Button>
+        )}
+        {puedeReprogramar && (
+          <>
+            <Button variant="outline" size="sm" disabled={ocupado !== null} onClick={cancelarCita}>
+              {ocupado === "cancelar" ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : (
+                <XCircle className="mr-2 size-4" />
+              )}
+              Cancelar
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={ocupado !== null}
+              onClick={() => void abrirReprogramar()}
+            >
+              {ocupado === "reprogramar-abrir" ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : (
+                <CalendarClock className="mr-2 size-4" />
+              )}
+              Reprogramar
+            </Button>
+          </>
         )}
         {cita.estado === "COMPLETADA" && (
           <Button
@@ -235,6 +322,50 @@ export function AccionesCita({ cita, onCambio }: { cita: Cita; onCambio?: () => 
           )}
         </div>
       )}
+
+      <Dialog
+        open={reprogramar.abierto}
+        onOpenChange={(v) =>
+          ocupado !== "reprogramar" && setReprogramar((r) => ({ ...r, abierto: v }))
+        }
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Reprogramar cita</DialogTitle>
+            <DialogDescription>
+              Elige otro turno con {cita.odontologo.nombre}. Puedes reprogramar una sola vez y tu
+              depósito pasa a la nueva fecha.
+            </DialogDescription>
+          </DialogHeader>
+          {reprogramar.abierto && (
+            <SelectorTurnos
+              odontologoId={cita.odontologo.id}
+              servicios={reprogramar.servicios}
+              servicioId={cita.servicio.id}
+              onServicio={() => undefined}
+              inicio={reprogramar.nuevoInicio}
+              onInicio={(i) => setReprogramar((r) => ({ ...r, nuevoInicio: i }))}
+              recargar={reprogramar.recargar}
+            />
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              disabled={ocupado === "reprogramar"}
+              onClick={() => setReprogramar((r) => ({ ...r, abierto: false }))}
+            >
+              Cancelar
+            </Button>
+            <Button
+              disabled={!reprogramar.nuevoInicio || ocupado === "reprogramar"}
+              onClick={() => void confirmarReprogramar()}
+            >
+              {ocupado === "reprogramar" && <Loader2 className="mr-2 size-4 animate-spin" />}
+              Confirmar nuevo horario
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {resena.abierta && (
         <div className="space-y-2 rounded-xl border border-border/70 p-3">

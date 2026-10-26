@@ -119,7 +119,7 @@ function AvisoTexto({ children }: { children: React.ReactNode }) {
       role="status"
       className="flex items-start gap-2 rounded-xl border border-brand/20 bg-sky px-3.5 py-2.5 text-sm text-brand-deep"
     >
-      <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-brand" />
+      <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-brand-texto" />
       <span>{children}</span>
     </p>
   );
@@ -186,7 +186,7 @@ function IndicadorProgreso({ paso }: { paso: number }) {
                     "flex size-9 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold transition-all",
                     completado && "border-transparent bg-success/15 text-success",
                     activo && "border-brand bg-brand text-white shadow-lg shadow-brand/30",
-                    pendiente && "border-slate-200 bg-white text-slate-400",
+                    pendiente && "border-slate-200 bg-white text-slate-500",
                   )}
                 >
                   {completado ? <Check className="size-4" aria-label="Completado" /> : i + 1}
@@ -205,8 +205,8 @@ function IndicadorProgreso({ paso }: { paso: number }) {
                 className={cn(
                   "hidden text-center text-[11px] font-semibold leading-tight sm:block",
                   completado && "text-success",
-                  activo && "text-brand",
-                  pendiente && "text-slate-400",
+                  activo && "text-brand-texto",
+                  pendiente && "text-slate-500",
                 )}
               >
                 {nombre}
@@ -372,7 +372,7 @@ function RecuperarContrasena() {
   };
 
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[0.95fr_1.05fr]">
+    <main className="min-h-screen lg:grid lg:grid-cols-[0.95fr_1.05fr]">
       {/* ---------- Panel izquierdo: identidad e ilustración (escritorio) ---------- */}
       <section className="hero-teal relative hidden overflow-hidden text-primary-foreground lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-14">
         <div className="pointer-events-none absolute -right-24 -top-24 size-[24rem] rounded-full bg-white/5" />
@@ -467,7 +467,7 @@ function RecuperarContrasena() {
                   <Mail className="size-6" />
                 </span>
                 <div className="min-w-0">
-                  <p className="text-xs font-bold uppercase tracking-wider text-brand">
+                  <p className="text-xs font-bold uppercase tracking-wider text-brand-texto">
                     Recuperación de contraseña
                   </p>
                   <p className="mt-0.5 text-sm text-muted-foreground">
@@ -706,7 +706,7 @@ function RecuperarContrasena() {
                                 "flex size-5 shrink-0 items-center justify-center rounded-full",
                                 cumple
                                   ? "bg-success/15 text-success"
-                                  : "bg-white text-slate-400 ring-1 ring-slate-200",
+                                  : "bg-white text-slate-500 ring-1 ring-slate-200",
                               )}
                             >
                               {cumple ? (
@@ -808,6 +808,6 @@ function RecuperarContrasena() {
         {/* Indicadores de seguridad también en pantallas pequeñas */}
         <IndicadoresSeguridad className="mt-6 justify-center text-[11px] text-muted-foreground lg:hidden" />
       </section>
-    </div>
+    </main>
   );
 }

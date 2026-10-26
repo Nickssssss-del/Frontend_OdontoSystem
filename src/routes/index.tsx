@@ -210,7 +210,7 @@ function LoginScreen() {
   ];
 
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[1.05fr_1fr]">
+    <main className="min-h-screen lg:grid lg:grid-cols-[1.05fr_1fr]">
       {/* Panel izquierdo — marca */}
       <section className="hero-teal relative hidden overflow-hidden text-primary-foreground lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
         <div className="pointer-events-none absolute -right-28 -top-28 size-[26rem] rounded-full bg-white/5" />
@@ -629,6 +629,6 @@ function LoginScreen() {
         onOpenChange={setTerminosAbiertos}
         mostrarAceptar={false}
       />
-    </div>
+    </main>
   );
 }

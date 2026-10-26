@@ -16,7 +16,6 @@ import { useAppState, statusLabel } from "@/lib/app-state";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/dentist/agenda")({
@@ -267,6 +266,7 @@ function DentistAgenda() {
               {/* Date Navigation */}
               <div className="flex items-center gap-2">
                 <Button
+                  aria-label="Periodo anterior"
                   variant="outline"
                   size="sm"
                   onClick={() => {
@@ -283,6 +283,7 @@ function DentistAgenda() {
                   {currentDate.toLocaleDateString("es-PE", { month: "short", year: "numeric" })}
                 </span>
                 <Button
+                  aria-label="Periodo siguiente"
                   variant="outline"
                   size="sm"
                   onClick={() => {
@@ -298,13 +299,35 @@ function DentistAgenda() {
               </div>
 
               {/* View Mode Tabs */}
-              <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="day">Día</TabsTrigger>
-                  <TabsTrigger value="week">Semana</TabsTrigger>
-                  <TabsTrigger value="month">Mes</TabsTrigger>
-                </TabsList>
-              </Tabs>
+              {/* Botones de vista (no son pestañas: no hay paneles asociados) */}
+              <div
+                role="group"
+                aria-label="Vista de la agenda"
+                className="grid w-full grid-cols-3 rounded-lg bg-muted p-1"
+              >
+                {(
+                  [
+                    ["day", "Día"],
+                    ["week", "Semana"],
+                    ["month", "Mes"],
+                  ] as const
+                ).map(([valor, etiqueta]) => (
+                  <button
+                    key={valor}
+                    type="button"
+                    aria-pressed={viewMode === valor}
+                    onClick={() => setViewMode(valor)}
+                    className={cn(
+                      "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                      viewMode === valor
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {etiqueta}
+                  </button>
+                ))}
+              </div>
             </div>
           </CardHeader>
         </Card>

@@ -217,13 +217,13 @@ export function ChatbotWidget() {
               {usuario ? (
                 <BubbleView
                   from="bot"
-                  text={`¡Hola ${usuario.nombre.split(" ")[0]}! 👋 Soy OdontoBot. Puedo ayudarte a buscar un odontólogo en Ica, agendar una cita o revisar tus citas.`}
+                  text={`¡Hola ${usuario.nombre.split(" ")[0]}! Soy OdontoBot. Puedo ayudarte a buscar un odontólogo en Ica, agendar una cita o revisar tus citas.`}
                 />
               ) : (
                 <div className="space-y-3">
                   <BubbleView
                     from="bot"
-                    text="¡Hola! 👋 Soy OdontoBot. Para ayudarte con tus citas necesito saber quién eres: inicia sesión o crea tu cuenta."
+                    text="¡Hola! Soy OdontoBot. Para ayudarte con tus citas necesito saber quién eres: inicia sesión o crea tu cuenta."
                   />
                   <Link
                     to="/"
@@ -275,6 +275,7 @@ export function ChatbotWidget() {
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
+                aria-label="Mensaje para OdontoBot"
                 placeholder={usuario ? "Escribe tu pregunta…" : "Inicia sesión para escribir"}
                 disabled={!usuario}
                 maxLength={1000}

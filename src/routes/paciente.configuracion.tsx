@@ -11,6 +11,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ConsentimientosCard } from "@/components/paciente/ConsentimientosCard";
+import { EliminarCuentaCard } from "@/components/cuenta/EliminarCuentaCard";
+import { VerificacionCorreoCard } from "@/components/cuenta/VerificacionCorreoCard";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -201,9 +203,9 @@ function ConfiguracionPaciente() {
         <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
           Cargando configuración…
         </div>
-      ) : error ? (
+      ) : error || !usuario ? (
         <div className="mx-auto mt-10 max-w-md text-center">
-          <p className="text-sm text-destructive">{error}</p>
+          <p className="text-sm text-destructive">{error ?? "No se pudo cargar tu cuenta."}</p>
           <Button
             variant="outline"
             className="mt-4 rounded-full"
@@ -494,7 +496,22 @@ function ConfiguracionPaciente() {
             </CardContent>
           </Card>
 
+          {usuario && (
+            <VerificacionCorreoCard
+              correo={usuario.correo}
+              verificado={usuario.correo_verificado}
+              onVerificado={() => setUsuario({ ...usuario, correo_verificado: true })}
+            />
+          )}
+
           <ConsentimientosCard />
+
+          <EliminarCuentaCard
+            onEliminada={() => {
+              cerrarSesion();
+              navigate({ to: "/" });
+            }}
+          />
 
           {/* Cerrar sesión */}
           <Card className="border-destructive/50">

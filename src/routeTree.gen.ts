@@ -26,6 +26,7 @@ import { Route as PacienteCatalogoRouteImport } from './routes/paciente.catalogo
 import { Route as PacienteConfiguracionRouteImport } from './routes/paciente.configuracion'
 import { Route as PacientePanelRouteImport } from './routes/paciente.panel'
 import { Route as PacientePerfilRouteImport } from './routes/paciente.perfil'
+import { Route as DentistHistorialPacienteIdRouteImport } from './routes/dentist.historial.$pacienteId'
 import { Route as PacienteAgendarIdRouteImport } from './routes/paciente.agendar.$id'
 import { Route as PacienteDentistaIdRouteImport } from './routes/paciente.dentista.$id'
 
@@ -114,6 +115,12 @@ const PacientePerfilRoute = PacientePerfilRouteImport.update({
   path: '/paciente/perfil',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DentistHistorialPacienteIdRoute =
+  DentistHistorialPacienteIdRouteImport.update({
+    id: '/dentist/historial/$pacienteId',
+    path: '/dentist/historial/$pacienteId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const PacienteAgendarIdRoute = PacienteAgendarIdRouteImport.update({
   id: '/paciente/agendar/$id',
   path: '/paciente/agendar/$id',
@@ -143,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/paciente/configuracion': typeof PacienteConfiguracionRoute
   '/paciente/panel': typeof PacientePanelRoute
   '/paciente/perfil': typeof PacientePerfilRoute
+  '/dentist/historial/$pacienteId': typeof DentistHistorialPacienteIdRoute
   '/paciente/agendar/$id': typeof PacienteAgendarIdRoute
   '/paciente/dentista/$id': typeof PacienteDentistaIdRoute
 }
@@ -164,6 +172,7 @@ export interface FileRoutesByTo {
   '/paciente/configuracion': typeof PacienteConfiguracionRoute
   '/paciente/panel': typeof PacientePanelRoute
   '/paciente/perfil': typeof PacientePerfilRoute
+  '/dentist/historial/$pacienteId': typeof DentistHistorialPacienteIdRoute
   '/paciente/agendar/$id': typeof PacienteAgendarIdRoute
   '/paciente/dentista/$id': typeof PacienteDentistaIdRoute
 }
@@ -186,6 +195,7 @@ export interface FileRoutesById {
   '/paciente/configuracion': typeof PacienteConfiguracionRoute
   '/paciente/panel': typeof PacientePanelRoute
   '/paciente/perfil': typeof PacientePerfilRoute
+  '/dentist/historial/$pacienteId': typeof DentistHistorialPacienteIdRoute
   '/paciente/agendar/$id': typeof PacienteAgendarIdRoute
   '/paciente/dentista/$id': typeof PacienteDentistaIdRoute
 }
@@ -209,6 +219,7 @@ export interface FileRouteTypes {
     | '/paciente/configuracion'
     | '/paciente/panel'
     | '/paciente/perfil'
+    | '/dentist/historial/$pacienteId'
     | '/paciente/agendar/$id'
     | '/paciente/dentista/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -230,6 +241,7 @@ export interface FileRouteTypes {
     | '/paciente/configuracion'
     | '/paciente/panel'
     | '/paciente/perfil'
+    | '/dentist/historial/$pacienteId'
     | '/paciente/agendar/$id'
     | '/paciente/dentista/$id'
   id:
@@ -251,6 +263,7 @@ export interface FileRouteTypes {
     | '/paciente/configuracion'
     | '/paciente/panel'
     | '/paciente/perfil'
+    | '/dentist/historial/$pacienteId'
     | '/paciente/agendar/$id'
     | '/paciente/dentista/$id'
   fileRoutesById: FileRoutesById
@@ -272,6 +285,7 @@ export interface RootRouteChildren {
   PacienteConfiguracionRoute: typeof PacienteConfiguracionRoute
   PacientePanelRoute: typeof PacientePanelRoute
   PacientePerfilRoute: typeof PacientePerfilRoute
+  DentistHistorialPacienteIdRoute: typeof DentistHistorialPacienteIdRoute
   PacienteAgendarIdRoute: typeof PacienteAgendarIdRoute
   PacienteDentistaIdRoute: typeof PacienteDentistaIdRoute
 }
@@ -397,6 +411,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PacientePerfilRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dentist/historial/$pacienteId': {
+      id: '/dentist/historial/$pacienteId'
+      path: '/dentist/historial/$pacienteId'
+      fullPath: '/dentist/historial/$pacienteId'
+      preLoaderRoute: typeof DentistHistorialPacienteIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/paciente/agendar/$id': {
       id: '/paciente/agendar/$id'
       path: '/paciente/agendar/$id'
@@ -443,6 +464,7 @@ const rootRouteChildren: RootRouteChildren = {
   PacienteConfiguracionRoute: PacienteConfiguracionRoute,
   PacientePanelRoute: PacientePanelRoute,
   PacientePerfilRoute: PacientePerfilRoute,
+  DentistHistorialPacienteIdRoute: DentistHistorialPacienteIdRoute,
   PacienteAgendarIdRoute: PacienteAgendarIdRoute,
   PacienteDentistaIdRoute: PacienteDentistaIdRoute,
 }

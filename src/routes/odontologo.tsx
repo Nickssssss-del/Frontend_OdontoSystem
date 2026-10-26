@@ -14,6 +14,7 @@ import {
   BadgeCheck,
   CalendarX2,
   CheckCircle2,
+  Lock,
   NotebookPen,
   Receipt,
   ThumbsDown,
@@ -444,8 +445,9 @@ function Odontologo() {
                           </div>
                           <p className="mt-0.5 text-sm text-muted-foreground">{cita.service}</p>
                           {cita.note && (
-                            <p className="mt-2 rounded-xl bg-muted/60 p-2 text-xs text-muted-foreground">
-                              🔒 {cita.note}
+                            <p className="mt-2 flex items-start gap-1.5 rounded-xl bg-muted/60 p-2 text-xs text-muted-foreground">
+                              <Lock className="mt-0.5 size-3 shrink-0" aria-label="Cifrado" />{" "}
+                              {cita.note}
                             </p>
                           )}
                           {cita.voucher && (
@@ -586,6 +588,7 @@ function Odontologo() {
                       <input
                         value={motivo}
                         onChange={(e) => setMotivo(e.target.value.slice(0, 160))}
+                        aria-label="Motivo personalizado"
                         placeholder="O escribe un motivo personalizado"
                         className="mt-3 h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-primary"
                       />
@@ -661,6 +664,7 @@ function Odontologo() {
                   </div>
                   <textarea
                     value={diagnostico}
+                    aria-label="Diagnóstico"
                     onChange={(e) => setDiagnostico(e.target.value)}
                     rows={2}
                     placeholder="Diagnóstico (obligatorio)"
@@ -668,6 +672,7 @@ function Odontologo() {
                   />
                   <textarea
                     value={tratamiento}
+                    aria-label="Tratamiento"
                     onChange={(e) => setTratamiento(e.target.value)}
                     rows={2}
                     placeholder="Tratamiento realizado (obligatorio)"
@@ -675,13 +680,15 @@ function Odontologo() {
                   />
                   <textarea
                     value={nota}
+                    aria-label="Notas"
                     onChange={(e) => setNota(e.target.value)}
                     rows={3}
                     placeholder="Notas: indicaciones y próximo control (opcional)"
                     className="mt-3 w-full rounded-2xl border border-input bg-background p-3 text-sm outline-none focus:border-primary"
                   />
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    🔒 El texto se guarda cifrado (AES-256) y solo el paciente y tú pueden verlo.
+                  <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Lock className="size-3 shrink-0" aria-hidden="true" /> El texto se guarda
+                    cifrado (AES-256) y solo el paciente y tú pueden verlo.
                   </p>
                   <button
                     onClick={() => void guardarNota()}
