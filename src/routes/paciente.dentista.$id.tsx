@@ -89,7 +89,7 @@ function PerfilDentista() {
               <h1 className="font-display text-2xl font-semibold">{perfil.nombre}</h1>
               {perfil.colegiatura_verificada ? (
                 <span className="flex items-center gap-1 rounded-full bg-primary/12 px-2.5 py-1 text-xs font-semibold text-primary">
-                  <BadgeCheck className="size-3.5" /> COP Verificado ✓
+                  <BadgeCheck className="size-3.5" /> COP Verificado
                 </span>
               ) : (
                 <span className="rounded-full bg-warning/20 px-2.5 py-1 text-xs font-semibold text-warning-foreground">

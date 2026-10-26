@@ -25,6 +25,8 @@ import {
 import { mensajeDeError } from "@/components/perfil";
 import { VerificacionCOP } from "@/components/VerificacionCOP";
 import { ConsentimientosCard } from "@/components/paciente/ConsentimientosCard";
+import { EliminarCuentaCard } from "@/components/cuenta/EliminarCuentaCard";
+import { VerificacionCorreoCard } from "@/components/cuenta/VerificacionCorreoCard";
 import { MapaConsultorio } from "@/components/MapaConsultorio";
 import { SelectorUbicacionMapa } from "@/components/SelectorUbicacionMapa";
 import { Input } from "@/components/ui/input";
@@ -825,7 +827,22 @@ function ConfiguracionOdontologo() {
             )}
           </div>
 
+          {usuario && (
+            <VerificacionCorreoCard
+              correo={usuario.correo}
+              verificado={usuario.correo_verificado}
+              onVerificado={() => setUsuario({ ...usuario, correo_verificado: true })}
+            />
+          )}
+
           <ConsentimientosCard />
+
+          <EliminarCuentaCard
+            onEliminada={() => {
+              cerrarSesion();
+              navigate({ to: "/" });
+            }}
+          />
 
           {/* Cerrar sesión */}
           <Card className="border-destructive/50">

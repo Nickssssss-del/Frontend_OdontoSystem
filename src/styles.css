@@ -61,6 +61,8 @@
   /* Paleta de marca (accesible como utilidades: bg-brand, text-mint, …) */
   --color-brand: var(--brand);
   --color-brand-deep: var(--brand-deep);
+  /* Turquesa oscurecido para TEXTO: #00807a da 4,8:1 sobre blanco (el turquesa #00a99d solo 2,9:1). */
+  --color-brand-texto: #00807a;
   --color-mint: var(--mint);
   --color-sky: var(--sky);
   --color-ice: var(--ice);
@@ -166,6 +168,14 @@
     text-rendering: optimizeLegibility;
   }
 
+  /* Tailwind 4 ya no pone la mano en los botones: se devuelve para todo lo que se puede pulsar. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary,
+  label[for] {
+    cursor: pointer;
+  }
+
   ::selection {
     background: color-mix(in oklab, var(--brand) 32%, transparent);
   }
@@ -253,4 +263,16 @@
   background-repeat: no-repeat;
   background-position: center;
   background-size: contain;
+}
+
+/* Respeta "reducir movimiento" del sistema operativo (WCAG 2.3.3). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

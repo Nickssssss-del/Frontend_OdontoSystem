@@ -63,7 +63,7 @@ function Marca({ tagline = false }: { tagline?: boolean }) {
       </span>
       <span className="flex min-w-0 flex-col leading-none">
         <span className="font-display text-[15px] font-semibold tracking-tight text-foreground">
-          Odonto<span className="text-brand">System</span>
+          Odonto<span className="text-brand-texto">System</span>
         </span>
         {tagline && (
           <span className="mt-1 text-[10px] font-medium text-muted-foreground">
@@ -195,8 +195,11 @@ function PatientHeader() {
 
           {/* Mobile Menu Button */}
           <button
+            type="button"
             onClick={() => setMenuOpen(!menuOpen)}
-            className="md:hidden p-2 hover:bg-muted rounded-lg transition-colors"
+            aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
+            aria-expanded={menuOpen}
+            className="md:hidden flex size-11 items-center justify-center hover:bg-muted rounded-lg transition-colors"
           >
             {menuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
           </button>
@@ -232,12 +235,25 @@ function PatientHeader() {
 // ============================================================================
 // VISTA DEL ODONTÓLOGO: Sidebar Navigation
 // ============================================================================
-function DentistSidebar({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+function DentistSidebar({
+  open,
+  onToggle,
+  movilAbierto,
+  onCerrarMovil,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  /** En pantallas menores a md el menú es un panel deslizante que se abre con el botón de la barra superior. */
+  movilAbierto: boolean;
+  onCerrarMovil: () => void;
+}) {
   const location = useLocation();
   const { usuario } = useAppState();
   const [notificacionesOpen, setNotificacionesOpen] = React.useState(false);
   const salir = useCerrarSesion();
   const nombre = usuario?.nombre ?? "Odontólogo";
+  // En el celular el panel siempre muestra las etiquetas; en escritorio depende de "open".
+  const expandido = open || movilAbierto;
 
   const navItems = [
     { to: "/dentist/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -253,9 +269,11 @@ function DentistSidebar({ open, onToggle }: { open: boolean; onToggle: () => voi
 
   return (
     <aside
+      id="menu-odontologo"
       className={cn(
-        "fixed left-0 top-0 z-40 h-screen border-r border-border/70 bg-card shadow-[1px_0_3px_rgba(0,107,104,0.05)] transition-all duration-300",
-        open ? "w-56" : "w-20",
+        "fixed left-0 top-0 z-50 h-screen w-64 border-r border-border/70 bg-card shadow-[1px_0_3px_rgba(0,107,104,0.05)] transition-all duration-300 motion-reduce:transition-none md:z-40 md:translate-x-0",
+        movilAbierto ? "translate-x-0" : "-translate-x-full",
+        open ? "md:w-56" : "md:w-20",
       )}
     >
       {/* Detalle decorativo discreto */}
@@ -268,7 +286,7 @@ function DentistSidebar({ open, onToggle }: { open: boolean; onToggle: () => voi
       <div
         className={cn(
           "relative flex h-16 items-center justify-between border-b border-border/70",
-          open ? "px-4" : "px-2",
+          expandido ? "px-4" : "px-2",
         )}
       >
         <Link
@@ -279,18 +297,27 @@ function DentistSidebar({ open, onToggle }: { open: boolean; onToggle: () => voi
           <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border/70 bg-white p-1 shadow-sm">
             <img src={LOGO_SRC} alt="OdontoSystem" className="size-full object-contain" />
           </span>
-          {open && (
+          {expandido && (
             <span className="truncate font-display text-sm font-semibold tracking-tight text-foreground">
-              Odonto<span className="text-brand">System</span>
+              Odonto<span className="text-brand-texto">System</span>
             </span>
           )}
         </Link>
         <button
+          type="button"
           onClick={onToggle}
           aria-label={open ? "Contraer menú" : "Expandir menú"}
-          className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-sky hover:text-foreground"
+          className="hidden size-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-sky hover:text-foreground md:flex"
         >
           <Menu className="size-4" />
+        </button>
+        <button
+          type="button"
+          onClick={onCerrarMovil}
+          aria-label="Cerrar menú"
+          className="flex size-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-sky hover:text-foreground md:hidden"
+        >
+          <X className="size-5" />
         </button>
       </div>
 
@@ -309,8 +336,8 @@ function DentistSidebar({ open, onToggle }: { open: boolean; onToggle: () => voi
                   : "text-muted-foreground hover:bg-sky hover:text-foreground",
               )}
             >
-              <Icon className="size-5 flex-shrink-0" />
-              {open && <span>{label}</span>}
+              <Icon className="size-5 flex-shrink-0" aria-hidden="true" />
+              {expandido ? <span>{label}</span> : <span className="sr-only">{label}</span>}
             </Link>
           );
         })}
@@ -327,15 +354,19 @@ function DentistSidebar({ open, onToggle }: { open: boolean; onToggle: () => voi
           className="mb-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sky hover:text-foreground"
         >
           <Bell className="size-5 shrink-0" />
-          {open && <span>Notificaciones</span>}
+          {expandido && <span>Notificaciones</span>}
         </button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors">
+            <button
+              type="button"
+              aria-label={`Cuenta de ${nombre}`}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors"
+            >
               <div className="size-8 flex-shrink-0 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-xs font-semibold text-primary-foreground">
                 {iniciales(nombre)}
               </div>
-              {open && (
+              {expandido && (
                 <div className="flex-1 text-left min-w-0">
                   <p className="text-sm font-medium truncate">{nombre}</p>
                   <p className="text-xs text-muted-foreground truncate">Odontólogo</p>
@@ -374,13 +405,55 @@ function DentistSidebar({ open, onToggle }: { open: boolean; onToggle: () => voi
 export function AppShell({ children }: { children: ReactNode }) {
   const { userRole } = useAppState();
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
+  const [menuMovil, setMenuMovil] = React.useState(false);
+  const { pathname } = useLocation();
+
+  // Al navegar desde el menú del celular, el panel se cierra solo.
+  React.useEffect(() => setMenuMovil(false), [pathname]);
 
   if (userRole === "dentist") {
     return (
       <div className="min-h-screen bg-background decor-glow">
-        <DentistSidebar open={sidebarOpen} onToggle={() => setSidebarOpen((v) => !v)} />
-        <main className={cn("transition-all duration-300", sidebarOpen ? "ml-56" : "ml-20")}>
-          <div className="p-8">{children}</div>
+        {/* Barra superior solo en celular: abre el menú lateral como panel deslizante */}
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border/70 bg-card/90 px-4 backdrop-blur-xl md:hidden">
+          <button
+            type="button"
+            onClick={() => setMenuMovil(true)}
+            aria-label="Abrir menú"
+            aria-controls="menu-odontologo"
+            aria-expanded={menuMovil}
+            className="flex size-11 items-center justify-center rounded-lg text-foreground hover:bg-muted"
+          >
+            <Menu className="size-5" />
+          </button>
+          <Link to="/dentist/dashboard" className="flex items-center gap-2">
+            <img src={LOGO_SRC} alt="" className="size-7" />
+            <span className="font-display text-sm font-semibold">
+              Odonto<span className="text-brand-deep">System</span>
+            </span>
+          </Link>
+        </header>
+        {menuMovil && (
+          <button
+            type="button"
+            aria-label="Cerrar menú"
+            onClick={() => setMenuMovil(false)}
+            className="fixed inset-0 z-40 bg-black/40 md:hidden"
+          />
+        )}
+        <DentistSidebar
+          open={sidebarOpen}
+          onToggle={() => setSidebarOpen((v) => !v)}
+          movilAbierto={menuMovil}
+          onCerrarMovil={() => setMenuMovil(false)}
+        />
+        <main
+          className={cn(
+            "transition-all duration-300 motion-reduce:transition-none",
+            sidebarOpen ? "md:ml-56" : "md:ml-20",
+          )}
+        >
+          <div className="p-4 sm:p-6 md:p-8">{children}</div>
         </main>
         <ChatbotWidget />
       </div>

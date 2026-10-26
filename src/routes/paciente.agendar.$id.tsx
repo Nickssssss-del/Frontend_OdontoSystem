@@ -104,7 +104,7 @@ function Agendar() {
   const [segundos, setSegundos] = React.useState(0);
   const [metodoPago, setMetodoPago] = React.useState<"billetera" | "tarjeta">("billetera");
   const [billetera, setBilletera] = React.useState<"yape" | "plin">("yape");
-  // Pasarela activa del backend (simulado, Culqi o Mercado Pago). null = aún cargando o sin respuesta.
+  // Pasarela activa del backend (simulado o Mercado Pago). null = aún cargando o sin respuesta.
   const [config, setConfig] = React.useState<ConfiguracionPagos | null>(null);
   React.useEffect(() => {
     let cancelado = false;
@@ -469,7 +469,7 @@ function Agendar() {
                       <User className="size-4" />
                     </span>
                     <div className="min-w-0">
-                      <p className="text-xs font-medium text-gray-400">Odontólogo</p>
+                      <p className="text-xs font-medium text-gray-500">Odontólogo</p>
                       <p className="truncate font-semibold text-gray-800">
                         {pago.cita.odontologo.nombre}
                       </p>
@@ -483,7 +483,7 @@ function Agendar() {
                         <Stethoscope className="size-4" />
                       </span>
                       <div className="min-w-0">
-                        <p className="text-xs font-medium text-gray-400">Especialidad</p>
+                        <p className="text-xs font-medium text-gray-500">Especialidad</p>
                         <p className="truncate font-semibold text-gray-800">
                           {perfil.especialidades.map((e) => e.nombre).join(" · ")}
                         </p>
@@ -497,7 +497,7 @@ function Agendar() {
                       <ShieldCheck className="size-4" />
                     </span>
                     <div className="min-w-0">
-                      <p className="text-xs font-medium text-gray-400">Servicio</p>
+                      <p className="text-xs font-medium text-gray-500">Servicio</p>
                       <p className="truncate font-semibold text-gray-800">
                         {pago.cita.servicio.titulo}
                       </p>
@@ -510,7 +510,7 @@ function Agendar() {
                       <Calendar className="size-4" />
                     </span>
                     <div className="min-w-0">
-                      <p className="text-xs font-medium text-gray-400">Fecha y hora</p>
+                      <p className="text-xs font-medium text-gray-500">Fecha y hora</p>
                       <p className="font-semibold text-gray-800">
                         {fechaLarga(fechaDe(pago.cita.inicio))} · {horaDe(pago.cita.inicio)}
                       </p>
@@ -523,7 +523,7 @@ function Agendar() {
                       <Wallet className="size-4" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-gray-400">
+                      <p className="text-xs font-medium text-gray-500">
                         {pendiente ? "Depósito en verificación" : "Depósito pagado"}
                       </p>
                       <div className="flex items-center justify-between">
@@ -536,7 +536,7 @@ function Agendar() {
                               : "Plin"}
                         </span>
                       </div>
-                      <p className="mt-0.5 text-xs text-gray-400">
+                      <p className="mt-0.5 text-xs text-gray-500">
                         Total del servicio: {soles(pago.cita.precio)} · el depósito se descuenta en
                         consulta
                       </p>

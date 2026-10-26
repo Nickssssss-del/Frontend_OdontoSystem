@@ -8,7 +8,6 @@ import { soles } from "@/lib/mock-data";
  * Formulario de pago de la pasarela activa del backend (GET /api/public/pagos/config).
  *
  * - Mercado Pago: Card Payment Brick de MercadoPago.js. Entrega `token` y `medio_pago_id`.
- * - Culqi: Culqi Checkout v4 (tarjeta o Yape). Entrega `token` (tkn_… / ype_…).
  *
  * En modo simulado la página no usa este componente. El token se envía al backend con
  * POST /api/citas/{id}/pagar; los datos de la tarjeta nunca pasan por nuestro servidor.
@@ -48,24 +47,11 @@ type MercadoPagoSdk = new (
   };
 };
 
-type CulqiGlobal = {
-  publicKey: string;
-  token?: { id: string } | null;
-  error?: { user_message?: string; merchant_message?: string } | null;
-  settings: (config: { title: string; currency: string; amount: number }) => void;
-  options: (config: Record<string, unknown>) => void;
-  open: () => void;
-  close: () => void;
-};
-
 type VentanaConPasarelas = Window & {
   MercadoPago?: MercadoPagoSdk;
-  Culqi?: CulqiGlobal;
-  culqi?: () => void;
 };
 
 const SDK_MERCADO_PAGO = "https://sdk.mercadopago.com/js/v2";
-const SDK_CULQI = "https://checkout.culqi.com/js/v4";
 
 /** Carga un <script> una sola vez; la promesa se rechaza si el navegador no logra descargarlo. */
 function cargarScript(url: string): Promise<void> {
@@ -100,7 +86,6 @@ function cargarScript(url: string): Promise<void> {
 
 export function PasarelaPago(props: PasarelaPagoProps) {
   if (props.config.modo === "mercadopago") return <MercadoPagoBrick {...props} />;
-  if (props.config.modo === "culqi") return <CulqiCheckout {...props} />;
   return null;
 }
 
@@ -188,119 +173,6 @@ function MercadoPagoBrick({ config, monto, onToken, enviando }: PasarelaPagoProp
       <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <ShieldCheck className="size-3.5" /> Depósito de {soles(monto)}. Pago procesado por Mercado
         Pago.
-      </p>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------------------------------
-// Culqi
-// ---------------------------------------------------------------------------------------------------
-function CulqiCheckout({ config, monto, onToken, enviando }: PasarelaPagoProps) {
-  const [estado, setEstado] = React.useState<"cargando" | "listo" | "error">("cargando");
-  const [detalle, setDetalle] = React.useState<string | null>(null);
-  const onTokenRef = React.useRef(onToken);
-  onTokenRef.current = onToken;
-  const llave = config.culqi_llave_publica;
-
-  React.useEffect(() => {
-    if (!llave) {
-      setEstado("error");
-      setDetalle("Culqi no está configurado en el servidor.");
-      return;
-    }
-    let cancelado = false;
-    cargarScript(SDK_CULQI)
-      .then(() => {
-        if (cancelado) return;
-        if (!(window as VentanaConPasarelas).Culqi) throw new Error("Culqi no se inicializó.");
-        setEstado("listo");
-      })
-      .catch((e: unknown) => {
-        if (cancelado) return;
-        setEstado("error");
-        setDetalle(e instanceof Error ? e.message : "No se pudo abrir el formulario de pago.");
-      });
-    return () => {
-      cancelado = true;
-      delete (window as VentanaConPasarelas).culqi;
-    };
-  }, [llave]);
-
-  const abrir = () => {
-    const ventana = window as VentanaConPasarelas;
-    const culqi = ventana.Culqi;
-    if (!culqi || !llave) return;
-    culqi.publicKey = llave;
-    culqi.settings({
-      title: "OdontoSystem",
-      currency: config.moneda || "PEN",
-      amount: Math.round(monto * 100),
-    });
-    culqi.options({
-      lang: "es",
-      installments: false,
-      // Plin no está disponible en Culqi (el backend responde 400): solo tarjeta y Yape.
-      paymentMethods: {
-        tarjeta: true,
-        yape: true,
-        billetera: false,
-        bancaMovil: false,
-        agente: false,
-        cuotealo: false,
-      },
-    });
-    // Culqi llama a window.culqi() cuando termina: trae el token (Culqi.token) o el error (Culqi.error).
-    ventana.culqi = () => {
-      if (culqi.token?.id) {
-        const token = culqi.token.id;
-        culqi.close();
-        const metodo: MetodoPago = token.startsWith("ype_") ? "YAPE" : "TARJETA";
-        onTokenRef.current(metodo, { token }).catch(() => undefined);
-      } else if (culqi.error) {
-        culqi.close();
-        setDetalle(
-          culqi.error.user_message ??
-            culqi.error.merchant_message ??
-            "No se pudo procesar el pago.",
-        );
-      }
-    };
-    setDetalle(null);
-    culqi.open();
-  };
-
-  return (
-    <div className="mt-4 space-y-3">
-      {config.modo_prueba && (
-        <p className="rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
-          Modo de prueba de Culqi: usa una tarjeta de prueba, no una real.
-        </p>
-      )}
-      {estado === "error" && (
-        <p role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
-          {detalle}
-        </p>
-      )}
-      {estado !== "error" && detalle && (
-        <p role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
-          {detalle}
-        </p>
-      )}
-      <Button
-        disabled={estado !== "listo" || enviando}
-        onClick={abrir}
-        className="w-full rounded-full"
-      >
-        {enviando || estado === "cargando" ? (
-          <Loader2 className="size-4 animate-spin" />
-        ) : (
-          <CreditCard className="size-4" />
-        )}
-        {enviando ? "Procesando pago…" : `Pagar ${soles(monto)} con tarjeta o Yape`}
-      </Button>
-      <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <ShieldCheck className="size-3.5" /> Pago procesado por Culqi.
       </p>
     </div>
   );

@@ -275,7 +275,7 @@ function ModalContent({ onAceptar, onCancelar, labelAceptar, mostrarAceptar }: M
               <DialogPrimitive.Title className="font-display text-lg font-semibold leading-tight text-gray-900">
                 Términos y condiciones
               </DialogPrimitive.Title>
-              <p id="terminos-desc" className="mt-0.5 text-xs text-gray-400">
+              <p id="terminos-desc" className="mt-0.5 text-xs text-gray-500">
                 Versión provisional · OdontoSystem · Ica, Perú
               </p>
             </div>
@@ -309,7 +309,7 @@ function ModalContent({ onAceptar, onCancelar, labelAceptar, mostrarAceptar }: M
             {SECCIONES.map((sec) => (
               <SeccionTerminos key={sec.id} id={sec.id} titulo={sec.titulo} Cuerpo={sec.Cuerpo} />
             ))}
-            <p className="border-t border-gray-100 pt-4 text-xs text-gray-400">
+            <p className="border-t border-gray-100 pt-4 text-xs text-gray-500">
               © {new Date().getFullYear()} OdontoSystem · Ica, Perú · Todos los derechos reservados.
             </p>
           </div>

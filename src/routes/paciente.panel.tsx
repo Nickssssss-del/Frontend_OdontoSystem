@@ -210,7 +210,7 @@ function PacientePanel() {
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border/70 bg-gradient-to-r from-primary/10 to-accent/10 p-6">
           <div>
             <h1 className="mb-2 text-2xl font-semibold">
-              Hola, <span className="text-primary">{usuario.nombre.split(" ")[0]}</span> 👋
+              Hola, <span className="text-primary">{usuario.nombre.split(" ")[0]}</span>
             </h1>
             <p className="text-muted-foreground">Tu salud dental, siempre bajo control.</p>
           </div>
