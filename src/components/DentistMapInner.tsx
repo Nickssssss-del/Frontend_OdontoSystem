@@ -16,9 +16,9 @@ export type DentistMapInnerProps = {
 const CENTRO_ICA: [number, number] = [-14.06777, -75.72861];
 
 /**
- * Obtiene las coordenadas geográficas de un dentista.
+ * Obtiene las coordenadas geogrÃ¡ficas de un dentista.
  * Si tiene latitud y longitud reales las usa; de lo contrario calcula
- * el centro del distrito en Ica con un desplazamiento para evitar superposición.
+ * el centro del distrito en Ica con un desplazamiento para evitar superposiciÃ³n.
  */
 function obtenerCoordenadas(d: Dentist, indice: number): [number, number] {
   if (
@@ -187,7 +187,7 @@ export function DentistMapInner({ dentists, altura = 340 }: DentistMapInnerProps
         })}
       </MapContainer>
 
-      {/* Brújula y conteo flotante */}
+      {/* BrÃºjula y conteo flotante */}
       <div className="pointer-events-none absolute bottom-2 left-3 z-[1000] flex items-center gap-1.5 rounded-full bg-background/90 px-3 py-1 text-[11px] font-medium text-foreground shadow-sm backdrop-blur">
         <Navigation className="size-3 text-primary" /> Mapa interactivo de Ica
       </div>

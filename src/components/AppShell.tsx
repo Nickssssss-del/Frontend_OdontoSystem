@@ -147,7 +147,12 @@ function PatientHeader() {
 
         {/* Right Section: Notifications + Profile */}
         <div className="ml-auto flex items-center gap-4">
-          <NotificacionesPanel open={notificacionesOpen} onOpenChange={setNotificacionesOpen} />
+          <NotificacionesPanel
+            open={notificacionesOpen}
+            onOpenChange={setNotificacionesOpen}
+            side="bottom"
+            align="end"
+          />
           <button
             type="button"
             onClick={() => setNotificacionesOpen((v) => !v)}
@@ -272,7 +277,7 @@ function DentistSidebar({
       id="menu-odontologo"
       className={cn(
         "fixed left-0 top-0 z-50 h-screen w-64 border-r border-border/70 bg-card shadow-[1px_0_3px_rgba(0,107,104,0.05)] transition-all duration-300 motion-reduce:transition-none md:z-40 md:translate-x-0",
-        movilAbierto ? "translate-x-0" : "-translate-x-full",
+        movilAbierto ? "translate-x-0 overflow-y-auto" : "-translate-x-full",
         open ? "md:w-56" : "md:w-20",
       )}
     >
@@ -345,7 +350,12 @@ function DentistSidebar({
 
       {/* Footer Profile */}
       <div className="absolute bottom-4 left-3 right-3 border-t border-border/70 pt-4">
-        <NotificacionesPanel open={notificacionesOpen} onOpenChange={setNotificacionesOpen} />
+        <NotificacionesPanel
+          open={notificacionesOpen}
+          onOpenChange={setNotificacionesOpen}
+          side="right"
+          align="start"
+        />
         <button
           type="button"
           onClick={() => setNotificacionesOpen((v) => !v)}

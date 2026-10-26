@@ -1,5 +1,5 @@
 import * as React from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import {
   Search,
@@ -260,9 +260,14 @@ function DentistPacientes() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-48">
-                                <DropdownMenuItem>
-                                  <Eye className="size-4 mr-2" />
-                                  Ver historial
+                                <DropdownMenuItem asChild>
+                                  <Link
+                                    to="/dentist/historial/$pacienteId"
+                                    params={{ pacienteId: patient.id }}
+                                  >
+                                    <Eye className="size-4 mr-2" />
+                                    Ver historial clínico
+                                  </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem>
                                   <Calendar className="size-4 mr-2" />

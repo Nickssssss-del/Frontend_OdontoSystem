@@ -59,11 +59,13 @@ export function VerificacionCOP({ onEstado }: { onEstado?: (e: EstadoVerificacio
   const [estado, setEstado] = React.useState<EstadoVerificacion | null>(null);
   const [documentos, setDocumentos] = React.useState<DocumentoOdontologo[]>([]);
   const [error, setError] = React.useState<string | null>(null);
+  const [cargando, setCargando] = React.useState(true);
   const [subiendo, setSubiendo] = React.useState<TipoDocumento | null>(null);
   const [reintentando, setReintentando] = React.useState(false);
   const inputRefs = React.useRef<Record<string, HTMLInputElement | null>>({});
 
   const cargar = React.useCallback(async () => {
+    setCargando(true);
     setError(null);
     try {
       const [e, d] = await Promise.all([verificacionApi.estado(), documentosApi.listar()]);
@@ -72,6 +74,10 @@ export function VerificacionCOP({ onEstado }: { onEstado?: (e: EstadoVerificacio
       onEstado?.(e);
     } catch (err) {
       setError(mensajeDe(err, "No se pudo cargar la verificación."));
+      // Fallback seguro: aseguramos que documentos sea un arreglo vacío
+      setDocumentos([]);
+    } finally {
+      setCargando(false);
     }
   }, [onEstado]);
 
@@ -110,6 +116,16 @@ export function VerificacionCOP({ onEstado }: { onEstado?: (e: EstadoVerificacio
       setReintentando(false);
     }
   };
+
+  if (cargando) {
+    return (
+      <Card>
+        <CardContent className="flex justify-center py-8">
+          <Loader2 className="size-6 animate-spin text-primary" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>

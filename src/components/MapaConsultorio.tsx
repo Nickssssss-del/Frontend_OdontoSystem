@@ -114,14 +114,14 @@ export function MapaConsultorio({
         <h4 className="mt-3 font-display text-sm font-semibold text-foreground">
           Ubicación geográfica no registrada
         </h4>
-        <p className="mt-1 max-w-sm text-xs text-muted-foreground">
+        <div className="mt-1 max-w-sm text-xs text-muted-foreground">
           El consultorio aún no cuenta con coordenadas GPS configuradas.
-        </p>
+        </div>
         {direccionCompleta && (
-          <p className="mt-2.5 flex items-center gap-1.5 rounded-full border border-border/80 bg-background/80 px-3 py-1 text-xs text-foreground">
+          <div className="mt-2.5 flex items-center gap-1.5 rounded-full border border-border/80 bg-background/80 px-3 py-1 text-xs text-foreground">
             <MapPin className="size-3 text-primary shrink-0" />
             <span className="truncate">{direccionCompleta}</span>
-          </p>
+          </div>
         )}
       </div>
     );

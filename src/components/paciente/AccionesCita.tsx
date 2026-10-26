@@ -1,5 +1,5 @@
 import * as React from "react";
-import { CalendarClock, FileDown, Loader2, Star, Upload } from "lucide-react";
+import { CalendarClock, FileDown, Loader2, Star, Upload, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -80,6 +80,21 @@ export function AccionesCita({ cita, onCambio }: { cita: Cita; onCambio?: () => 
     nuevoInicio: string | null;
     recargar: number;
   }>({ abierto: false, servicios: [], nuevoInicio: null, recargar: 0 });
+
+  // Cancelar cita
+  const cancelarCita = async () => {
+    if (!window.confirm("¿Estás seguro de cancelar esta cita?")) return;
+    setOcupado("cancelar");
+    try {
+      await citasApi.cancelar(cita.id, "Cancelada por el paciente desde la web");
+      toast.success("Cita cancelada", { description: "Se ha cancelado correctamente." });
+      onCambio?.();
+    } catch (e) {
+      toast.error("No se pudo cancelar", { description: mensajeDe(e) });
+    } finally {
+      setOcupado(null);
+    }
+  };
 
   React.useEffect(() => {
     if (cita.estado !== "INASISTENCIA_PENALIZADA") return;
@@ -191,19 +206,29 @@ export function AccionesCita({ cita, onCambio }: { cita: Cita; onCambio?: () => 
           </Button>
         )}
         {puedeReprogramar && (
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={ocupado !== null}
-            onClick={() => void abrirReprogramar()}
-          >
-            {ocupado === "reprogramar-abrir" ? (
-              <Loader2 className="mr-2 size-4 animate-spin" />
-            ) : (
-              <CalendarClock className="mr-2 size-4" />
-            )}
-            Reprogramar
-          </Button>
+          <>
+            <Button variant="outline" size="sm" disabled={ocupado !== null} onClick={cancelarCita}>
+              {ocupado === "cancelar" ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : (
+                <XCircle className="mr-2 size-4" />
+              )}
+              Cancelar
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={ocupado !== null}
+              onClick={() => void abrirReprogramar()}
+            >
+              {ocupado === "reprogramar-abrir" ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : (
+                <CalendarClock className="mr-2 size-4" />
+              )}
+              Reprogramar
+            </Button>
+          </>
         )}
         {cita.estado === "COMPLETADA" && (
           <Button

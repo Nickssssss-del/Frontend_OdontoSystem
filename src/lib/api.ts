@@ -745,6 +745,15 @@ export type HistoriaClinica = {
   creado_en: string;
 };
 
+/** Detalle de paciente para el historial clínico. */
+export type PacienteDetalle = {
+  id: string;
+  nombre: string;
+  apellido: string;
+  alergias: string | null;
+  antecedentes: string | null;
+};
+
 const FOTO_TIPOS_ADMITIDOS = ["image/jpeg", "image/png", "image/webp"];
 const FOTO_MAXIMO_BYTES = 5 * 1024 * 1024; // el backend limita a 5 MB
 
@@ -934,6 +943,14 @@ export const miPerfilApi = {
     return llamar<HistoriaClinica[]>(
       `/api/odontologos/yo/historias${consulta({ paciente_id: pacienteId })}`,
     );
+  },
+};
+
+/** API para obtener datos de pacientes (usado en historial clínico). */
+export const pacientesApi = {
+  /** GET /api/pacientes/{pacienteId} — detalle de un paciente. */
+  detalle(pacienteId: string): Promise<PacienteDetalle> {
+    return llamar<PacienteDetalle>(`/api/pacientes/${pacienteId}`);
   },
 };
 

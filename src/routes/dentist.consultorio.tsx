@@ -286,10 +286,10 @@ function DentistConsultorio() {
               className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 p-4"
             >
               <div>
-                <p className="flex items-center gap-2 font-medium">
+                <div className="flex items-center gap-2 font-medium">
                   {s.titulo} <Badge variant="outline">{s.categoria}</Badge>
                   {!s.activo && <Badge variant="destructive">Inactivo</Badge>}
-                </p>
+                </div>
                 <p className="text-sm text-muted-foreground">
                   {soles(s.precio_total)} · depósito {soles(s.monto_deposito)} ·{" "}
                   {s.duracion_minutos} min

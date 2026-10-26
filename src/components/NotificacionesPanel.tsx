@@ -5,6 +5,7 @@ import { Bell, CheckCircle2, Clock, CreditCard, Mail, User, X, ChevronRight } fr
 import { Button } from "@/components/ui/button";
 import { useAppState } from "@/lib/app-state";
 import { cn } from "@/lib/utils";
+import { Popover, PopoverContent } from "@/components/ui/popover";
 
 type EstadoApp = ReturnType<typeof useAppState>;
 
@@ -94,9 +95,9 @@ function construirNotificacionesPaciente(datos: {
           fecha: cita.date,
           leida: false,
           ruta: "/paciente/panel",
-          color: COLORES_TIPO.cita_confirmada,
-          labelTipo: LABEL_TIPO.cita_confirmada,
           icono: ICONOS_TIPO.cita_confirmada,
+          color: "text-success-foreground",
+          labelTipo: "Cita confirmada",
         });
         break;
       case "CANCELLED":
@@ -107,222 +108,197 @@ function construirNotificacionesPaciente(datos: {
           descripcion: `Tu cita del ${cita.date} a las ${cita.time} ha sido cancelada.`,
           fecha: cita.date,
           leida: false,
-          ruta: "/paciente/catalogo",
-          color: COLORES_TIPO.cita_cancelada,
-          labelTipo: LABEL_TIPO.cita_cancelada,
+          ruta: "/paciente/panel",
           icono: ICONOS_TIPO.cita_cancelada,
+          color: "text-destructive-foreground",
+          labelTipo: "Cita cancelada",
         });
         break;
-      case "COMPLETED":
-        lista.push({
-          id: `cita-${cita.id}-completada`,
-          tipo: "cita_confirmada",
-          titulo: "Cita atendida",
-          descripcion: `Tu cita del ${cita.date} ha sido atendida.`,
-          fecha: cita.date,
-          leida: false,
-          ruta: "/paciente/panel",
-          color: COLORES_TIPO.cita_confirmada,
-          labelTipo: LABEL_TIPO.cita_confirmada,
-          icono: ICONOS_TIPO.cita_confirmada,
-        });
-        break;
-      case "PAYMENT_REJECTED":
-        lista.push({
-          id: `pago-${cita.id}-rechazado`,
-          tipo: "pago_rechazado",
-          titulo: "Pago rechazado",
-          descripcion: `El comprobante de tu cita del ${cita.date} fue rechazado.`,
-          fecha: cita.date,
-          leida: false,
-          ruta: "/paciente/panel",
-          color: COLORES_TIPO.pago_rechazado,
-          labelTipo: LABEL_TIPO.pago_rechazado,
-          icono: ICONOS_TIPO.pago_rechazado,
-        });
-        break;
+      case "PENDING_PAYMENT":
       case "VERIFYING":
-        lista.push({
-          id: `pago-${cita.id}-verificando`,
-          tipo: "pago_aprobado",
-          titulo: "Pago en revisión",
-          descripcion: `Tu comprobante para la cita del ${cita.date} está siendo verificado.`,
-          fecha: cita.date,
-          leida: false,
-          ruta: "/paciente/panel",
-          color: COLORES_TIPO.pago_aprobado,
-          labelTipo: LABEL_TIPO.pago_aprobado,
-          icono: ICONOS_TIPO.pago_aprobado,
-        });
+      case "PAYMENT_REJECTED":
+        if (diasDiff <= 1 && diasDiff >= 0) {
+          lista.push({
+            id: `cita-${cita.id}-recordatorio`,
+            tipo: "cita_recordatorio",
+            titulo: "Recordatorio de cita",
+            descripcion: `Tienes una cita mañana ${cita.date} a las ${cita.time}.`,
+            fecha: cita.date,
+            leida: false,
+            ruta: "/paciente/panel",
+            icono: ICONOS_TIPO.cita_recordatorio,
+            color: "text-warning-foreground",
+            labelTipo: "Recordatorio de cita",
+          });
+        }
         break;
     }
+  }
 
-    if (cita.status === "CONFIRMED" && diasDiff > 0 && diasDiff <= 2) {
+  // strikes is a number (count of pending vouchers)
+  if (strikes > 0) {
+    for (let i = 0; i < strikes; i++) {
       lista.push({
-        id: `recordatorio-${cita.id}`,
-        tipo: "cita_recordatorio",
-        titulo: "Recordatorio de cita",
-        descripcion: `Mañana tienes una cita a las ${cita.time}.`,
-        fecha: cita.date,
+        id: `strike-${i}-voucher`,
+        tipo: "voucher_pendiente",
+        titulo: "Comprobante pendiente",
+        descripcion: "Tienes un comprobante pendiente de subir.",
+        fecha: new Date().toISOString(),
         leida: false,
         ruta: "/paciente/panel",
-        color: COLORES_TIPO.cita_recordatorio,
-        labelTipo: LABEL_TIPO.cita_recordatorio,
-        icono: ICONOS_TIPO.cita_recordatorio,
+        icono: ICONOS_TIPO.voucher_pendiente,
+        color: "text-primary-foreground",
+        labelTipo: "Comprobante pendiente",
       });
     }
   }
 
-  if (strikes > 0) {
-    lista.push({
-      id: `strike-${usuario?.nombre}`,
-      tipo: "cita_cancelada",
-      titulo: "Inasistencia registrada",
-      descripcion: "Tienes una inasistencia registrada en tus citas.",
-      fecha: new Date().toISOString().split("T")[0]!,
-      leida: false,
-      ruta: "/paciente/panel",
-      color: COLORES_TIPO.cita_cancelada,
-      labelTipo: LABEL_TIPO.cita_cancelada,
-      icono: ICONOS_TIPO.cita_cancelada,
-    });
-  }
-
-  return lista;
+  return lista.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
 }
 
 function construirNotificacionesOdontologo(datos: {
-  agenda: EstadoApp["agenda"];
-  vouchersPorRevisar: EstadoApp["vouchersPorRevisar"];
+  usuario: EstadoApp["usuario"];
+  appointments: EstadoApp["appointments"];
 }): Notificacion[] {
-  const { agenda, vouchersPorRevisar } = datos;
+  const { appointments } = datos;
+  const ahora = new Date();
   const lista: Notificacion[] = [];
 
-  for (const cita of agenda) {
+  for (const cita of appointments) {
+    const fechaCita = new Date(cita.date);
+    const diasDiff = (fechaCita.getTime() - ahora.getTime()) / (1000 * 60 * 60 * 24);
+
     switch (cita.status) {
-      case "PENDING_PAYMENT":
+      case "CONFIRMED":
         lista.push({
-          id: `reserva-${cita.id}-pendiente`,
+          id: `cita-${cita.id}-confirmada`,
+          tipo: "cita_confirmada",
+          titulo: "Cita confirmada",
+          descripcion: `Cita de ${cita.patient} confirmada para el ${cita.date} a las ${cita.time}.`,
+          fecha: cita.date,
+          leida: false,
+          ruta: "/dentist/agenda",
+          icono: ICONOS_TIPO.cita_confirmada,
+          color: "text-success-foreground",
+          labelTipo: "Cita confirmada",
+        });
+        break;
+      case "PENDING_PAYMENT":
+      case "VERIFYING":
+      case "PAYMENT_REJECTED":
+        if (diasDiff <= 1 && diasDiff >= 0) {
+          lista.push({
+            id: `cita-${cita.id}-recordatorio`,
+            tipo: "cita_recordatorio",
+            titulo: "Próxima cita",
+            descripcion: `Cita de ${cita.patient} mañana ${cita.date} a las ${cita.time}.`,
+            fecha: cita.date,
+            leida: false,
+            ruta: "/dentist/agenda",
+            icono: ICONOS_TIPO.cita_recordatorio,
+            color: "text-warning-foreground",
+            labelTipo: "Recordatorio de cita",
+          });
+        }
+        lista.push({
+          id: `cita-${cita.id}-nueva`,
           tipo: "nueva_reserva",
-          titulo: "Nueva reserva pendiente",
+          titulo: "Nueva reserva",
           descripcion: `${cita.patient} ha solicitado una cita para el ${cita.date} a las ${cita.time}.`,
           fecha: cita.date,
           leida: false,
           ruta: "/dentist/agenda",
-          color: COLORES_TIPO.nueva_reserva,
-          labelTipo: LABEL_TIPO.nueva_reserva,
           icono: ICONOS_TIPO.nueva_reserva,
+          color: "text-primary-foreground",
+          labelTipo: "Nueva reserva",
         });
         break;
       case "CANCELLED":
         lista.push({
-          id: `reserva-${cita.id}-cancelada`,
+          id: `cita-${cita.id}-cancelacion`,
           tipo: "cancelacion_reserva",
           titulo: "Reserva cancelada",
-          descripcion: `${cita.patient} canceló su cita del ${cita.date} a las ${cita.time}.`,
+          descripcion: `${cita.patient} ha cancelado su cita del ${cita.date} a las ${cita.time}.`,
           fecha: cita.date,
           leida: false,
           ruta: "/dentist/agenda",
-          color: COLORES_TIPO.cancelacion_reserva,
-          labelTipo: LABEL_TIPO.cancelacion_reserva,
           icono: ICONOS_TIPO.cancelacion_reserva,
+          color: "text-destructive-foreground",
+          labelTipo: "Reserva cancelada",
+        });
+        break;
+      case "COMPLETED":
+      case "NO_SHOW":
+        lista.push({
+          id: `cita-${cita.id}-cambio`,
+          tipo: "cambio_agenda",
+          titulo: "Agenda actualizada",
+          descripcion: `Cita de ${cita.patient} completada el ${cita.date}.`,
+          fecha: cita.date,
+          leida: false,
+          ruta: "/dentist/agenda",
+          icono: ICONOS_TIPO.cambio_agenda,
+          color: "text-warning-foreground",
+          labelTipo: "Cambio de agenda",
         });
         break;
     }
   }
 
-  for (const voucher of vouchersPorRevisar) {
-    if (voucher.voucher?.status === "EN_REVISION") {
-      lista.push({
-        id: `voucher-${voucher.id}`,
-        tipo: "voucher_pendiente",
-        titulo: "Comprobante pendiente",
-        descripcion: `${voucher.patient} subió un comprobante para revisar.`,
-        fecha: voucher.voucher.uploadedAt ?? new Date().toISOString().split("T")[0]!,
-        leida: false,
-        ruta: "/dentist/agenda",
-        color: COLORES_TIPO.voucher_pendiente,
-        labelTipo: LABEL_TIPO.voucher_pendiente,
-        icono: ICONOS_TIPO.voucher_pendiente,
-      });
-    }
-  }
-
-  for (const cita of agenda) {
-    if (cita.status === "COMPLETED") {
-      lista.push({
-        id: `atendida-${cita.id}`,
-        tipo: "cita_confirmada",
-        titulo: "Cita atendida",
-        descripcion: `La cita de ${cita.patient} del ${cita.date} fue marcada como atendida.`,
-        fecha: cita.date,
-        leida: false,
-        ruta: "/dentist/agenda",
-        color: COLORES_TIPO.cita_confirmada,
-        labelTipo: LABEL_TIPO.cita_confirmada,
-        icono: ICONOS_TIPO.cita_confirmada,
-      });
-    }
-  }
-
-  return lista;
+  return lista.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
 }
 
 function formatoFechaRelativa(fechaISO: string): string {
   const fecha = new Date(fechaISO);
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
-  const ayer = new Date(hoy);
-  ayer.setDate(hoy.getDate() - 1);
+  const ahora = new Date();
+  const diffMs = fecha.getTime() - ahora.getTime();
+  const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-  if (fecha.toDateString() === hoy.toDateString()) {
-    return fecha.toLocaleTimeString("es-PE", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
-  if (fecha.toDateString() === ayer.toDateString()) {
-    return "Ayer";
-  }
-  return fecha.toLocaleDateString("es-PE", {
-    day: "2-digit",
-    month: "short",
-  });
+  if (diffDias === 0) return "Hoy";
+  if (diffDias === 1) return "Mañana";
+  if (diffDias === -1) return "Ayer";
+  if (diffDias > 1 && diffDias <= 7) return `En ${diffDias} días`;
+  if (diffDias < -1 && diffDias >= -7) return `Hace ${Math.abs(diffDias)} días`;
+
+  return fecha.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "2-digit" });
 }
 
 interface NotificacionesPanelProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  side?: "top" | "right" | "bottom" | "left";
+  align?: "start" | "center" | "end";
+  sideOffset?: number;
 }
 
-export function NotificacionesPanel({ open, onOpenChange }: NotificacionesPanelProps) {
+export function NotificacionesPanel({
+  open,
+  onOpenChange,
+  side = "right",
+  align = "start",
+  sideOffset = 4,
+}: NotificacionesPanelProps) {
   const navigate = useNavigate();
-  const panelRef = React.useRef<HTMLDivElement>(null);
-  const { usuario, appointments, agenda, vouchersPorRevisar, strikes } = useAppState();
+  const { usuario, appointments, strikes } = useAppState();
   const esOdontologo = usuario?.rol === "ODONTOLOGO";
 
-  const [leidas, setLeidas] = React.useState<ReadonlySet<string>>(() => new Set<string>());
+  const notificaciones = React.useMemo(() => {
+    if (esOdontologo) {
+      return construirNotificacionesOdontologo({ usuario, appointments });
+    }
+    return construirNotificacionesPaciente({ usuario, appointments, strikes });
+  }, [esOdontologo, usuario, appointments, strikes]);
 
-  const notificaciones = React.useMemo(
-    () =>
-      esOdontologo
-        ? construirNotificacionesOdontologo({ agenda, vouchersPorRevisar })
-        : construirNotificacionesPaciente({ usuario, appointments, strikes }),
-    [esOdontologo, agenda, vouchersPorRevisar, usuario, appointments, strikes],
-  );
+  const [leidas, setLeidas] = React.useState<Set<string>>(new Set());
 
   const noLeidas = notificaciones.filter((n) => !leidas.has(n.id)).length;
 
-  const marcarTodasLeidas = () => {
-    setLeidas(new Set(notificaciones.map((n) => n.id)));
+  const marcarLeida = (id: string) => {
+    setLeidas((prev) => new Set(prev).add(id));
   };
 
-  const marcarLeida = (id: string) => {
-    setLeidas((prev) => {
-      const siguiente = new Set(prev);
-      siguiente.add(id);
-      return siguiente;
-    });
+  const marcarTodasLeidas = () => {
+    setLeidas(new Set(notificaciones.map((n) => n.id)));
   };
 
   const navegarARuta = (ruta?: RutaNotificacion) => {
@@ -331,34 +307,8 @@ export function NotificacionesPanel({ open, onOpenChange }: NotificacionesPanelP
     onOpenChange(false);
   };
 
-  React.useEffect(() => {
-    if (!open) return;
-    const manejarClicFuera = (e: MouseEvent) => {
-      const panel = panelRef.current;
-      if (panel && !panel.contains(e.target as Node)) onOpenChange(false);
-    };
-    const manejarEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onOpenChange(false);
-    };
-    document.addEventListener("mousedown", manejarClicFuera);
-    document.addEventListener("keydown", manejarEscape);
-    return () => {
-      document.removeEventListener("mousedown", manejarClicFuera);
-      document.removeEventListener("keydown", manejarEscape);
-    };
-  }, [open, onOpenChange]);
-
-  if (!open) return null;
-
-  return (
-    <motion.div
-      ref={panelRef}
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      transition={{ duration: 0.2 }}
-      className="fixed top-16 right-4 z-50 w-80 md:w-96 max-h-[85vh] flex flex-col rounded-2xl border border-border/80 bg-white shadow-lg shadow-brand-deep/10 backdrop-blur-sm"
-    >
+  const contenidoPanel = (
+    <div className="w-[320px] sm:w-[380px] max-w-[calc(100vw-20px)] flex flex-col rounded-2xl border border-border/80 bg-popover shadow-lg shadow-brand-deep/10 backdrop-blur-sm overflow-hidden">
       <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-border/60">
         <div className="flex items-center gap-2">
           <Bell className="size-5 text-primary" />
@@ -420,7 +370,7 @@ export function NotificacionesPanel({ open, onOpenChange }: NotificacionesPanelP
                     <div className="flex-1 min-w-0">
                       <p
                         className={cn(
-                          "text-sm font-medium leading-tight",
+                          "text-sm font-medium leading-tight truncate",
                           !esLeida ? "text-foreground" : "text-muted-foreground",
                         )}
                       >
@@ -473,6 +423,20 @@ export function NotificacionesPanel({ open, onOpenChange }: NotificacionesPanelP
           </>
         )}
       </div>
-    </motion.div>
+    </div>
+  );
+
+  return (
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverContent
+        side={side}
+        align={align}
+        sideOffset={sideOffset}
+        className="p-0 w-auto max-w-none"
+        alignOffset={-8}
+      >
+        {contenidoPanel}
+      </PopoverContent>
+    </Popover>
   );
 }
