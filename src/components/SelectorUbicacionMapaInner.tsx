@@ -1,5 +1,4 @@
 import * as React from "react";
-import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
 
@@ -74,6 +73,18 @@ function CentradorMapa({ destino }: { destino?: Coordenadas | null | undefined }
   return null;
 }
 
+/** Fuerza invalidar el tamaño del mapa al montarse para evitar tiles grises */
+function MapSizeFixer() {
+  const map = useMap();
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [map]);
+  return null;
+}
+
 export function SelectorUbicacionMapaInner({
   posicion,
   onChange,
@@ -120,6 +131,7 @@ export function SelectorUbicacionMapaInner({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           maxZoom={19}
         />
+        <MapSizeFixer />
 
         <ManejadorClics onClic={onChange} />
         <CentradorMapa destino={posicion} />

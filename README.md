@@ -18,15 +18,15 @@
 
 ## Descripción
 
-El portal web es la **capa de presentación** (la *Vista* del patrón MVC) de OdontoSystem. No contiene reglas de negocio ni se conecta a la base de datos: todo lo obtiene de la API REST del backend Spring Boot, que valida, calcula y guarda la información.
+El portal web es la **capa de presentación** (la _Vista_ del patrón MVC) de OdontoSystem. No contiene reglas de negocio ni se conecta a la base de datos: todo lo obtiene de la API REST del backend Spring Boot, que valida, calcula y guarda la información.
 
-| Paciente | Odontólogo |
-|---|---|
-| Busca odontólogos verificados por distrito, especialidad y cercanía en un mapa | Gestiona su agenda del día y confirma o completa citas |
-| Revisa el perfil, los servicios, las reseñas y el sello COP | Define horarios de atención y bloqueos de emergencia |
-| Elige un turno libre y paga el depósito de garantía | Sube sus documentos y sigue su verificación COP |
-| Consulta sus citas, descarga constancias y pide reembolsos | Registra historias clínicas, responde reclamos y ve sus liquidaciones |
-| Conversa con el chatbot para buscar o agendar | Administra servicios, precios y fotos del consultorio |
+| Paciente                                                                       | Odontólogo                                                            |
+| ------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
+| Busca odontólogos verificados por distrito, especialidad y cercanía en un mapa | Gestiona su agenda del día y confirma o completa citas                |
+| Revisa el perfil, los servicios, las reseñas y el sello COP                    | Define horarios de atención y bloqueos de emergencia                  |
+| Elige un turno libre y paga el depósito de garantía                            | Sube sus documentos y sigue su verificación COP                       |
+| Consulta sus citas, descarga constancias y pide reembolsos                     | Registra historias clínicas, responde reclamos y ve sus liquidaciones |
+| Conversa con el chatbot para buscar o agendar                                  | Administra servicios, precios y fotos del consultorio                 |
 
 ## Arquitectura
 
@@ -63,33 +63,33 @@ sequenceDiagram
 
 ## Pantallas y requerimientos
 
-| Requerimiento | Ruta / componente | Endpoint principal |
-|---|---|---|
-| RF01 Registro e inicio de sesión | `index.tsx`, `recuperar.tsx` | `/api/auth/register`, `/login`, `/refresh` |
-| RF16 Inicio con Google | `GoogleBoton.tsx` | `/api/auth/google` |
-| RF02 Búsqueda con mapa | `paciente.catalogo.tsx`, `DentistMap.tsx` | `GET /api/odontologos` |
-| RF12 Perfil público y reseñas | `paciente.dentista.$id.tsx` | `GET /api/odontologos/{id}` |
-| RF03 Reserva de turno | `paciente.agendar.$id.tsx`, `SelectorTurnos.tsx` | `POST /api/citas` |
-| RF13 Pago del depósito | `PasarelaPago.tsx` | `POST /api/citas/{id}/pagar` |
-| RF04 · RF05 · RF14 · RF15 Mis citas | `paciente.panel.tsx`, `AccionesCita.tsx` | `/api/citas/mias`, `/cancelar`, `/constancia`, `/reembolsos` |
-| RF06 · RF07 Horarios y bloqueos | `dentist.horarios.tsx` | `/api/odontologos/yo/horarios`, `/bloqueos` |
-| RF08 · RF09 Verificación COP | `VerificacionCOP.tsx`, `dentist.perfil.tsx` | `/api/odontologos/yo/verificacion` |
-| RF11 Confirmación de citas | `dentist.agenda.tsx` | `/api/odontologos/yo/citas/{id}/confirmar` |
-| Historias clínicas | `dentist.pacientes.tsx` | `/api/citas/{id}/historia` |
-| Liquidaciones | `dentist.liquidaciones.tsx` | `/api/odontologos/yo/liquidaciones` |
-| Libro de reclamaciones | `reclamos.tsx`, `dentist.reclamos.tsx` | `/api/reclamos` |
-| Chatbot | `ChatbotWidget.tsx` | `POST /api/chatbot/mensaje` |
+| Requerimiento                       | Ruta / componente                                | Endpoint principal                                           |
+| ----------------------------------- | ------------------------------------------------ | ------------------------------------------------------------ |
+| RF01 Registro e inicio de sesión    | `index.tsx`, `recuperar.tsx`                     | `/api/auth/register`, `/login`, `/refresh`                   |
+| RF16 Inicio con Google              | `GoogleBoton.tsx`                                | `/api/auth/google`                                           |
+| RF02 Búsqueda con mapa              | `paciente.catalogo.tsx`, `DentistMap.tsx`        | `GET /api/odontologos`                                       |
+| RF12 Perfil público y reseñas       | `paciente.dentista.$id.tsx`                      | `GET /api/odontologos/{id}`                                  |
+| RF03 Reserva de turno               | `paciente.agendar.$id.tsx`, `SelectorTurnos.tsx` | `POST /api/citas`                                            |
+| RF13 Pago del depósito              | `PasarelaPago.tsx`                               | `POST /api/citas/{id}/pagar`                                 |
+| RF04 · RF05 · RF14 · RF15 Mis citas | `paciente.panel.tsx`, `AccionesCita.tsx`         | `/api/citas/mias`, `/cancelar`, `/constancia`, `/reembolsos` |
+| RF06 · RF07 Horarios y bloqueos     | `dentist.horarios.tsx`                           | `/api/odontologos/yo/horarios`, `/bloqueos`                  |
+| RF08 · RF09 Verificación COP        | `VerificacionCOP.tsx`, `dentist.perfil.tsx`      | `/api/odontologos/yo/verificacion`                           |
+| RF11 Confirmación de citas          | `dentist.agenda.tsx`                             | `/api/odontologos/yo/citas/{id}/confirmar`                   |
+| Historias clínicas                  | `dentist.pacientes.tsx`                          | `/api/citas/{id}/historia`                                   |
+| Liquidaciones                       | `dentist.liquidaciones.tsx`                      | `/api/odontologos/yo/liquidaciones`                          |
+| Libro de reclamaciones              | `reclamos.tsx`, `dentist.reclamos.tsx`           | `/api/reclamos`                                              |
+| Chatbot                             | `ChatbotWidget.tsx`                              | `POST /api/chatbot/mensaje`                                  |
 
 ## Tecnologías
 
-| Uso | Librería |
-|---|---|
-| Interfaz | React 19, TypeScript, Tailwind CSS 4, componentes Radix UI |
-| Navegación | TanStack Router (rutas por archivo en `src/routes`) |
-| Formularios y validación | React Hook Form + Zod |
-| Mapas | Leaflet + React Leaflet |
-| Gráficos de indicadores | Recharts |
-| Notificaciones en pantalla | Sonner |
+| Uso                        | Librería                                                   |
+| -------------------------- | ---------------------------------------------------------- |
+| Interfaz                   | React 19, TypeScript, Tailwind CSS 4, componentes Radix UI |
+| Navegación                 | TanStack Router (rutas por archivo en `src/routes`)        |
+| Formularios y validación   | React Hook Form + Zod                                      |
+| Mapas                      | Leaflet + React Leaflet                                    |
+| Gráficos de indicadores    | Recharts                                                   |
+| Notificaciones en pantalla | Sonner                                                     |
 
 ## Estructura
 
@@ -120,10 +120,10 @@ npm run build            # versión de producción
 
 ## Equipo y flujo de trabajo
 
-| Integrante | Aporte |
-|---|---|
+| Integrante                   | Aporte                                                                   |
+| ---------------------------- | ------------------------------------------------------------------------ |
 | **Nicole De La Cruz Chávez** | Diseño UX/UI, pantallas de paciente y odontólogo, integración con la API |
-| Luana Barrientos Espinoza | Apoyo en la integración con la API (catálogo real y panel del paciente) |
+| Luana Barrientos Espinoza    | Apoyo en la integración con la API (catálogo real y panel del paciente)  |
 
 El prototipo inicial de las pantallas se generó con Lovable y luego se adaptó al contrato real de la API.
 Cada cambio se desarrolla en una rama con el nombre de su autora (`nicole/…`, `luana/…`) y se integra a `main` mediante pull request; Vercel publica `main` automáticamente.

@@ -1,7 +1,6 @@
 import * as React from "react";
-import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
+import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import { PIN_HTML_TEMPLATE } from "./markerHtml";
 
 export type MapaConsultorioInnerProps = {
@@ -27,6 +26,18 @@ function crearIconoMarcador(titulo: string) {
     iconAnchor: [17, 45],
     popupAnchor: [0, -45],
   });
+}
+
+/** Fuerza invalidar el tamaño del mapa al montarse para evitar tiles grises */
+function MapSizeFixer() {
+  const map = useMap();
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [map]);
+  return null;
 }
 
 /**
@@ -64,6 +75,7 @@ export function MapaConsultorioInner({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           maxZoom={19}
         />
+        <MapSizeFixer />
         <Marker position={posicion} icon={icono}>
           <Popup>
             <div className="p-1 text-xs">

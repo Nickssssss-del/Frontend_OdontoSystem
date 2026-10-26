@@ -1,5 +1,4 @@
 import * as React from "react";
-import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import { Link } from "@tanstack/react-router";
@@ -95,6 +94,18 @@ function AjustadorLimites({ puntos }: { puntos: [number, number][] }) {
   return null;
 }
 
+/** Fuerza invalidar el tamaño del mapa al montarse para evitar tiles grises */
+function MapSizeFixer() {
+  const map = useMap();
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [map]);
+  return null;
+}
+
 export function DentistMapInner({ dentists, altura = 340 }: DentistMapInnerProps) {
   const alturaEstilo = typeof altura === "number" ? `${altura}px` : altura;
 
@@ -129,6 +140,7 @@ export function DentistMapInner({ dentists, altura = 340 }: DentistMapInnerProps
           maxZoom={19}
         />
 
+        <MapSizeFixer />
         <AjustadorLimites puntos={puntos} />
 
         {puntosYDentistas.map(({ dentist, coords, icon }) => {
