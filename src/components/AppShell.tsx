@@ -152,19 +152,20 @@ function PatientHeader() {
             onOpenChange={setNotificacionesOpen}
             side="bottom"
             align="end"
-          />
-          <button
-            type="button"
-            onClick={() => setNotificacionesOpen((v) => !v)}
-            aria-label="Notificaciones"
-            aria-expanded={notificacionesOpen}
-            className="relative rounded-full p-2 hover:bg-muted transition-colors"
           >
-            <Bell className="size-5" />
-            {notificacionesOpen && (
-              <span className="absolute top-1 right-1 size-2 rounded-full bg-primary" />
-            )}
-          </button>
+            <button
+              type="button"
+              onClick={() => setNotificacionesOpen((v) => !v)}
+              aria-label="Notificaciones"
+              aria-expanded={notificacionesOpen}
+              className="relative rounded-full p-2 hover:bg-muted transition-colors"
+            >
+              <Bell className="size-5" />
+              {notificacionesOpen && (
+                <span className="absolute top-1 right-1 size-2 rounded-full bg-primary" />
+              )}
+            </button>
+          </NotificacionesPanel>
 
           {/* Profile Dropdown */}
           <DropdownMenu>
@@ -355,17 +356,18 @@ function DentistSidebar({
           onOpenChange={setNotificacionesOpen}
           side="right"
           align="start"
-        />
-        <button
-          type="button"
-          onClick={() => setNotificacionesOpen((v) => !v)}
-          aria-label="Notificaciones"
-          aria-expanded={notificacionesOpen}
-          className="mb-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sky hover:text-foreground"
         >
-          <Bell className="size-5 shrink-0" />
-          {expandido && <span>Notificaciones</span>}
-        </button>
+          <button
+            type="button"
+            onClick={() => setNotificacionesOpen((v) => !v)}
+            aria-label="Notificaciones"
+            aria-expanded={notificacionesOpen}
+            className="mb-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sky hover:text-foreground"
+          >
+            <Bell className="size-5 shrink-0" />
+            {expandido && <span>Notificaciones</span>}
+          </button>
+        </NotificacionesPanel>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button

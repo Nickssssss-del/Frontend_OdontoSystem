@@ -5,7 +5,7 @@ import { Bell, CheckCircle2, Clock, CreditCard, Mail, User, X, ChevronRight } fr
 import { Button } from "@/components/ui/button";
 import { useAppState } from "@/lib/app-state";
 import { cn } from "@/lib/utils";
-import { Popover, PopoverContent } from "@/components/ui/popover";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 
 type EstadoApp = ReturnType<typeof useAppState>;
 
@@ -269,6 +269,7 @@ interface NotificacionesPanelProps {
   side?: "top" | "right" | "bottom" | "left";
   align?: "start" | "center" | "end";
   sideOffset?: number;
+  children: React.ReactNode;
 }
 
 export function NotificacionesPanel({
@@ -277,6 +278,7 @@ export function NotificacionesPanel({
   side = "right",
   align = "start",
   sideOffset = 4,
+  children,
 }: NotificacionesPanelProps) {
   const navigate = useNavigate();
   const { usuario, appointments, strikes } = useAppState();
@@ -428,6 +430,7 @@ export function NotificacionesPanel({
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverTrigger asChild>{children}</PopoverTrigger>
       <PopoverContent
         side={side}
         align={align}
