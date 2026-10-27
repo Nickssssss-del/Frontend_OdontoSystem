@@ -23,6 +23,7 @@ import {
   fechaPerfil,
   mensajeDeError,
 } from "@/components/perfil";
+import { StrikeMeter } from "@/components/StrikeMeter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,6 +40,7 @@ import {
 } from "@/lib/api";
 import { fechaDe, fechaLarga, horaDe } from "@/lib/odontologos";
 import { cn } from "@/lib/utils";
+import { useAppState } from "@/lib/app-state";
 
 const CITAS_ACTIVAS: EstadoCita[] = ["PENDIENTE_PAGO", "PENDIENTE_CONFIRMACION", "CONFIRMADA"];
 
@@ -132,6 +134,24 @@ export function ResumenPaciente() {
           tono={reputacion && reputacion.strikes > 0 ? "destructive" : "success"}
         />
       </div>
+
+      {/* StrikeMeter visual: barra de puntualidad con nivel */}
+      <Card className="transition-shadow hover:shadow-md">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 font-display text-xl">
+            <ShieldAlert className="size-5 text-primary" /> Puntualidad
+          </CardTitle>
+          <CardDescription>
+            Tu nivel de asistencia a citas programadas.{" "}
+            {reputacion &&
+              reputacion.limite_strikes &&
+              `Límite: ${reputacion.limite_strikes} strikes.`}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <StrikeMeter strikes={reputacion?.strikes ?? 0} />
+        </CardContent>
+      </Card>
 
       {errorCitas && <AvisoError mensaje={errorCitas} onReintentar={reintentar} />}
       <div className="grid gap-6 lg:grid-cols-2">

@@ -27,18 +27,7 @@ import {
   SIDEBAR_KEYBOARD_SHORTCUT,
 } from "./variants/sidebar";
 import { useSidebar } from "./hooks/useSidebar";
-
-type SidebarContextProps = {
-  state: "expanded" | "collapsed";
-  open: boolean;
-  setOpen: (open: boolean) => void;
-  openMobile: boolean;
-  setOpenMobile: (open: boolean) => void;
-  isMobile: boolean;
-  toggleSidebar: () => void;
-};
-
-export const SidebarContext = React.createContext<SidebarContextProps | null>(null);
+import { SidebarContext, type SidebarContextProps } from "@/components/ui/sidebar-context";
 
 const SidebarProvider = React.forwardRef<
   HTMLDivElement,
@@ -734,4 +723,5 @@ export {
   SidebarRail,
   SidebarSeparator,
   SidebarTrigger,
+  SidebarContext,
 };
