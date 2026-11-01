@@ -10,6 +10,7 @@ import {
   guardarArchivo,
   liquidacionesApi,
   type EstadoLiquidacion,
+  type Liquidacion,
   type MisIngresos,
 } from "@/lib/api";
 import { fechaHora, mensajeDe, soles } from "@/lib/formato";
@@ -22,8 +23,31 @@ export const Route = createFileRoute("/dentist/liquidaciones")({
 const ETIQUETA: Record<EstadoLiquidacion, string> = {
   PENDIENTE: "En custodia",
   LIQUIDADA: "Pagada",
-  CANCELADA: "Devuelta al paciente",
+  CANCELADA: "Cancelada",
 };
+
+function etiquetaDe(l: Liquidacion): string {
+  if (l.estado !== "CANCELADA") return ETIQUETA[l.estado];
+  if (l.estado_cita === "CANCELADA_CON_REEMBOLSO") return "Cancelada con reembolso";
+  if (l.estado_cita === "CANCELADA_SIN_REEMBOLSO") return "Cancelada sin reembolso";
+  return ETIQUETA.CANCELADA;
+}
+
+function detalleDe(l: Liquidacion): string {
+  if (l.estado === "LIQUIDADA") {
+    return `Pagado ${fechaHora(l.liquidado_en)}${l.referencia_pago ? ` · ref. ${l.referencia_pago}` : ""}`;
+  }
+  if (l.estado === "PENDIENTE") {
+    return l.retenida_por
+      ? `Retenida por ${l.retenida_por.toLowerCase()}`
+      : `Se paga desde ${fechaHora(l.pagar_desde)}`;
+  }
+  const motivo = l.motivo?.trim() || l.detalle?.trim();
+  if (motivo) return motivo;
+  if (l.estado_cita === "CANCELADA_CON_REEMBOLSO") return "Cancelada con reembolso";
+  if (l.estado_cita === "CANCELADA_SIN_REEMBOLSO") return "Cancelada sin reembolso";
+  return "Cancelada";
+}
 
 function DentistLiquidaciones() {
   const [datos, setDatos] = React.useState<MisIngresos | null>(null);
@@ -141,18 +165,10 @@ function DentistLiquidaciones() {
                           <td className="py-3 pr-4 font-medium">{soles(l.monto)}</td>
                           <td className="py-3 pr-4">
                             <Badge variant={l.estado === "LIQUIDADA" ? "default" : "outline"}>
-                              {ETIQUETA[l.estado]}
+                              {etiquetaDe(l)}
                             </Badge>
                           </td>
-                          <td className="py-3 text-xs text-muted-foreground">
-                            {l.estado === "LIQUIDADA" &&
-                              `Pagado ${fechaHora(l.liquidado_en)}${l.referencia_pago ? ` · ref. ${l.referencia_pago}` : ""}`}
-                            {l.estado === "PENDIENTE" &&
-                              (l.retenida_por
-                                ? `Retenida por ${l.retenida_por.toLowerCase()}`
-                                : `Se paga desde ${fechaHora(l.pagar_desde)}`)}
-                            {l.estado === "CANCELADA" && "Depósito devuelto"}
-                          </td>
+                          <td className="py-3 text-xs text-muted-foreground">{detalleDe(l)}</td>
                         </tr>
                       ))}
                     </tbody>

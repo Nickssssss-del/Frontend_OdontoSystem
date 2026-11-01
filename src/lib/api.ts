@@ -1179,6 +1179,9 @@ export type Liquidacion = {
   estado_cita: EstadoCita;
   monto: number;
   estado: EstadoLiquidacion;
+  /** Motivo o detalle que manda el backend (cancelación, reembolso, retención). */
+  motivo?: string | null;
+  detalle?: string | null;
   /** Qué la retiene (reclamo o apelación pendiente), si aplica. */
   retenida_por: string | null;
   pagar_desde: string | null;
