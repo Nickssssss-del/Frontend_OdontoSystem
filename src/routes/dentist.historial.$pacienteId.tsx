@@ -14,6 +14,7 @@ import {
   TableHead,
 } from "@/components/ui/table";
 import { miPerfilApi, pacientesApi, type HistoriaClinica, type PacienteDetalle } from "@/lib/api";
+import { useAppState } from "@/lib/app-state";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -29,15 +30,25 @@ export const Route = createFileRoute("/dentist/historial/$pacienteId")({
 
 function HistorialClinicoPaciente() {
   const { pacienteId } = Route.useParams();
+  const { agenda, appointments } = useAppState();
   const [historias, setHistorias] = React.useState<HistoriaClinica[]>([]);
   const [paciente, setPaciente] = React.useState<PacienteDetalle | null>(null);
   const [cargando, setCargando] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [errorPaciente, setErrorPaciente] = React.useState<string | null>(null);
+
+  const nombreEnLista = React.useMemo(() => {
+    const cita = [...agenda, ...appointments].find((c) => c.patientId === pacienteId);
+    const nombre = cita?.patient?.trim();
+    return nombre || null;
+  }, [agenda, appointments, pacienteId]);
 
   React.useEffect(() => {
     let vivo = true;
     setCargando(true);
     setError(null);
+    setErrorPaciente(null);
+    setPaciente(null);
     // cargar historial
     miPerfilApi
       .historias(pacienteId)
@@ -52,7 +63,6 @@ function HistorialClinicoPaciente() {
         );
         setHistorias([]);
       });
-    // cargar datos del paciente con fallback
     pacientesApi
       .detalle(pacienteId)
       .then((pacienteData) => {
@@ -61,14 +71,8 @@ function HistorialClinicoPaciente() {
       })
       .catch(() => {
         if (!vivo) return;
-        // Fallback con datos de prueba para evitar skeletons indefinidos
-        setPaciente({
-          id: pacienteId,
-          nombre: "Fabrizio",
-          apellido: "Vásquez Vargas",
-          alergias: "Ninguna conocida",
-          antecedentes: "Sin enfermedades crónicas",
-        });
+        setPaciente(null);
+        setErrorPaciente("No se pudieron cargar los datos del paciente");
       })
       .finally(() => {
         if (vivo) setCargando(false);
@@ -84,6 +88,14 @@ function HistorialClinicoPaciente() {
       month: "2-digit",
       year: "numeric",
     });
+
+  const nombreVisible = paciente
+    ? `${paciente.nombre} ${paciente.apellido}`.trim()
+    : nombreEnLista;
+  const alergias = errorPaciente ? "Sin datos" : (paciente?.alergias?.trim() || "Sin datos");
+  const antecedentes = errorPaciente
+    ? "Sin datos"
+    : paciente?.antecedentes?.trim() || "Sin datos";
 
   return (
     <AppShell>
@@ -102,8 +114,8 @@ function HistorialClinicoPaciente() {
             </div>
           ) : (
             <h1 className="font-display text-3xl font-semibold">
-              {paciente && paciente.nombre
-                ? `Historial Clínico de ${paciente.nombre}`
+              {nombreVisible
+                ? `Historial Clínico de ${nombreVisible}`
                 : "Historial Clínico del Paciente"}
             </h1>
           )}
@@ -120,23 +132,13 @@ function HistorialClinicoPaciente() {
             <CardDescription>Datos generales, alergias y antecedentes médicos.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-muted-foreground">
-            <p>
-              <strong>ID:</strong> {pacienteId}
-            </p>
-            {paciente ? (
-              <>
-                <p>
-                  <strong>Nombre:</strong> {paciente.nombre} {paciente.apellido}
-                </p>
-                <p>
-                  <strong>Alergias:</strong> {paciente.alergias ?? "Ninguna"}
-                </p>
-                <p>
-                  <strong>Antecedentes médicos:</strong>{" "}
-                  {paciente.antecedentes ?? "Sin antecedentes registrados"}
-                </p>
-              </>
-            ) : (
+            {errorPaciente && (
+              <div className="flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+                <AlertCircle className="size-5 shrink-0" />
+                {errorPaciente}
+              </div>
+            )}
+            {cargando && !errorPaciente ? (
               <>
                 <div>
                   <strong>Nombre:</strong> <Skeleton className="h-4 w-32 animate-pulse ml-2" />
@@ -148,6 +150,18 @@ function HistorialClinicoPaciente() {
                   <strong>Antecedentes médicos:</strong>{" "}
                   <Skeleton className="h-4 w-48 animate-pulse ml-2" />
                 </div>
+              </>
+            ) : (
+              <>
+                <p>
+                  <strong>Nombre:</strong> {nombreVisible ?? "Sin datos"}
+                </p>
+                <p>
+                  <strong>Alergias:</strong> {alergias}
+                </p>
+                <p>
+                  <strong>Antecedentes médicos:</strong> {antecedentes}
+                </p>
               </>
             )}
           </CardContent>
