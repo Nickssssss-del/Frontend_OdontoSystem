@@ -10,6 +10,7 @@ import {
   SlidersHorizontal,
   LayoutGrid,
   List,
+  Star,
   X,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -66,6 +67,7 @@ function Catalogo() {
   const [especialidad, setEspecialidad] = React.useState<string>("Todas");
   const [maxPrecio, setMaxPrecio] = React.useState([1000]);
   const [orden, setOrden] = React.useState<(typeof ordenes)[number]["id"]>("rating");
+  const [minimo, setMinimo] = React.useState(0);
   const [viewMode, setViewMode] = React.useState<"grid" | "list">("grid");
   const [filtersOpen, setFiltersOpen] = React.useState(true);
 
@@ -127,7 +129,8 @@ function Catalogo() {
       .filter((d) => (chips.length ? chips.some((c) => d.specialties.includes(c)) : true))
       .filter((d) => (especialidad === "Todas" ? true : d.specialties.includes(especialidad)))
       .filter((d) => (distrito === "Todos" ? true : d.district === distrito))
-      .filter((d) => d.price <= (maxPrecio[0] ?? tope));
+      .filter((d) => d.price <= (maxPrecio[0] ?? tope))
+      .filter((d) => d.rating >= minimo);
     return [...list].sort((a, b) =>
       orden === "precio"
         ? a.price - b.price
@@ -135,7 +138,7 @@ function Catalogo() {
           ? a.distanceKm - b.distanceKm
           : b.rating - a.rating,
     );
-  }, [dentists, query, chips, distrito, especialidad, maxPrecio, orden, tope]);
+  }, [dentists, query, chips, distrito, especialidad, maxPrecio, orden, tope, minimo]);
 
   if (isBanned) {
     return (
@@ -310,27 +313,29 @@ function Catalogo() {
                     </Select>
                   </div>
 
-                  {/* Horario */}
-                  <div>
-                    <h3 className="font-semibold text-sm mb-3">Horario disponible</h3>
-                    <div className="space-y-2 text-sm">
-                      {["Mañana", "Tarde", "Noche"].map((h) => (
-                        <label key={h} className="flex items-center gap-2 cursor-pointer">
-                          <Checkbox />
-                          <span>{h}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Calificación */}
+                  {/* El buscador no trae disponibilidad: no se ofrece un filtro de horario. */}
                   <div>
                     <h3 className="font-semibold text-sm mb-3">Calificación mínima</h3>
                     <div className="space-y-2 text-sm">
-                      {["5 ⭐", "4+ ⭐", "3+ ⭐"].map((r) => (
-                        <label key={r} className="flex items-center gap-2 cursor-pointer">
-                          <Checkbox />
-                          <span>{r}</span>
+                      {(
+                        [
+                          [5, "5"],
+                          [4, "4+"],
+                          [3, "3+"],
+                        ] as const
+                      ).map(([valor, etiqueta]) => (
+                        <label key={valor} className="flex items-center gap-2 cursor-pointer">
+                          <Checkbox
+                            checked={minimo === valor}
+                            onCheckedChange={(marcado) => setMinimo(marcado === true ? valor : 0)}
+                          />
+                          <span className="inline-flex items-center gap-1">
+                            {etiqueta}
+                            <Star
+                              className="size-3.5 fill-warning text-warning"
+                              aria-hidden="true"
+                            />
+                          </span>
                         </label>
                       ))}
                     </div>
@@ -347,7 +352,8 @@ function Catalogo() {
               chips.length > 0 ||
               distrito !== "Todos" ||
               especialidad !== "Todas" ||
-              filtroPrecioActivo) && (
+              filtroPrecioActivo ||
+              minimo > 0) && (
               <div className="mb-6 flex flex-wrap gap-2">
                 {query && (
                   <Badge variant="secondary" className="gap-1">
@@ -377,6 +383,22 @@ function Catalogo() {
                   <Badge variant="secondary" className="gap-1">
                     {distrito}
                     <button onClick={() => setDistrito("Todos")} className="hover:opacity-75">
+                      <X className="size-3" />
+                    </button>
+                  </Badge>
+                )}
+                {minimo > 0 && (
+                  <Badge variant="secondary" className="gap-1">
+                    <span className="inline-flex items-center gap-1">
+                      {minimo === 5 ? "5" : `${minimo}+`}
+                      <Star className="size-3 fill-current" aria-hidden="true" />
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setMinimo(0)}
+                      className="hover:opacity-75"
+                      aria-label="Quitar filtro de calificación"
+                    >
                       <X className="size-3" />
                     </button>
                   </Badge>
