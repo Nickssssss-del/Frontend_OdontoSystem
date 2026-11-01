@@ -43,7 +43,7 @@ function DentistAgenda() {
   const claveDia = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-  // Colores por estado
+  // CANCELLED cubre CANCELADA_CON_REEMBOLSO y CANCELADA_SIN_REEMBOLSO (ESTADO_UI).
   const statusColors = {
     CONFIRMED: "bg-primary/12 border-l-4 border-primary text-primary",
     COMPLETED: "bg-success/12 border-l-4 border-success text-success",
@@ -77,6 +77,7 @@ function DentistAgenda() {
               className={cn(
                 "rounded-lg border border-border/70 p-3 transition-all hover:shadow-md",
                 statusColors[appointment.status],
+                appointment.status === "CANCELLED" && "line-through opacity-60",
               )}
             >
               <p className="text-xs font-semibold text-muted-foreground mb-2">{appointment.time}</p>
@@ -148,10 +149,14 @@ function DentistAgenda() {
                     dayAppointments.map((apt) => (
                       <div
                         key={apt.id}
-                        className="text-xs rounded p-1.5 bg-background border-l-2 border-primary"
+                        className={cn(
+                          "text-xs rounded p-1.5",
+                          statusColors[apt.status],
+                          apt.status === "CANCELLED" && "line-through opacity-60",
+                        )}
                       >
                         <p className="font-semibold">{apt.time}</p>
-                        <p className="text-muted-foreground truncate">{apt.patient}</p>
+                        <p className="truncate">{apt.patient}</p>
                       </div>
                     ))
                   ) : (
@@ -217,7 +222,11 @@ function DentistAgenda() {
                       {dayAppointments.slice(0, 2).map((apt) => (
                         <div
                           key={apt.id}
-                          className="rounded px-1 py-0.5 bg-primary/20 text-primary text-xs truncate"
+                          className={cn(
+                            "rounded px-1 py-0.5 text-xs truncate",
+                            statusColors[apt.status],
+                            apt.status === "CANCELLED" && "line-through opacity-60",
+                          )}
                         >
                           {apt.time}
                         </div>
@@ -356,6 +365,7 @@ function DentistAgenda() {
                 { status: "COMPLETED", label: "Completada", icon: CheckCircle2 },
                 { status: "VERIFYING", label: "Por confirmar", icon: AlertCircle },
                 { status: "NO_SHOW", label: "Inasistencia", icon: AlertCircle },
+                { status: "CANCELLED", label: "Cancelada", icon: AlertCircle },
               ].map((item) => (
                 <div key={item.status} className="flex items-center gap-2">
                   <div
@@ -365,6 +375,7 @@ function DentistAgenda() {
                       item.status === "COMPLETED" && "bg-success",
                       item.status === "VERIFYING" && "bg-warning",
                       item.status === "NO_SHOW" && "bg-destructive",
+                      item.status === "CANCELLED" && "bg-muted-foreground",
                     )}
                   />
                   <span className="text-sm">{item.label}</span>
