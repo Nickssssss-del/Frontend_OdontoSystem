@@ -89,13 +89,9 @@ function HistorialClinicoPaciente() {
       year: "numeric",
     });
 
-  const nombreVisible = paciente
-    ? `${paciente.nombre} ${paciente.apellido}`.trim()
-    : nombreEnLista;
-  const alergias = errorPaciente ? "Sin datos" : (paciente?.alergias?.trim() || "Sin datos");
-  const antecedentes = errorPaciente
-    ? "Sin datos"
-    : paciente?.antecedentes?.trim() || "Sin datos";
+  const nombreVisible = paciente ? `${paciente.nombre} ${paciente.apellido}`.trim() : nombreEnLista;
+  const alergias = errorPaciente ? "Sin datos" : paciente?.alergias?.trim() || "Sin datos";
+  const antecedentes = errorPaciente ? "Sin datos" : paciente?.antecedentes?.trim() || "Sin datos";
 
   return (
     <AppShell>
