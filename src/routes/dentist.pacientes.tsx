@@ -1,16 +1,7 @@
 import * as React from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
-import {
-  Search,
-  Clock,
-  Eye,
-  MoreHorizontal,
-  Mail,
-  Phone,
-  Calendar,
-  MessageSquare,
-} from "lucide-react";
+import { Search, Eye, MoreHorizontal, Mail, Phone } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useAppState, type Appointment } from "@/lib/app-state";
 import { fechaLima } from "@/lib/odontologos";
@@ -30,7 +21,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -102,6 +92,8 @@ function DentistPacientes() {
   const filteredPatients = patients.filter((p) =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
+  const hayEdad = patients.some((p) => p.age != null);
+  const columnas = hayEdad ? 7 : 6;
 
   const stats = {
     total: patients.length,
@@ -201,7 +193,10 @@ function DentistPacientes() {
           <Card>
             <CardHeader>
               <CardTitle>Registro de Pacientes</CardTitle>
-              <CardDescription>{filteredPatients.length} paciente(s) encontrado(s)</CardDescription>
+              <CardDescription>
+                {filteredPatients.length} paciente(s) encontrado(s). Esta lista sale de las citas
+                cargadas en la agenda; el listado completo de pacientes depende del backend.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -209,7 +204,7 @@ function DentistPacientes() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Paciente</TableHead>
-                      <TableHead>Edad</TableHead>
+                      {hayEdad && <TableHead>Edad</TableHead>}
                       <TableHead className="hidden md:table-cell">Última cita</TableHead>
                       <TableHead className="hidden lg:table-cell">Especialidad</TableHead>
                       <TableHead>Citas</TableHead>
@@ -227,7 +222,9 @@ function DentistPacientes() {
                               <p className="text-xs text-muted-foreground">{patient.email}</p>
                             </div>
                           </TableCell>
-                          <TableCell className="text-sm">{patient.age ?? "—"}</TableCell>
+                          {hayEdad && (
+                            <TableCell className="text-sm">{patient.age ?? "—"}</TableCell>
+                          )}
                           <TableCell className="text-sm text-muted-foreground hidden md:table-cell">
                             {new Date(`${patient.lastVisit}T12:00:00`).toLocaleDateString("es-PE", {
                               day: "numeric",
@@ -255,7 +252,12 @@ function DentistPacientes() {
                           <TableCell className="text-right">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  aria-label={`Acciones de ${patient.name}`}
+                                >
                                   <MoreHorizontal className="size-4" />
                                 </Button>
                               </DropdownMenuTrigger>
@@ -269,27 +271,22 @@ function DentistPacientes() {
                                     Ver historial clínico
                                   </Link>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Calendar className="size-4 mr-2" />
-                                  Agendar cita
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <MessageSquare className="size-4 mr-2" />
-                                  Enviar mensaje
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Mail className="size-4 mr-2" />
-                                  Enviar email
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Phone className="size-4 mr-2" />
-                                  Llamar
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem>
-                                  <Clock className="size-4 mr-2" />
-                                  Cambiar estado
-                                </DropdownMenuItem>
+                                {patient.email && (
+                                  <DropdownMenuItem asChild>
+                                    <a href={`mailto:${patient.email}`}>
+                                      <Mail className="size-4 mr-2" />
+                                      Enviar email
+                                    </a>
+                                  </DropdownMenuItem>
+                                )}
+                                {patient.phone && (
+                                  <DropdownMenuItem asChild>
+                                    <a href={`tel:${patient.phone}`}>
+                                      <Phone className="size-4 mr-2" />
+                                      Llamar
+                                    </a>
+                                  </DropdownMenuItem>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
@@ -297,7 +294,10 @@ function DentistPacientes() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        <TableCell
+                          colSpan={columnas}
+                          className="text-center py-8 text-muted-foreground"
+                        >
                           No se encontraron pacientes
                         </TableCell>
                       </TableRow>
