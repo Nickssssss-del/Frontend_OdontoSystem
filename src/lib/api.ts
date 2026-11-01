@@ -722,6 +722,15 @@ export type ActualizarUsuarioRequest = {
 
 export type FotoPerfil = { foto_perfil_url: string };
 
+/** GET /api/usuarios/yo/notificaciones — el backend aún puede no exponer este contrato. */
+export type NotificacionUsuario = {
+  id: string;
+  titulo: string;
+  descripcion: string;
+  fecha: string;
+  leida?: boolean;
+};
+
 /** GET /api/usuarios/yo/reputacion — strikes por inasistencia del paciente. */
 export type ReputacionPaciente = {
   strikes: number;
@@ -806,6 +815,11 @@ export const usuariosApi = {
   /** GET /api/usuarios/yo/reputacion — estado de strikes (solo pacientes). */
   reputacion(): Promise<ReputacionPaciente> {
     return llamar<ReputacionPaciente>("/api/usuarios/yo/reputacion");
+  },
+
+  /** GET /api/usuarios/yo/notificaciones — avisos del usuario. Todavía puede no existir en el backend. */
+  notificaciones(): Promise<NotificacionUsuario[]> {
+    return llamar<NotificacionUsuario[]>("/api/usuarios/yo/notificaciones");
   },
 
   /** POST /api/usuarios/yo/verificar-correo/codigo — envía un código de 6 dígitos (vale 15 min). 409 si ya está verificado. */
