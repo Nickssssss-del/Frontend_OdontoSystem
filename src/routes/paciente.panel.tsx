@@ -437,7 +437,15 @@ function PacientePanel() {
                               </Badge>
                             </TableCell>
                             <TableCell className="min-w-[14rem]">
-                              <AccionesCita cita={c} onCambio={() => setRecargar((n) => n + 1)} />
+                              <AccionesCita
+                                cita={c}
+                                onCambio={() => setRecargar((n) => n + 1)}
+                                yaResenada={
+                                  errorResenas
+                                    ? undefined
+                                    : !porResenar.some((p) => p.cita_id === c.id)
+                                }
+                              />
                             </TableCell>
                           </TableRow>
                         ))}

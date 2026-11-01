@@ -53,10 +53,19 @@ function ubicacionActual(): Promise<{ latitud: number; longitud: number }> {
 
 /**
  * Acciones del paciente sobre una cita: constancia PDF, "¿te atendieron?", apelar una
- * inasistencia, ver reembolsos y editar la reseña. Úsalo dentro de la tarjeta de cada cita:
- *   <AccionesCita cita={cita} onCambio={recargarCitas} />
+ * inasistencia, ver reembolsos y calificar o editar la reseña. Úsalo dentro de la tarjeta de cada cita:
+ *   <AccionesCita cita={cita} onCambio={recargarCitas} yaResenada={false} />
  */
-export function AccionesCita({ cita, onCambio }: { cita: Cita; onCambio?: () => void }) {
+export function AccionesCita({
+  cita,
+  onCambio,
+  yaResenada,
+}: {
+  cita: Cita;
+  onCambio?: () => void;
+  /** true si la cita ya tiene reseña; false si falta calificar. Sin el dato, no se muestra el botón. */
+  yaResenada?: boolean;
+}) {
   const [ocupado, setOcupado] = React.useState<string | null>(null);
   const [reembolsos, setReembolsos] = React.useState<Reembolso[] | null>(null);
   const [apelacion, setApelacion] = React.useState<Apelacion | null>(null);
@@ -171,9 +180,15 @@ export function AccionesCita({ cita, onCambio }: { cita: Cita; onCambio?: () => 
 
   const guardarResena = () =>
     correr("resena", async () => {
-      await resenasApi.editar(cita.id, resena.nota, resena.comentario);
-      toast.success("Reseña actualizada");
+      if (yaResenada) {
+        await resenasApi.editar(cita.id, resena.nota, resena.comentario);
+        toast.success("Reseña actualizada");
+      } else {
+        await resenasApi.calificar(cita.id, resena.nota, resena.comentario);
+        toast.success("Reseña enviada");
+      }
       setResena((r) => ({ ...r, abierta: false }));
+      onCambio?.();
     });
 
   return (
@@ -230,13 +245,13 @@ export function AccionesCita({ cita, onCambio }: { cita: Cita; onCambio?: () => 
             </Button>
           </>
         )}
-        {cita.estado === "COMPLETADA" && (
+        {cita.estado === "COMPLETADA" && yaResenada !== undefined && (
           <Button
             variant="outline"
             size="sm"
             onClick={() => setResena((r) => ({ ...r, abierta: !r.abierta }))}
           >
-            <Star className="mr-2 size-4" /> Editar mi reseña
+            <Star className="mr-2 size-4" /> {yaResenada ? "Editar mi reseña" : "Calificar"}
           </Button>
         )}
       </div>
