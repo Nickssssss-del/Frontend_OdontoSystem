@@ -34,9 +34,11 @@ import {
   ApiError,
   citasApi,
   resenasApi,
+  usuariosApi,
   type Cita,
   type CitaPorResenar,
   type EstadoCita,
+  type ReputacionPaciente,
 } from "@/lib/api";
 import { soles } from "@/lib/mock-data";
 import { fechaDe, fechaLarga, horaDe } from "@/lib/odontologos";
@@ -61,8 +63,6 @@ export const Route = createFileRoute("/paciente/panel")({
   component: PacientePanel,
 });
 
-/** Inasistencias que suspenden la cuenta (regla de 3 strikes). */
-const LIMITE_STRIKES = 3;
 const HORAS_REEMBOLSO = 12;
 
 const ACTIVAS: EstadoCita[] = ["PENDIENTE_PAGO", "PENDIENTE_CONFIRMACION", "CONFIRMADA"];
@@ -106,6 +106,8 @@ function PacientePanel() {
   const [errorResenas, setErrorResenas] = React.useState(false);
   const [cargando, setCargando] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [reputacion, setReputacion] = React.useState<ReputacionPaciente | null>(null);
+  const [errorReputacion, setErrorReputacion] = React.useState(false);
   const [recargar, setRecargar] = React.useState(0);
 
   React.useEffect(() => {
@@ -117,16 +119,24 @@ function PacientePanel() {
     setCargando(true);
     setError(null);
     setErrorResenas(false);
+    setErrorReputacion(false);
+    setReputacion(null);
     // Las reseñas pendientes son secundarias: si fallan, el panel de citas se muestra igual.
     const resenasPendientes = resenasApi.porResenar().catch((): CitaPorResenar[] => {
       if (vigente) setErrorResenas(true);
       return [];
     });
-    Promise.all([citasApi.mias(), resenasPendientes])
-      .then(([c, r]) => {
+    // Misma fuente que Mi perfil: GET /api/usuarios/yo/reputacion.
+    const reputacionPendiente = usuariosApi.reputacion().catch((): ReputacionPaciente | null => {
+      if (vigente) setErrorReputacion(true);
+      return null;
+    });
+    Promise.all([citasApi.mias(), resenasPendientes, reputacionPendiente])
+      .then(([c, r, rep]) => {
         if (!vigente) return;
         setCitas(c);
         setPorResenar(r);
+        setReputacion(rep);
       })
       .catch((e: unknown) => {
         if (vigente)
@@ -144,12 +154,14 @@ function PacientePanel() {
     .sort((a, b) => a.inicio.localeCompare(b.inicio));
   const historial = citas.filter((c) => !proximas.includes(c));
   const atendidas = citas.filter((c) => c.estado === "COMPLETADA").length;
-  const inasistencias = citas.filter((c) => c.estado === "INASISTENCIA_PENALIZADA").length;
+  const inasistenciasEnCitas = citas.filter((c) => c.estado === "INASISTENCIA_PENALIZADA").length;
   const cancelacionesTardias = citas.filter((c) => c.estado === "CANCELADA_SIN_REEMBOLSO").length;
   const asistencia =
-    atendidas + inasistencias > 0
-      ? `${Math.round((atendidas / (atendidas + inasistencias)) * 100)}%`
+    atendidas + inasistenciasEnCitas > 0
+      ? `${Math.round((atendidas / (atendidas + inasistenciasEnCitas)) * 100)}%`
       : "—";
+  const strikes = reputacion?.strikes ?? null;
+  const limiteStrikes = reputacion?.limite_strikes ?? null;
 
   const kpis: KPI[] = [
     {
@@ -332,40 +344,51 @@ function PacientePanel() {
               </Card>
             )}
 
-            {/* Semáforo de puntualidad (con datos reales de tus citas) */}
+            {/* Semáforo: strikes de GET /api/usuarios/yo/reputacion; el % de asistencia sigue saliendo de las citas. */}
             <Card className="mb-8">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Zap className="size-5 text-primary" /> Semáforo de Puntualidad
                 </CardTitle>
                 <CardDescription>
-                  Cada inasistencia sin aviso suma un strike. Con {LIMITE_STRIKES} strikes la cuenta
-                  se suspende. Si faltaste por un motivo de salud, puedes apelar con un certificado
-                  médico.
+                  Cada inasistencia sin aviso suma un strike.
+                  {limiteStrikes != null
+                    ? ` Con ${limiteStrikes} strikes la cuenta se suspende.`
+                    : " El límite de strikes llega de tu reputación."}{" "}
+                  Si faltaste por un motivo de salud, puedes apelar con un certificado médico.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <Medidor
-                  label="Inasistencias"
-                  valor={inasistencias}
-                  max={LIMITE_STRIKES}
-                  color="bg-destructive"
-                />
+                {errorReputacion || strikes == null || limiteStrikes == null ? (
+                  <div className="flex gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                    <AlertCircle className="mt-0.5 size-5 flex-shrink-0" />
+                    <p>No se pudo cargar tu reputación. Sin datos.</p>
+                  </div>
+                ) : (
+                  <>
+                    <Medidor
+                      label="Inasistencias"
+                      valor={strikes}
+                      max={Math.max(limiteStrikes, 1)}
+                      color="bg-destructive"
+                    />
+                    {strikes >= 2 && strikes < limiteStrikes && (
+                      <div className="flex gap-3 rounded-lg border border-warning/50 bg-warning/5 p-3">
+                        <AlertCircle className="mt-0.5 size-5 flex-shrink-0 text-warning" />
+                        <p className="text-sm">
+                          <span className="font-medium text-warning">Atención:</span> te queda{" "}
+                          {limiteStrikes - strikes} strike antes de la suspensión de tu cuenta.
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
                 <Medidor
                   label="Cancelaciones sin reembolso"
                   valor={cancelacionesTardias}
                   max={Math.max(3, cancelacionesTardias)}
                   color="bg-warning"
                 />
-                {inasistencias >= 2 && inasistencias < LIMITE_STRIKES && (
-                  <div className="flex gap-3 rounded-lg border border-warning/50 bg-warning/5 p-3">
-                    <AlertCircle className="mt-0.5 size-5 flex-shrink-0 text-warning" />
-                    <p className="text-sm">
-                      <span className="font-medium text-warning">Atención:</span> te queda{" "}
-                      {LIMITE_STRIKES - inasistencias} strike antes de la suspensión de tu cuenta.
-                    </p>
-                  </div>
-                )}
               </CardContent>
             </Card>
 
