@@ -722,13 +722,21 @@ export type ActualizarUsuarioRequest = {
 
 export type FotoPerfil = { foto_perfil_url: string };
 
-/** GET /api/usuarios/yo/notificaciones — el backend aún puede no exponer este contrato. */
+/** Aviso de GET /api/usuarios/yo/notificaciones. */
 export type NotificacionUsuario = {
   id: string;
+  tipo: string;
   titulo: string;
-  descripcion: string;
-  fecha: string;
-  leida?: boolean;
+  mensaje: string;
+  cita_id: string | null;
+  creado_en: string;
+  leida: boolean;
+};
+
+/** GET /api/usuarios/yo/notificaciones. */
+export type BandejaNotificaciones = {
+  no_leidas: number;
+  notificaciones: NotificacionUsuario[];
 };
 
 /** GET /api/usuarios/yo/reputacion — strikes por inasistencia del paciente. */
@@ -817,9 +825,23 @@ export const usuariosApi = {
     return llamar<ReputacionPaciente>("/api/usuarios/yo/reputacion");
   },
 
-  /** GET /api/usuarios/yo/notificaciones — avisos del usuario. Todavía puede no existir en el backend. */
-  notificaciones(): Promise<NotificacionUsuario[]> {
-    return llamar<NotificacionUsuario[]>("/api/usuarios/yo/notificaciones");
+  /** GET /api/usuarios/yo/notificaciones — bandeja del usuario autenticado. */
+  notificaciones(): Promise<BandejaNotificaciones> {
+    return llamar<BandejaNotificaciones>("/api/usuarios/yo/notificaciones");
+  },
+
+  /** PATCH /api/usuarios/yo/notificaciones/{id}/leida — marca un aviso como leído. */
+  marcarNotificacionLeida(id: string): Promise<NotificacionUsuario> {
+    return llamar<NotificacionUsuario>(`/api/usuarios/yo/notificaciones/${id}/leida`, {
+      method: "PATCH",
+    });
+  },
+
+  /** PATCH /api/usuarios/yo/notificaciones/leidas — marca todos los avisos como leídos. */
+  marcarTodasLeidas(): Promise<{ marcadas: number }> {
+    return llamar<{ marcadas: number }>("/api/usuarios/yo/notificaciones/leidas", {
+      method: "PATCH",
+    });
   },
 
   /** POST /api/usuarios/yo/verificar-correo/codigo — envía un código de 6 dígitos (vale 15 min). 409 si ya está verificado. */

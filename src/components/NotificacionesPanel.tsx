@@ -281,25 +281,9 @@ export function NotificacionesPanel({
     let vivo = true;
     usuariosApi
       .notificaciones()
-      .then((lista) => {
-        if (!vivo || !Array.isArray(lista)) return;
-        const validas = lista.filter(
-          (aviso) =>
-            aviso &&
-            typeof aviso.id === "string" &&
-            typeof aviso.titulo === "string" &&
-            typeof aviso.descripcion === "string" &&
-            typeof aviso.fecha === "string",
-        );
-        setDesdeApi(validas);
-        const idsLeidos = validas.filter((aviso) => aviso.leida).map((aviso) => aviso.id);
-        if (idsLeidos.length === 0) return;
-        setLeidas((prev) => {
-          const siguiente = new Set(prev);
-          for (const id of idsLeidos) siguiente.add(id);
-          guardarIdsLeidos([...siguiente]);
-          return siguiente;
-        });
+      .then((respuesta) => {
+        if (!vivo) return;
+        setDesdeApi(respuesta.notificaciones);
       })
       .catch(() => {
         if (vivo) setDesdeApi(null);
@@ -311,25 +295,31 @@ export function NotificacionesPanel({
 
   const notificaciones = React.useMemo(() => {
     if (desdeApi) {
-      return desdeApi.map((aviso): Notificacion => ({
-        id: aviso.id,
-        tipo: "cambio_agenda",
-        titulo: aviso.titulo,
-        descripcion: aviso.descripcion,
-        fecha: aviso.fecha,
-        leida: Boolean(aviso.leida),
-        icono: Bell,
-        color: "text-primary",
-        labelTipo: aviso.titulo,
-      }));
+      return desdeApi.map((aviso): Notificacion => {
+        const tipo = (aviso.tipo in ICONOS_TIPO ? aviso.tipo : "cambio_agenda") as TipoNotificacion;
+        return {
+          id: aviso.id,
+          tipo,
+          titulo: aviso.titulo,
+          descripcion: aviso.mensaje,
+          fecha: aviso.creado_en,
+          leida: aviso.leida,
+          icono: ICONOS_TIPO[tipo],
+          color: "text-primary",
+          labelTipo: LABEL_TIPO[tipo],
+        };
+      });
     }
     if (esOdontologo) return construirNotificacionesOdontologo({ usuario, appointments });
     return construirNotificacionesPaciente({ usuario, appointments });
   }, [desdeApi, esOdontologo, usuario, appointments]);
 
-  const noLeidas = notificaciones.filter((n) => !n.leida && !leidas.has(n.id)).length;
+  const noLeidas =
+    desdeApi !== null
+      ? notificaciones.filter((n) => !n.leida).length
+      : notificaciones.filter((n) => !leidas.has(n.id)).length;
 
-  const marcarLeida = (id: string) => {
+  const marcarLeidaLocal = (id: string) => {
     setLeidas((prev) => {
       const siguiente = new Set(prev);
       siguiente.add(id);
@@ -338,13 +328,31 @@ export function NotificacionesPanel({
     });
   };
 
+  const marcarLeida = (id: string) => {
+    if (desdeApi === null) {
+      marcarLeidaLocal(id);
+      return;
+    }
+    const previa = desdeApi;
+    const aviso = previa.find((item) => item.id === id);
+    if (!aviso || aviso.leida) return;
+    setDesdeApi(previa.map((item) => (item.id === id ? { ...item, leida: true } : item)));
+    void usuariosApi.marcarNotificacionLeida(id).catch(() => setDesdeApi(previa));
+  };
+
   const marcarTodasLeidas = () => {
-    setLeidas((prev) => {
-      const siguiente = new Set(prev);
-      for (const aviso of notificaciones) siguiente.add(aviso.id);
-      guardarIdsLeidos([...siguiente]);
-      return siguiente;
-    });
+    if (desdeApi === null) {
+      setLeidas((prev) => {
+        const siguiente = new Set(prev);
+        for (const aviso of notificaciones) siguiente.add(aviso.id);
+        guardarIdsLeidos([...siguiente]);
+        return siguiente;
+      });
+      return;
+    }
+    const previa = desdeApi;
+    setDesdeApi(previa.map((aviso) => ({ ...aviso, leida: true })));
+    void usuariosApi.marcarTodasLeidas().catch(() => setDesdeApi(previa));
   };
 
   const navegarARuta = (ruta?: RutaNotificacion) => {
@@ -391,7 +399,7 @@ export function NotificacionesPanel({
             <div className="divide-y divide-border/60">
               {notificaciones.map((notif) => {
                 const Icon = notif.icono;
-                const esLeida = notif.leida || leidas.has(notif.id);
+                const esLeida = desdeApi !== null ? notif.leida : leidas.has(notif.id);
                 return (
                   <motion.div
                     key={notif.id}
