@@ -281,9 +281,11 @@ function Catalogo() {
 
                   {/* Distrito */}
                   <div>
-                    <h3 className="font-semibold text-sm mb-3">Distrito</h3>
+                    <label htmlFor="distrito-select" className="font-semibold text-sm mb-3 block">
+                      Distrito
+                    </label>
                     <Select value={distrito} onValueChange={setDistrito}>
-                      <SelectTrigger className="h-8 text-sm">
+                      <SelectTrigger id="distrito-select" className="h-8 text-sm">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -298,9 +300,11 @@ function Catalogo() {
 
                   {/* Orden */}
                   <div>
-                    <h3 className="font-semibold text-sm mb-3">Ordenar por</h3>
+                    <label htmlFor="orden-select" className="font-semibold text-sm mb-3 block">
+                      Ordenar por
+                    </label>
                     <Select value={orden} onValueChange={(v) => setOrden(v as typeof orden)}>
-                      <SelectTrigger className="h-8 text-sm">
+                      <SelectTrigger id="orden-select" className="h-8 text-sm">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>

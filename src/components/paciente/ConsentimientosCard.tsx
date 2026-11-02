@@ -40,7 +40,6 @@ export function ConsentimientosCard() {
         {lista?.map((c) => (
           <p key={`${c.version_politica}-${c.aceptado_en}`}>
             Aceptaste la versión <strong>{c.version_politica}</strong> el {fechaHora(c.aceptado_en)}
-            .
           </p>
         ))}
       </CardContent>

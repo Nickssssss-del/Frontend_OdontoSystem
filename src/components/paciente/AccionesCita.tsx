@@ -83,6 +83,8 @@ export function AccionesCita({
     (cita.estado === "CONFIRMADA" || cita.estado === "PENDIENTE_CONFIRMACION") &&
     inicio - ahora >= 24 * 3_600_000 &&
     !cita.cita_origen_id;
+  const plazoApelacion = fin + 7 * 24 * 3_600_000;
+  const puedeApelar = !apelacion && ahora <= plazoApelacion;
   const [reprogramar, setReprogramar] = React.useState<{
     abierto: boolean;
     servicios: ServicioOdontologo[];
@@ -310,30 +312,32 @@ export function AccionesCita({
               )}
             </p>
           ) : (
-            <>
-              <p className="mb-2">
-                ¿Tuviste un impedimento? Puedes apelar con un certificado (PDF, JPG o PNG de hasta 5
-                MB) hasta 7 días después.
-              </p>
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-input px-3 py-1.5 hover:bg-accent">
-                {ocupado === "apelar" ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Upload className="size-4" />
-                )}
-                Subir certificado
-                <input
-                  type="file"
-                  className="sr-only"
-                  accept="application/pdf,image/jpeg,image/png"
-                  disabled={ocupado !== null}
-                  onChange={(e) => {
-                    apelar(e.target.files?.[0]);
-                    e.target.value = "";
-                  }}
-                />
-              </label>
-            </>
+            puedeApelar && (
+              <>
+                <p className="mb-2">
+                  ¿Tuviste un impedimento? Puedes apelar con un certificado (PDF, JPG o PNG de hasta
+                  5 MB) hasta 7 días después.
+                </p>
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-input px-3 py-1.5 hover:bg-accent">
+                  {ocupado === "apelar" ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Upload className="size-4" />
+                  )}
+                  Subir certificado
+                  <input
+                    type="file"
+                    className="sr-only"
+                    accept="application/pdf,image/jpeg,image/png"
+                    disabled={ocupado !== null}
+                    onChange={(e) => {
+                      apelar(e.target.files?.[0]);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+              </>
+            )
           )}
         </div>
       )}
@@ -364,13 +368,6 @@ export function AccionesCita({
             />
           )}
           <DialogFooter>
-            <Button
-              variant="outline"
-              disabled={ocupado === "reprogramar"}
-              onClick={() => setReprogramar((r) => ({ ...r, abierto: false }))}
-            >
-              Cancelar
-            </Button>
             <Button
               disabled={!reprogramar.nuevoInicio || ocupado === "reprogramar"}
               onClick={() => void confirmarReprogramar()}

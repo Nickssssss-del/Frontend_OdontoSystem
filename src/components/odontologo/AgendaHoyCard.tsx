@@ -69,6 +69,10 @@ export function AgendaHoyCard({ onCambio }: { onCambio?: () => void }) {
               </span>
             </div>
 
+            {hoy.citas_hoy === 0 && (
+              <p className="text-sm text-muted-foreground">No tienes citas hoy</p>
+            )}
+
             {hoy.atiende !== false && !cancelando && (
               <div className="flex flex-wrap gap-2">
                 {hoy.atiende === null && (

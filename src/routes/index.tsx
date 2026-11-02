@@ -56,11 +56,7 @@ export const Route = createFileRoute("/")({
 type Role = "paciente" | "odontologo";
 type Mode = "login" | "registro";
 
-const stats = [
-  { value: "2,400+", label: "Especialistas" },
-  { value: "98%", label: "Satisfacción" },
-  { value: "50 mil", label: "Citas" },
-];
+const stats = [{ value: "17", label: "Odontólogos verificados en Ica" }];
 
 const mensajeDeError = (error: unknown) =>
   error instanceof ApiError ? error.message : "Ocurrió un error inesperado. Inténtalo de nuevo.";
@@ -246,8 +242,8 @@ function LoginScreen() {
             Tu salud dental, en manos expertas.
           </h1>
           <p className="mt-5 max-w-md text-lg leading-relaxed opacity-85">
-            Agenda con especialistas verificados por el Colegio Odontológico del Perú. Pagos
-            seguros, citas sin complicaciones.
+            Agenda con especialistas verificados por el Colegio Odontológico del Perú. Pagos seguros
+            (modo prueba), citas sin complicaciones.
           </p>
           <dl className="mt-12 grid max-w-lg grid-cols-3 gap-6 border-t border-white/20 pt-8">
             {stats.map((s) => (
@@ -266,9 +262,6 @@ function LoginScreen() {
           </span>
           <span className="inline-flex items-center gap-2">
             <ShieldCheck className="size-4" /> COP Verificado
-          </span>
-          <span className="inline-flex items-center gap-2">
-            <CreditCard className="size-4" /> PCI Compliant
           </span>
         </footer>
       </section>
