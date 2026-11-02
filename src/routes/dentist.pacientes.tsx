@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/dentist/pacientes")({
   head: () => ({
     meta: [
-      { title: "Pacientes | OdontoSystem Odontólogo" },
+      { title: "Pacientes | OdontoSystem Odont\u00f3logo" },
       {
         name: "description",
         content: "Administra el registro de tus pacientes y visualiza su historial.",
@@ -66,9 +66,9 @@ function resumenAPaciente(p: PacienteResumen): Patient {
 }
 
 function fechaLista(valor: string | null): string {
-  if (!valor) return "—";
+  if (!valor) return "\u2014";
   const fecha = valor.includes("T") ? new Date(valor) : new Date(`${valor}T12:00:00`);
-  if (Number.isNaN(fecha.getTime())) return "—";
+  if (Number.isNaN(fecha.getTime())) return "\u2014";
   return fecha.toLocaleDateString("es-PE", { day: "numeric", month: "short" });
 }
 
@@ -126,7 +126,7 @@ function DentistPacientes() {
         email: ultima.patientEmail ?? "",
         lastVisit: (ultimaAtendida ?? ultima).date,
         specialty: ultima.service,
-        // Activo = tiene una cita próxima o atendida en la ventana de la agenda.
+        // Activo = tiene una cita pr\u00f3xima o atendida en la ventana de la agenda.
         status: vigentes.some((c) => c.date >= hoy || c.status === "COMPLETED")
           ? ("active" as const)
           : ("inactive" as const),
@@ -135,7 +135,34 @@ function DentistPacientes() {
     });
   }, [agenda, appointments]);
 
-  const patients = desdeApi ?? (listaIncompleta ? desdeAgenda : []);
+  // Servicio de la \u00faltima cita de cada paciente (desc por fecha+hora).
+  const ultimoServicioPorPaciente = React.useMemo<Map<string, string>>(() => {
+    const mapa = new Map<string, string>();
+    const porPaciente = new Map<string, { key: string; service: string }[]>();
+    for (const cita of [...agenda, ...appointments]) {
+      const id = cita.patientId ?? cita.patient;
+      const lista = porPaciente.get(id) ?? [];
+      lista.push({ key: `${cita.date}${cita.time}`, service: cita.service });
+      porPaciente.set(id, lista);
+    }
+    for (const [id, citas] of porPaciente.entries()) {
+      const ordenadas = [...citas].sort((x, y) => y.key.localeCompare(x.key));
+      if (ordenadas[0]) mapa.set(id, ordenadas[0].service);
+    }
+    return mapa;
+  }, [agenda, appointments]);
+
+  // Combina la lista de la API con el servicio de la \u00faltima cita (sin mutar estado).
+  const desdeApiConServicio = React.useMemo<Patient[] | null>(
+    () =>
+      desdeApi?.map((p) => ({
+        ...p,
+        specialty: ultimoServicioPorPaciente.get(p.id) ?? p.specialty,
+      })) ?? null,
+    [desdeApi, ultimoServicioPorPaciente],
+  );
+
+  const patients = desdeApiConServicio ?? (listaIncompleta ? desdeAgenda : []);
 
   const filteredPatients = patients.filter((p) =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -243,7 +270,7 @@ function DentistPacientes() {
               <CardTitle>Registro de Pacientes</CardTitle>
               <CardDescription>
                 {cargandoLista
-                  ? "Cargando pacientes…"
+                  ? "Cargando pacientes\u2026"
                   : `${filteredPatients.length} paciente(s) encontrado(s).`}
                 {listaIncompleta &&
                   " No se pudo cargar el listado completo: esta lista sale de la agenda y puede estar incompleta."}
@@ -256,7 +283,7 @@ function DentistPacientes() {
                     <TableRow>
                       <TableHead>Paciente</TableHead>
                       {hayEdad && <TableHead>Edad</TableHead>}
-                      <TableHead className="hidden md:table-cell">Última cita</TableHead>
+                      <TableHead className="hidden md:table-cell">\u00daltima cita</TableHead>
                       <TableHead className="hidden lg:table-cell">Especialidad</TableHead>
                       <TableHead>Citas</TableHead>
                       <TableHead>Estado</TableHead>
@@ -274,13 +301,13 @@ function DentistPacientes() {
                             </div>
                           </TableCell>
                           {hayEdad && (
-                            <TableCell className="text-sm">{patient.age ?? "—"}</TableCell>
+                            <TableCell className="text-sm">{patient.age ?? "\u2014"}</TableCell>
                           )}
                           <TableCell className="text-sm text-muted-foreground hidden md:table-cell">
                             {fechaLista(patient.lastVisit)}
                           </TableCell>
                           <TableCell className="text-sm hidden lg:table-cell">
-                            {patient.specialty || "—"}
+                            {patient.specialty || "\u2014"}
                           </TableCell>
                           <TableCell className="text-sm font-medium">
                             {patient.appointmentsCount}
@@ -316,7 +343,7 @@ function DentistPacientes() {
                                     params={{ pacienteId: patient.id }}
                                   >
                                     <Eye className="size-4 mr-2" />
-                                    Ver historial clínico
+                                    Ver historial cl\u00ednico
                                   </Link>
                                 </DropdownMenuItem>
                                 {patient.email && (
