@@ -982,11 +982,29 @@ export const miPerfilApi = {
   },
 };
 
+/** Paciente del odontólogo autenticado (GET /api/odontologos/yo/pacientes). */
+export type PacienteResumen = {
+  id: string;
+  nombre_completo: string;
+  correo: string | null;
+  telefono: string | null;
+  total_citas: number;
+  citas_atendidas: number;
+  inasistencias: number;
+  ultima_atencion: string | null;
+  proxima_cita: string | null;
+};
+
 /** API para obtener datos de pacientes (usado en historial clínico). */
 export const pacientesApi = {
   /** GET /api/pacientes/{pacienteId} — detalle de un paciente. */
   detalle(pacienteId: string): Promise<PacienteDetalle> {
     return llamar<PacienteDetalle>(`/api/pacientes/${pacienteId}`);
+  },
+
+  /** GET /api/odontologos/yo/pacientes — todos los pacientes del odontólogo. */
+  mios(): Promise<PacienteResumen[]> {
+    return llamar<PacienteResumen[]>("/api/odontologos/yo/pacientes");
   },
 };
 

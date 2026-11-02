@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { Search, Eye, MoreHorizontal, Mail, Phone } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useAppState, type Appointment } from "@/lib/app-state";
+import { pacientesApi, type PacienteResumen } from "@/lib/api";
 import { fechaLima } from "@/lib/odontologos";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -44,19 +45,64 @@ type Patient = {
   age: number | null;
   phone: string;
   email: string;
-  lastVisit: string;
+  lastVisit: string | null;
   specialty: string;
   status: "active" | "inactive";
   appointmentsCount: number;
 };
 
+function resumenAPaciente(p: PacienteResumen): Patient {
+  return {
+    id: p.id,
+    name: p.nombre_completo,
+    age: null,
+    phone: p.telefono ?? "",
+    email: p.correo ?? "",
+    lastVisit: p.ultima_atencion,
+    specialty: "",
+    status: p.proxima_cita != null || p.citas_atendidas > 0 ? "active" : "inactive",
+    appointmentsCount: p.total_citas,
+  };
+}
+
+function fechaLista(valor: string | null): string {
+  if (!valor) return "—";
+  const fecha = valor.includes("T") ? new Date(valor) : new Date(`${valor}T12:00:00`);
+  if (Number.isNaN(fecha.getTime())) return "—";
+  return fecha.toLocaleDateString("es-PE", { day: "numeric", month: "short" });
+}
+
 function DentistPacientes() {
   const { agenda, appointments } = useAppState();
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [desdeApi, setDesdeApi] = React.useState<Patient[] | null>(null);
+  const [listaIncompleta, setListaIncompleta] = React.useState(false);
+  const [cargandoLista, setCargandoLista] = React.useState(true);
 
-  // Pacientes reales: se derivan de las citas de la agenda (el backend no tiene un listado de pacientes
-  // aparte; /api/odontologos/yo/citas trae id, nombre, teléfono y correo de cada paciente).
-  const patients = React.useMemo<Patient[]>(() => {
+  React.useEffect(() => {
+    let vivo = true;
+    pacientesApi
+      .mios()
+      .then((lista) => {
+        if (!vivo) return;
+        setDesdeApi(lista.map(resumenAPaciente));
+        setListaIncompleta(false);
+      })
+      .catch(() => {
+        if (!vivo) return;
+        setDesdeApi(null);
+        setListaIncompleta(true);
+      })
+      .finally(() => {
+        if (vivo) setCargandoLista(false);
+      });
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
+  // Respaldo: la agenda solo trae pacientes con cita en la ventana cargada.
+  const desdeAgenda = React.useMemo<Patient[]>(() => {
     const hoy = fechaLima(0);
     const porPaciente = new Map<string, Appointment[]>();
     for (const cita of [...agenda, ...appointments]) {
@@ -88,6 +134,8 @@ function DentistPacientes() {
       };
     });
   }, [agenda, appointments]);
+
+  const patients = desdeApi ?? (listaIncompleta ? desdeAgenda : []);
 
   const filteredPatients = patients.filter((p) =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -194,8 +242,11 @@ function DentistPacientes() {
             <CardHeader>
               <CardTitle>Registro de Pacientes</CardTitle>
               <CardDescription>
-                {filteredPatients.length} paciente(s) encontrado(s). Esta lista sale de las citas
-                cargadas en la agenda; el listado completo de pacientes depende del backend.
+                {cargandoLista
+                  ? "Cargando pacientes…"
+                  : `${filteredPatients.length} paciente(s) encontrado(s).`}
+                {listaIncompleta &&
+                  " No se pudo cargar el listado completo: esta lista sale de la agenda y puede estar incompleta."}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -226,13 +277,10 @@ function DentistPacientes() {
                             <TableCell className="text-sm">{patient.age ?? "—"}</TableCell>
                           )}
                           <TableCell className="text-sm text-muted-foreground hidden md:table-cell">
-                            {new Date(`${patient.lastVisit}T12:00:00`).toLocaleDateString("es-PE", {
-                              day: "numeric",
-                              month: "short",
-                            })}
+                            {fechaLista(patient.lastVisit)}
                           </TableCell>
                           <TableCell className="text-sm hidden lg:table-cell">
-                            {patient.specialty}
+                            {patient.specialty || "—"}
                           </TableCell>
                           <TableCell className="text-sm font-medium">
                             {patient.appointmentsCount}
