@@ -53,10 +53,19 @@ function ubicacionActual(): Promise<{ latitud: number; longitud: number }> {
 
 /**
  * Acciones del paciente sobre una cita: constancia PDF, "¿te atendieron?", apelar una
- * inasistencia, ver reembolsos y editar la reseña. Úsalo dentro de la tarjeta de cada cita:
- *   <AccionesCita cita={cita} onCambio={recargarCitas} />
+ * inasistencia, ver reembolsos y calificar o editar la reseña. Úsalo dentro de la tarjeta de cada cita:
+ *   <AccionesCita cita={cita} onCambio={recargarCitas} yaResenada={false} />
  */
-export function AccionesCita({ cita, onCambio }: { cita: Cita; onCambio?: () => void }) {
+export function AccionesCita({
+  cita,
+  onCambio,
+  yaResenada,
+}: {
+  cita: Cita;
+  onCambio?: () => void;
+  /** true si la cita ya tiene reseña; false si falta calificar. Sin el dato, no se muestra el botón. */
+  yaResenada?: boolean | undefined;
+}) {
   const [ocupado, setOcupado] = React.useState<string | null>(null);
   const [reembolsos, setReembolsos] = React.useState<Reembolso[] | null>(null);
   const [apelacion, setApelacion] = React.useState<Apelacion | null>(null);
@@ -74,6 +83,8 @@ export function AccionesCita({ cita, onCambio }: { cita: Cita; onCambio?: () => 
     (cita.estado === "CONFIRMADA" || cita.estado === "PENDIENTE_CONFIRMACION") &&
     inicio - ahora >= 24 * 3_600_000 &&
     !cita.cita_origen_id;
+  const plazoApelacion = fin + 7 * 24 * 3_600_000;
+  const puedeApelar = !apelacion && ahora <= plazoApelacion;
   const [reprogramar, setReprogramar] = React.useState<{
     abierto: boolean;
     servicios: ServicioOdontologo[];
@@ -171,9 +182,15 @@ export function AccionesCita({ cita, onCambio }: { cita: Cita; onCambio?: () => 
 
   const guardarResena = () =>
     correr("resena", async () => {
-      await resenasApi.editar(cita.id, resena.nota, resena.comentario);
-      toast.success("Reseña actualizada");
+      if (yaResenada) {
+        await resenasApi.editar(cita.id, resena.nota, resena.comentario);
+        toast.success("Reseña actualizada");
+      } else {
+        await resenasApi.calificar(cita.id, resena.nota, resena.comentario);
+        toast.success("Reseña enviada");
+      }
       setResena((r) => ({ ...r, abierta: false }));
+      onCambio?.();
     });
 
   return (
@@ -230,13 +247,13 @@ export function AccionesCita({ cita, onCambio }: { cita: Cita; onCambio?: () => 
             </Button>
           </>
         )}
-        {cita.estado === "COMPLETADA" && (
+        {cita.estado === "COMPLETADA" && yaResenada !== undefined && (
           <Button
             variant="outline"
             size="sm"
             onClick={() => setResena((r) => ({ ...r, abierta: !r.abierta }))}
           >
-            <Star className="mr-2 size-4" /> Editar mi reseña
+            <Star className="mr-2 size-4" /> {yaResenada ? "Editar mi reseña" : "Calificar"}
           </Button>
         )}
       </div>
@@ -295,30 +312,32 @@ export function AccionesCita({ cita, onCambio }: { cita: Cita; onCambio?: () => 
               )}
             </p>
           ) : (
-            <>
-              <p className="mb-2">
-                ¿Tuviste un impedimento? Puedes apelar con un certificado (PDF, JPG o PNG de hasta 5
-                MB) hasta 7 días después.
-              </p>
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-input px-3 py-1.5 hover:bg-accent">
-                {ocupado === "apelar" ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Upload className="size-4" />
-                )}
-                Subir certificado
-                <input
-                  type="file"
-                  className="sr-only"
-                  accept="application/pdf,image/jpeg,image/png"
-                  disabled={ocupado !== null}
-                  onChange={(e) => {
-                    apelar(e.target.files?.[0]);
-                    e.target.value = "";
-                  }}
-                />
-              </label>
-            </>
+            puedeApelar && (
+              <>
+                <p className="mb-2">
+                  ¿Tuviste un impedimento? Puedes apelar con un certificado (PDF, JPG o PNG de hasta
+                  5 MB) hasta 7 días después.
+                </p>
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-input px-3 py-1.5 hover:bg-accent">
+                  {ocupado === "apelar" ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Upload className="size-4" />
+                  )}
+                  Subir certificado
+                  <input
+                    type="file"
+                    className="sr-only"
+                    accept="application/pdf,image/jpeg,image/png"
+                    disabled={ocupado !== null}
+                    onChange={(e) => {
+                      apelar(e.target.files?.[0]);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+              </>
+            )
           )}
         </div>
       )}
@@ -349,13 +368,6 @@ export function AccionesCita({ cita, onCambio }: { cita: Cita; onCambio?: () => 
             />
           )}
           <DialogFooter>
-            <Button
-              variant="outline"
-              disabled={ocupado === "reprogramar"}
-              onClick={() => setReprogramar((r) => ({ ...r, abierto: false }))}
-            >
-              Cancelar
-            </Button>
             <Button
               disabled={!reprogramar.nuevoInicio || ocupado === "reprogramar"}
               onClick={() => void confirmarReprogramar()}

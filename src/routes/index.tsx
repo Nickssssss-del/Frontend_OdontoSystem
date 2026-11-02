@@ -57,9 +57,9 @@ type Role = "paciente" | "odontologo";
 type Mode = "login" | "registro";
 
 const stats = [
-  { value: "2,400+", label: "Especialistas" },
-  { value: "98%", label: "Satisfacción" },
-  { value: "50 mil", label: "Citas" },
+  { value: "17", unidad: "", label: "Odontólogos verificados en Ica" },
+  { value: "15", unidad: "min", label: "Para pagar mientras tu turno queda apartado" },
+  { value: "12", unidad: "h", label: "De anticipación para cancelar y recuperar tu depósito" },
 ];
 
 const mensajeDeError = (error: unknown) =>
@@ -246,15 +246,20 @@ function LoginScreen() {
             Tu salud dental, en manos expertas.
           </h1>
           <p className="mt-5 max-w-md text-lg leading-relaxed opacity-85">
-            Agenda con especialistas verificados por el Colegio Odontológico del Perú. Pagos
-            seguros, citas sin complicaciones.
+            Agenda con especialistas verificados por el Colegio Odontológico del Perú. Pagos seguros
+            (modo prueba), citas sin complicaciones.
           </p>
-          <dl className="mt-12 grid max-w-lg grid-cols-3 gap-6 border-t border-white/20 pt-8">
+          <dl className="mt-12 grid max-w-lg grid-cols-3 items-start gap-6 border-t border-white/20 pt-8">
             {stats.map((s) => (
               <div key={s.label}>
-                <dt className="sr-only">{s.label}</dt>
-                <dd className="font-display text-3xl font-bold">{s.value}</dd>
-                <dd className="mt-1 text-sm opacity-80">{s.label}</dd>
+                <dt className="sr-only">{`${s.value}${s.unidad ? ` ${s.unidad}` : ""} · ${s.label}`}</dt>
+                <dd className="font-display text-3xl font-bold">
+                  {s.value}
+                  {s.unidad && (
+                    <span className="ml-1 text-base font-semibold opacity-85">{s.unidad}</span>
+                  )}
+                </dd>
+                <dd className="mt-1 text-sm leading-snug opacity-80">{s.label}</dd>
               </div>
             ))}
           </dl>
@@ -266,9 +271,6 @@ function LoginScreen() {
           </span>
           <span className="inline-flex items-center gap-2">
             <ShieldCheck className="size-4" /> COP Verificado
-          </span>
-          <span className="inline-flex items-center gap-2">
-            <CreditCard className="size-4" /> PCI Compliant
           </span>
         </footer>
       </section>

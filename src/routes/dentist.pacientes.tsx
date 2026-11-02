@@ -1,18 +1,10 @@
 import * as React from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
-import {
-  Search,
-  Clock,
-  Eye,
-  MoreHorizontal,
-  Mail,
-  Phone,
-  Calendar,
-  MessageSquare,
-} from "lucide-react";
+import { Search, Eye, MoreHorizontal, Mail, Phone } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useAppState, type Appointment } from "@/lib/app-state";
+import { pacientesApi, type PacienteResumen } from "@/lib/api";
 import { fechaLima } from "@/lib/odontologos";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -30,7 +22,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -38,7 +29,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/dentist/pacientes")({
   head: () => ({
     meta: [
-      { title: "Pacientes | OdontoSystem Odontólogo" },
+      { title: "Pacientes | OdontoSystem Odont\u00f3logo" },
       {
         name: "description",
         content: "Administra el registro de tus pacientes y visualiza su historial.",
@@ -54,19 +45,64 @@ type Patient = {
   age: number | null;
   phone: string;
   email: string;
-  lastVisit: string;
+  lastVisit: string | null;
   specialty: string;
   status: "active" | "inactive";
   appointmentsCount: number;
 };
 
+function resumenAPaciente(p: PacienteResumen): Patient {
+  return {
+    id: p.id,
+    name: p.nombre_completo,
+    age: null,
+    phone: p.telefono ?? "",
+    email: p.correo ?? "",
+    lastVisit: p.ultima_atencion,
+    specialty: "",
+    status: p.proxima_cita != null || p.citas_atendidas > 0 ? "active" : "inactive",
+    appointmentsCount: p.total_citas,
+  };
+}
+
+function fechaLista(valor: string | null): string {
+  if (!valor) return "\u2014";
+  const fecha = valor.includes("T") ? new Date(valor) : new Date(`${valor}T12:00:00`);
+  if (Number.isNaN(fecha.getTime())) return "\u2014";
+  return fecha.toLocaleDateString("es-PE", { day: "numeric", month: "short" });
+}
+
 function DentistPacientes() {
   const { agenda, appointments } = useAppState();
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [desdeApi, setDesdeApi] = React.useState<Patient[] | null>(null);
+  const [listaIncompleta, setListaIncompleta] = React.useState(false);
+  const [cargandoLista, setCargandoLista] = React.useState(true);
 
-  // Pacientes reales: se derivan de las citas de la agenda (el backend no tiene un listado de pacientes
-  // aparte; /api/odontologos/yo/citas trae id, nombre, teléfono y correo de cada paciente).
-  const patients = React.useMemo<Patient[]>(() => {
+  React.useEffect(() => {
+    let vivo = true;
+    pacientesApi
+      .mios()
+      .then((lista) => {
+        if (!vivo) return;
+        setDesdeApi(lista.map(resumenAPaciente));
+        setListaIncompleta(false);
+      })
+      .catch(() => {
+        if (!vivo) return;
+        setDesdeApi(null);
+        setListaIncompleta(true);
+      })
+      .finally(() => {
+        if (vivo) setCargandoLista(false);
+      });
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
+  // Respaldo: la agenda solo trae pacientes con cita en la ventana cargada.
+  const desdeAgenda = React.useMemo<Patient[]>(() => {
     const hoy = fechaLima(0);
     const porPaciente = new Map<string, Appointment[]>();
     for (const cita of [...agenda, ...appointments]) {
@@ -90,7 +126,7 @@ function DentistPacientes() {
         email: ultima.patientEmail ?? "",
         lastVisit: (ultimaAtendida ?? ultima).date,
         specialty: ultima.service,
-        // Activo = tiene una cita próxima o atendida en la ventana de la agenda.
+        // Activo = tiene una cita pr\u00f3xima o atendida en la ventana de la agenda.
         status: vigentes.some((c) => c.date >= hoy || c.status === "COMPLETED")
           ? ("active" as const)
           : ("inactive" as const),
@@ -99,9 +135,40 @@ function DentistPacientes() {
     });
   }, [agenda, appointments]);
 
+  // Servicio de la \u00faltima cita de cada paciente (desc por fecha+hora).
+  const ultimoServicioPorPaciente = React.useMemo<Map<string, string>>(() => {
+    const mapa = new Map<string, string>();
+    const porPaciente = new Map<string, { key: string; service: string }[]>();
+    for (const cita of [...agenda, ...appointments]) {
+      const id = cita.patientId ?? cita.patient;
+      const lista = porPaciente.get(id) ?? [];
+      lista.push({ key: `${cita.date}${cita.time}`, service: cita.service });
+      porPaciente.set(id, lista);
+    }
+    for (const [id, citas] of porPaciente.entries()) {
+      const ordenadas = [...citas].sort((x, y) => y.key.localeCompare(x.key));
+      if (ordenadas[0]) mapa.set(id, ordenadas[0].service);
+    }
+    return mapa;
+  }, [agenda, appointments]);
+
+  // Combina la lista de la API con el servicio de la \u00faltima cita (sin mutar estado).
+  const desdeApiConServicio = React.useMemo<Patient[] | null>(
+    () =>
+      desdeApi?.map((p) => ({
+        ...p,
+        specialty: ultimoServicioPorPaciente.get(p.id) ?? p.specialty,
+      })) ?? null,
+    [desdeApi, ultimoServicioPorPaciente],
+  );
+
+  const patients = desdeApiConServicio ?? (listaIncompleta ? desdeAgenda : []);
+
   const filteredPatients = patients.filter((p) =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
+  const hayEdad = patients.some((p) => p.age != null);
+  const columnas = hayEdad ? 7 : 6;
 
   const stats = {
     total: patients.length,
@@ -201,7 +268,13 @@ function DentistPacientes() {
           <Card>
             <CardHeader>
               <CardTitle>Registro de Pacientes</CardTitle>
-              <CardDescription>{filteredPatients.length} paciente(s) encontrado(s)</CardDescription>
+              <CardDescription>
+                {cargandoLista
+                  ? "Cargando pacientes\u2026"
+                  : `${filteredPatients.length} paciente(s) encontrado(s).`}
+                {listaIncompleta &&
+                  " No se pudo cargar el listado completo: esta lista sale de la agenda y puede estar incompleta."}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -209,8 +282,8 @@ function DentistPacientes() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Paciente</TableHead>
-                      <TableHead>Edad</TableHead>
-                      <TableHead className="hidden md:table-cell">Última cita</TableHead>
+                      {hayEdad && <TableHead>Edad</TableHead>}
+                      <TableHead className="hidden md:table-cell">\u00daltima cita</TableHead>
                       <TableHead className="hidden lg:table-cell">Especialidad</TableHead>
                       <TableHead>Citas</TableHead>
                       <TableHead>Estado</TableHead>
@@ -227,15 +300,14 @@ function DentistPacientes() {
                               <p className="text-xs text-muted-foreground">{patient.email}</p>
                             </div>
                           </TableCell>
-                          <TableCell className="text-sm">{patient.age ?? "—"}</TableCell>
+                          {hayEdad && (
+                            <TableCell className="text-sm">{patient.age ?? "\u2014"}</TableCell>
+                          )}
                           <TableCell className="text-sm text-muted-foreground hidden md:table-cell">
-                            {new Date(`${patient.lastVisit}T12:00:00`).toLocaleDateString("es-PE", {
-                              day: "numeric",
-                              month: "short",
-                            })}
+                            {fechaLista(patient.lastVisit)}
                           </TableCell>
                           <TableCell className="text-sm hidden lg:table-cell">
-                            {patient.specialty}
+                            {patient.specialty || "\u2014"}
                           </TableCell>
                           <TableCell className="text-sm font-medium">
                             {patient.appointmentsCount}
@@ -255,7 +327,12 @@ function DentistPacientes() {
                           <TableCell className="text-right">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  aria-label={`Acciones de ${patient.name}`}
+                                >
                                   <MoreHorizontal className="size-4" />
                                 </Button>
                               </DropdownMenuTrigger>
@@ -266,30 +343,25 @@ function DentistPacientes() {
                                     params={{ pacienteId: patient.id }}
                                   >
                                     <Eye className="size-4 mr-2" />
-                                    Ver historial clínico
+                                    Ver historial cl\u00ednico
                                   </Link>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Calendar className="size-4 mr-2" />
-                                  Agendar cita
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <MessageSquare className="size-4 mr-2" />
-                                  Enviar mensaje
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Mail className="size-4 mr-2" />
-                                  Enviar email
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Phone className="size-4 mr-2" />
-                                  Llamar
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem>
-                                  <Clock className="size-4 mr-2" />
-                                  Cambiar estado
-                                </DropdownMenuItem>
+                                {patient.email && (
+                                  <DropdownMenuItem asChild>
+                                    <a href={`mailto:${patient.email}`}>
+                                      <Mail className="size-4 mr-2" />
+                                      Enviar email
+                                    </a>
+                                  </DropdownMenuItem>
+                                )}
+                                {patient.phone && (
+                                  <DropdownMenuItem asChild>
+                                    <a href={`tel:${patient.phone}`}>
+                                      <Phone className="size-4 mr-2" />
+                                      Llamar
+                                    </a>
+                                  </DropdownMenuItem>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
@@ -297,7 +369,10 @@ function DentistPacientes() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        <TableCell
+                          colSpan={columnas}
+                          className="text-center py-8 text-muted-foreground"
+                        >
                           No se encontraron pacientes
                         </TableCell>
                       </TableRow>

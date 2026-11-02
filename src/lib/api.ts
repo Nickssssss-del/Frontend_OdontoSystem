@@ -722,6 +722,23 @@ export type ActualizarUsuarioRequest = {
 
 export type FotoPerfil = { foto_perfil_url: string };
 
+/** Aviso de GET /api/usuarios/yo/notificaciones. */
+export type NotificacionUsuario = {
+  id: string;
+  tipo: string;
+  titulo: string;
+  mensaje: string;
+  cita_id: string | null;
+  creado_en: string;
+  leida: boolean;
+};
+
+/** GET /api/usuarios/yo/notificaciones. */
+export type BandejaNotificaciones = {
+  no_leidas: number;
+  notificaciones: NotificacionUsuario[];
+};
+
 /** GET /api/usuarios/yo/reputacion — strikes por inasistencia del paciente. */
 export type ReputacionPaciente = {
   strikes: number;
@@ -806,6 +823,25 @@ export const usuariosApi = {
   /** GET /api/usuarios/yo/reputacion — estado de strikes (solo pacientes). */
   reputacion(): Promise<ReputacionPaciente> {
     return llamar<ReputacionPaciente>("/api/usuarios/yo/reputacion");
+  },
+
+  /** GET /api/usuarios/yo/notificaciones — bandeja del usuario autenticado. */
+  notificaciones(): Promise<BandejaNotificaciones> {
+    return llamar<BandejaNotificaciones>("/api/usuarios/yo/notificaciones");
+  },
+
+  /** PATCH /api/usuarios/yo/notificaciones/{id}/leida — marca un aviso como leído. */
+  marcarNotificacionLeida(id: string): Promise<NotificacionUsuario> {
+    return llamar<NotificacionUsuario>(`/api/usuarios/yo/notificaciones/${id}/leida`, {
+      method: "PATCH",
+    });
+  },
+
+  /** PATCH /api/usuarios/yo/notificaciones/leidas — marca todos los avisos como leídos. */
+  marcarTodasLeidas(): Promise<{ marcadas: number }> {
+    return llamar<{ marcadas: number }>("/api/usuarios/yo/notificaciones/leidas", {
+      method: "PATCH",
+    });
   },
 
   /** POST /api/usuarios/yo/verificar-correo/codigo — envía un código de 6 dígitos (vale 15 min). 409 si ya está verificado. */
@@ -946,11 +982,29 @@ export const miPerfilApi = {
   },
 };
 
+/** Paciente del odontólogo autenticado (GET /api/odontologos/yo/pacientes). */
+export type PacienteResumen = {
+  id: string;
+  nombre_completo: string;
+  correo: string | null;
+  telefono: string | null;
+  total_citas: number;
+  citas_atendidas: number;
+  inasistencias: number;
+  ultima_atencion: string | null;
+  proxima_cita: string | null;
+};
+
 /** API para obtener datos de pacientes (usado en historial clínico). */
 export const pacientesApi = {
   /** GET /api/pacientes/{pacienteId} — detalle de un paciente. */
   detalle(pacienteId: string): Promise<PacienteDetalle> {
     return llamar<PacienteDetalle>(`/api/pacientes/${pacienteId}`);
+  },
+
+  /** GET /api/odontologos/yo/pacientes — todos los pacientes del odontólogo. */
+  mios(): Promise<PacienteResumen[]> {
+    return llamar<PacienteResumen[]>("/api/odontologos/yo/pacientes");
   },
 };
 
@@ -1165,6 +1219,9 @@ export type Liquidacion = {
   estado_cita: EstadoCita;
   monto: number;
   estado: EstadoLiquidacion;
+  /** Motivo o detalle que manda el backend (cancelación, reembolso, retención). */
+  motivo?: string | null;
+  detalle?: string | null;
   /** Qué la retiene (reclamo o apelación pendiente), si aplica. */
   retenida_por: string | null;
   pagar_desde: string | null;

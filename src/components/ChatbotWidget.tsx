@@ -95,6 +95,14 @@ export function ChatbotWidget() {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
   }, [mensajes, loading, open]);
 
+  React.useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [open]);
+
   const ask = async (text: string, opcion?: { accion: string; valor?: string }) => {
     if (loading || !usuario) return;
     setMensajes((prev) => [...prev, { id: nuevoId(), from: "user", text }]);

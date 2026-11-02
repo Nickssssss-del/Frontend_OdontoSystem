@@ -512,7 +512,8 @@ function ConfiguracionOdontologo() {
                 onCheckedChange={(v) => togglePref("correo", v)}
               />
               <p className="mt-3 text-xs text-muted-foreground">
-                Estas preferencias se guardan en tu dispositivo.
+                Estas preferencias se guardan solo en este dispositivo; el correo de avisos del
+                sistema se sigue enviando aunque las desactives aquí.
               </p>
             </CardContent>
           </Card>
