@@ -56,7 +56,11 @@ export const Route = createFileRoute("/")({
 type Role = "paciente" | "odontologo";
 type Mode = "login" | "registro";
 
-const stats = [{ value: "17", label: "Odontólogos verificados en Ica" }];
+const stats = [
+  { value: "17", unidad: "", label: "Odontólogos verificados en Ica" },
+  { value: "15", unidad: "min", label: "Para pagar mientras tu turno queda apartado" },
+  { value: "12", unidad: "h", label: "De anticipación para cancelar y recuperar tu depósito" },
+];
 
 const mensajeDeError = (error: unknown) =>
   error instanceof ApiError ? error.message : "Ocurrió un error inesperado. Inténtalo de nuevo.";
@@ -245,12 +249,17 @@ function LoginScreen() {
             Agenda con especialistas verificados por el Colegio Odontológico del Perú. Pagos seguros
             (modo prueba), citas sin complicaciones.
           </p>
-          <dl className="mt-12 grid max-w-lg grid-cols-3 gap-6 border-t border-white/20 pt-8">
+          <dl className="mt-12 grid max-w-lg grid-cols-3 items-start gap-6 border-t border-white/20 pt-8">
             {stats.map((s) => (
               <div key={s.label}>
-                <dt className="sr-only">{s.label}</dt>
-                <dd className="font-display text-3xl font-bold">{s.value}</dd>
-                <dd className="mt-1 text-sm opacity-80">{s.label}</dd>
+                <dt className="sr-only">{`${s.value}${s.unidad ? ` ${s.unidad}` : ""} · ${s.label}`}</dt>
+                <dd className="font-display text-3xl font-bold">
+                  {s.value}
+                  {s.unidad && (
+                    <span className="ml-1 text-base font-semibold opacity-85">{s.unidad}</span>
+                  )}
+                </dd>
+                <dd className="mt-1 text-sm leading-snug opacity-80">{s.label}</dd>
               </div>
             ))}
           </dl>
