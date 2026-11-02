@@ -64,7 +64,7 @@ export function AccionesCita({
   cita: Cita;
   onCambio?: () => void;
   /** true si la cita ya tiene reseña; false si falta calificar. Sin el dato, no se muestra el botón. */
-  yaResenada?: boolean;
+  yaResenada?: boolean | undefined;
 }) {
   const [ocupado, setOcupado] = React.useState<string | null>(null);
   const [reembolsos, setReembolsos] = React.useState<Reembolso[] | null>(null);
