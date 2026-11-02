@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { QrArt } from "@/components/ChatbotWidget";
+import { LogoBilletera, nombreBilletera } from "@/components/pagos/LogoBilletera";
 import { PasarelaPago } from "@/components/PasarelaPago";
 import { SelectorTurnos } from "@/components/SelectorTurnos";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -121,6 +122,16 @@ function Agendar() {
     };
   }, []);
   const pasarelaReal = config !== null && config.modo !== "simulado";
+  /** Lo que el backend dice de cada método (PLIN puede venir como "Próximamente"). Sin dato, se permite. */
+  const estadoMetodo = (metodo: "YAPE" | "PLIN") =>
+    config?.metodos?.find((m) => m.metodo === metodo);
+  const billeteraDisponible = (b: "yape" | "plin") =>
+    estadoMetodo(b === "yape" ? "YAPE" : "PLIN")?.disponible !== false;
+  // Si la billetera elegida no está disponible (p. ej. Plin), se pasa a la otra.
+  React.useEffect(() => {
+    if (!billeteraDisponible(billetera)) setBilletera(billetera === "yape" ? "plin" : "yape");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config]);
 
   const servicio = servicios.find((s) => s.id === servicioId);
   const step = pago ? 3 : cita ? 2 : 1;
@@ -644,7 +655,9 @@ function Agendar() {
                           <span className="flex items-center gap-1.5 text-sm font-semibold">
                             <Smartphone className="size-4 text-primary" /> Billetera Digital
                           </span>
-                          <span className="mt-0.5 block text-xs text-muted-foreground">
+                          <span className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <LogoBilletera billetera="yape" className="size-5 text-[9px]" />
+                            <LogoBilletera billetera="plin" className="size-5 text-[9px]" />
                             Yape o Plin
                           </span>
                         </span>
@@ -679,20 +692,33 @@ function Agendar() {
                           exit={{ opacity: 0, y: -8 }}
                         >
                           <div className="mt-4 flex gap-2">
-                            {(["yape", "plin"] as const).map((m) => (
-                              <button
-                                key={m}
-                                onClick={() => setBilletera(m)}
-                                className={cn(
-                                  "flex-1 rounded-xl border py-2.5 text-sm font-semibold capitalize transition-colors",
-                                  billetera === m
-                                    ? "border-primary bg-primary/10 text-primary"
-                                    : "border-border text-muted-foreground",
-                                )}
-                              >
-                                {m}
-                              </button>
-                            ))}
+                            {(["yape", "plin"] as const).map((m) => {
+                              const disponible = billeteraDisponible(m);
+                              const nota = estadoMetodo(m === "yape" ? "YAPE" : "PLIN")?.nota;
+                              return (
+                                <button
+                                  key={m}
+                                  type="button"
+                                  onClick={() => setBilletera(m)}
+                                  disabled={!disponible}
+                                  aria-pressed={billetera === m}
+                                  className={cn(
+                                    "flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+                                    billetera === m
+                                      ? "border-primary bg-primary/10 text-primary"
+                                      : "border-border text-muted-foreground",
+                                  )}
+                                >
+                                  <LogoBilletera billetera={m} />
+                                  <span>{nombreBilletera(m)}</span>
+                                  {!disponible && (
+                                    <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                                      {nota ?? "No disponible"}
+                                    </span>
+                                  )}
+                                </button>
+                              );
+                            })}
                           </div>
                           <div className="mt-4 rounded-2xl border border-border bg-muted/40 p-6 text-center">
                             <QrArt />

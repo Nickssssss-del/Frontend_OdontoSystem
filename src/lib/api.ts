@@ -585,11 +585,16 @@ export type Pago = {
 /** GET /api/public/pagos/config — qué pasarela está activa y su llave pública (no es secreta). */
 export type ConfiguracionPagos = {
   modo: "simulado" | "mercadopago";
-  mercadopago_llave_publica: string | null;
+  /** Solo viene con Mercado Pago activo: en modo simulado el backend no manda el campo. */
+  mercadopago_llave_publica?: string | null;
   /** true: ningún cobro es real (tarjetas de prueba). */
   modo_prueba: boolean;
   moneda: string;
+  /** Qué métodos se pueden usar hoy (p. ej. PLIN: disponible false, nota "Próximamente"). */
+  metodos?: MetodoDisponible[];
 };
+
+export type MetodoDisponible = { metodo: MetodoPago; disponible: boolean; nota?: string };
 
 /** Lo que entrega la pasarela al tokenizar (Mercado Pago: token del Brick + medio de pago). */
 export type DatosPasarela = { token?: string; medio_pago_id?: string };
@@ -1219,11 +1224,11 @@ export type Liquidacion = {
   estado_cita: EstadoCita;
   monto: number;
   estado: EstadoLiquidacion;
-  /** Motivo o detalle que manda el backend (cancelación, reembolso, retención). */
-  motivo?: string | null;
-  detalle?: string | null;
-  /** Qué la retiene (reclamo o apelación pendiente), si aplica. */
-  retenida_por: string | null;
+  /**
+   * PENDIENTE: qué retiene el pago (reclamo o apelación pendiente).
+   * CANCELADA: el motivo de la cancelación (p. ej. "Reclamo atendido: el depósito se devolvió al paciente").
+   */
+  retenida_por?: string | null;
   pagar_desde: string | null;
   referencia_pago: string | null;
   liquidado_en: string | null;
@@ -1497,6 +1502,14 @@ export const agendaHoyApi = {
 // ---------------------------------------------------------------------------
 export type Consentimiento = { version_politica: string; aceptado_en: string };
 
+/** GET /api/usuarios/yo/consentimientos/estado. Los campos sin valor no vienen en el JSON. */
+export type EstadoConsentimiento = {
+  version_vigente: string;
+  aceptada: boolean;
+  ultima_version_aceptada?: string;
+  ultima_aceptacion_en?: string;
+};
+
 export const consentimientosApi = {
   /** GET /api/public/privacidad — versión vigente (sin login). */
   politica(): Promise<{ version: string }> {
@@ -1505,6 +1518,14 @@ export const consentimientosApi = {
   /** GET /api/usuarios/yo/consentimientos */
   mios(): Promise<Consentimiento[]> {
     return llamar<Consentimiento[]>("/api/usuarios/yo/consentimientos");
+  },
+  /** GET /api/usuarios/yo/consentimientos/estado — ¿aceptó la versión vigente? */
+  estado(): Promise<EstadoConsentimiento> {
+    return llamar<EstadoConsentimiento>("/api/usuarios/yo/consentimientos/estado");
+  },
+  /** POST /api/usuarios/yo/consentimientos — acepta la versión vigente (sin cuerpo). */
+  aceptar(): Promise<EstadoConsentimiento> {
+    return llamar<EstadoConsentimiento>("/api/usuarios/yo/consentimientos", { method: "POST" });
   },
 };
 

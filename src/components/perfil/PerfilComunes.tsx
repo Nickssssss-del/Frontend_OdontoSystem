@@ -159,7 +159,8 @@ export function DatoSoloLectura({
         {icono}
         {label}
       </p>
-      <p className="mt-1.5 break-words text-sm font-semibold text-foreground">{valor}</p>
+      {/* div y no p: el valor puede ser un Badge (div), y un div dentro de un p rompe la hidratación. */}
+      <div className="mt-1.5 break-words text-sm font-semibold text-foreground">{valor}</div>
     </div>
   );
 }

@@ -42,7 +42,8 @@ function detalleDe(l: Liquidacion): string {
       ? `Retenida por ${l.retenida_por.toLowerCase()}`
       : `Se paga desde ${fechaHora(l.pagar_desde)}`;
   }
-  const motivo = l.motivo?.trim() || l.detalle?.trim();
+  // El backend manda el motivo de la cancelación en retenida_por (p. ej. "Reclamo atendido: …").
+  const motivo = l.retenida_por?.trim();
   if (motivo) return motivo;
   if (l.estado_cita === "CANCELADA_CON_REEMBOLSO") return "Cancelada con reembolso";
   if (l.estado_cita === "CANCELADA_SIN_REEMBOLSO") return "Cancelada sin reembolso";
