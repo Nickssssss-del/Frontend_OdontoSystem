@@ -1,20 +1,14 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { NOMBRE, nombreBilletera } from "./logoBilleteraUtils";
 
 export type Billetera = "yape" | "plin";
 
-const NOMBRE: Record<Billetera, string> = { yape: "Yape", plin: "Plin" };
-
-/** Color de cada billetera para el distintivo de respaldo (cuando no está el archivo del logo). */
 const COLOR: Record<Billetera, string> = {
   yape: "bg-[#742284] text-white",
   plin: "bg-[#00a9b7] text-white",
 };
 
-/**
- * Logo de Yape o Plin. Usa el archivo oficial de public/pagos/{yape|plin}.png; si todavía no está,
- * muestra un distintivo con el nombre en el color de la billetera, para que el botón nunca quede vacío.
- */
 export function LogoBilletera({
   billetera,
   className,
@@ -34,10 +28,11 @@ export function LogoBilletera({
           className,
         )}
       >
-        {NOMBRE[billetera].charAt(0)}
+        {nombreBilletera(billetera).charAt(0)}
       </span>
     );
   }
+
   return (
     <img
       src={`/pagos/${billetera}.png`}
@@ -50,5 +45,3 @@ export function LogoBilletera({
     />
   );
 }
-
-export const nombreBilletera = (b: Billetera) => NOMBRE[b];

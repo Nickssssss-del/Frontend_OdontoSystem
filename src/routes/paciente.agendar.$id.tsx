@@ -22,7 +22,8 @@ import {
   X,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { LogoBilletera, nombreBilletera } from "@/components/pagos/LogoBilletera";
+import { LogoBilletera } from "@/components/pagos/LogoBilletera";
+import { nombreBilletera } from "@/components/pagos/logoBilleteraUtils";
 import { PasarelaPago } from "@/components/PasarelaPago";
 import { SelectorTurnos } from "@/components/SelectorTurnos";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";

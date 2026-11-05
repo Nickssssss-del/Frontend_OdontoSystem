@@ -237,7 +237,7 @@ function Catalogo() {
         </div>
 
         {/* ===================== LAYOUT: FILTROS LATERAL + RESULTADOS ===================== */}
-        <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
+        <div className={cn("grid gap-6", filtersOpen && "lg:grid-cols-[240px_minmax(0,1fr)]")}>
           {/* Sidebar de Filtros */}
           <AnimatePresence>
             {filtersOpen && (
@@ -350,7 +350,7 @@ function Catalogo() {
           </AnimatePresence>
 
           {/* Resultados */}
-          <div>
+          <div className="min-w-0">
             {/* Chips de filtros activos */}
             {(query ||
               chips.length > 0 ||
@@ -439,7 +439,7 @@ function Catalogo() {
 
             {/* View Mode: Grid */}
             {!cargando && !error && viewMode === "grid" && (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-[repeat(auto-fill,minmax(250px,1fr))]">
                 <AnimatePresence>
                   {results.length > 0 ? (
                     results.map((d) => (

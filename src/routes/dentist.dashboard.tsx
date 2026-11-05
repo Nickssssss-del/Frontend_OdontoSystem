@@ -1,28 +1,13 @@
 import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "motion/react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  ResponsiveContainer,
-  LineChart,
-  Line,
-} from "recharts";
-import {
-  DollarSign,
-  Users,
-  BarChart3,
-  AlertCircle,
-  Clock,
-  CheckCircle2,
-  TrendingUp,
-} from "lucide-react";
+import { DollarSign, Users, BarChart3, AlertCircle, Clock, CheckCircle2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { AgendaHoyCard } from "@/components/odontologo/AgendaHoyCard";
+import {
+  CitasPorSemanaChart,
+  IngresosSemanalesChart,
+} from "@/components/odontologo/GraficosDashboard";
 import { useAppState, statusLabel } from "@/lib/app-state";
 import { fechaLima } from "@/lib/odontologos";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -100,6 +85,10 @@ function DentistDashboard() {
         .reduce((sum, a) => sum + a.amount, 0),
     };
   });
+  const diaActual =
+    DIAS_SEMANA[
+      Math.round((new Date(`${hoy}T12:00:00Z`).getTime() - lunes.getTime()) / 86_400_000)
+    ];
   const citasPorSemanaData = [-1, 0, 1, 2, 3].map((offset) => {
     const desde = aClave(lunesDe(hoy, offset));
     const hasta = aClave(lunesDe(hoy, offset + 1));
@@ -192,98 +181,22 @@ function DentistDashboard() {
 
         {/* Gráficos */}
         <div className="grid gap-6 mb-8 lg:grid-cols-2">
-          {/* Ingresos Semanales */}
+          {/* Ingresos semanales */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="size-5 text-success" />
-                  Ingresos Semanales
-                </CardTitle>
-                <CardDescription>Citas atendidas esta semana, en soles</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={ingresoSemanalData}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="var(--muted-foreground-opacity-20)"
-                    />
-                    <XAxis
-                      dataKey="day"
-                      stroke="var(--muted-foreground)"
-                      style={{ fontSize: "12px" }}
-                    />
-                    <YAxis stroke="var(--muted-foreground)" style={{ fontSize: "12px" }} />
-                    <RechartsTooltip
-                      contentStyle={{
-                        backgroundColor: "var(--background)",
-                        border: "1px solid var(--border)",
-                        borderRadius: "6px",
-                      }}
-                      formatter={(value) => `S/ ${value}`}
-                    />
-                    <Bar dataKey="ingresos" fill="hsl(var(--success))" radius={[8, 8, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+            <IngresosSemanalesChart data={ingresoSemanalData} diaActual={diaActual} />
           </motion.div>
 
-          {/* Ocupación Mensual */}
+          {/* Citas por semana */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
           >
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="size-5 text-primary" />
-                  Citas por semana
-                </CardTitle>
-                <CardDescription>Citas activas (no canceladas) por semana</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={280}>
-                  <LineChart data={citasPorSemanaData}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="var(--muted-foreground-opacity-20)"
-                    />
-                    <XAxis
-                      dataKey="week"
-                      stroke="var(--muted-foreground)"
-                      style={{ fontSize: "12px" }}
-                    />
-                    <YAxis
-                      stroke="var(--muted-foreground)"
-                      style={{ fontSize: "12px" }}
-                      allowDecimals={false}
-                    />
-                    <RechartsTooltip
-                      contentStyle={{
-                        backgroundColor: "var(--background)",
-                        border: "1px solid var(--border)",
-                        borderRadius: "6px",
-                      }}
-                      formatter={(value) => `${value} cita(s)`}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="citas"
-                      stroke="hsl(var(--primary))"
-                      strokeWidth={2}
-                      dot={{ fill: "hsl(var(--primary))", r: 4 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+            <CitasPorSemanaChart data={citasPorSemanaData} />
           </motion.div>
         </div>
 

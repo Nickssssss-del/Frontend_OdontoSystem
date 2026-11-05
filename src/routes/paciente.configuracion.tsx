@@ -34,8 +34,56 @@ import { Switch } from "@/components/ui/switch";
 import { useAppState } from "@/lib/app-state";
 import { leerSesion, usuariosApi, type UsuarioYo } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { ArrowRight, Bell, Clock, LogOut, Mail, Phone, Shield, UserRound } from "lucide-react";
+import {
+  ArrowRight,
+  Bell,
+  Clock,
+  LogOut,
+  Mail,
+  Monitor,
+  Moon,
+  Palette,
+  Phone,
+  Shield,
+  Sun,
+  UserRound,
+} from "lucide-react";
 import { toast } from "sonner";
+
+type Tema = "claro" | "oscuro" | "sistema";
+type TamanoTexto = "normal" | "grande";
+
+const CLAVE_TEMA = "odontosystem.tema";
+const CLAVE_TAMANO_TEXTO = "odontosystem.tamano-texto";
+
+function leerTema(): Tema {
+  if (typeof window === "undefined") return "claro";
+  const valor = window.localStorage.getItem(CLAVE_TEMA);
+  return valor === "oscuro" || valor === "sistema" ? valor : "claro";
+}
+
+function aplicarTema(tema: Tema) {
+  if (typeof document === "undefined") return;
+  const oscuro =
+    tema === "oscuro" ||
+    (tema === "sistema" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  document.documentElement.classList.toggle("dark", oscuro);
+}
+
+function guardarTema(tema: Tema) {
+  if (typeof window !== "undefined") window.localStorage.setItem(CLAVE_TEMA, tema);
+  aplicarTema(tema);
+}
+
+function leerTamanoTexto(): TamanoTexto {
+  if (typeof window === "undefined") return "normal";
+  return window.localStorage.getItem(CLAVE_TAMANO_TEXTO) === "grande" ? "grande" : "normal";
+}
+
+function guardarTamanoTexto(tamano: TamanoTexto) {
+  if (typeof window !== "undefined") window.localStorage.setItem(CLAVE_TAMANO_TEXTO, tamano);
+  document.documentElement.classList.toggle("text-large", tamano === "grande");
+}
 
 export const Route = createFileRoute("/paciente/configuracion")({
   head: () => ({
@@ -57,9 +105,6 @@ type PreferenciasPaciente = {
   push: boolean;
   comunicacionAtenciones: boolean;
   historialClinico: boolean;
-  // Idioma y tema visual (si están soportados)
-  idioma: string; // es, en, etc.
-  tema: string; // claro, oscuro
 };
 
 const PREFERENCIAS_INICIALES: PreferenciasPaciente = {
@@ -69,8 +114,6 @@ const PREFERENCIAS_INICIALES: PreferenciasPaciente = {
   push: true,
   comunicacionAtenciones: true,
   historialClinico: true,
-  idioma: "es",
-  tema: "claro",
 };
 
 const anticipacionLabel: Record<PreferenciasPaciente["anticipacion"], string> = {
@@ -128,6 +171,22 @@ function ConfiguracionPaciente() {
   const [intento, setIntento] = React.useState(0);
   const [cerrandoSesion, setCerrandoSesion] = React.useState(false);
   const [cerrarAbierto, setCerrarAbierto] = React.useState(false);
+  const [tema, setTema] = React.useState<Tema>("claro");
+  const [texto, setTexto] = React.useState<TamanoTexto>("normal");
+
+  React.useEffect(() => {
+    setTema(leerTema());
+    setTexto(leerTamanoTexto());
+  }, []);
+
+  const cambiarTema = (valor: Tema) => {
+    setTema(valor);
+    guardarTema(valor);
+  };
+  const cambiarTexto = (valor: TamanoTexto) => {
+    setTexto(valor);
+    guardarTamanoTexto(valor);
+  };
 
   React.useEffect(() => {
     if (!esPaciente) {
@@ -440,58 +499,86 @@ function ConfiguracionPaciente() {
             </CardContent>
           </Card>
 
-          {/* Preferencias */}
+          {/* Preferencias de apariencia: se guardan en este dispositivo y se aplican al instante */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 font-display text-xl">
-                <Shield className="size-5 text-primary" /> Preferencias
+                <Palette className="size-5 text-primary" /> Apariencia
               </CardTitle>
-              <CardDescription>Idioma, tema visual y otras opciones disponibles.</CardDescription>
+              <CardDescription>
+                Personaliza cómo se ve OdontoSystem en este dispositivo.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Idioma */}
-              <div className="flex items-center justify-between gap-4 rounded-xl border border-border p-4">
-                <div>
-                  <p className="text-sm font-semibold">Idioma</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Selecciona el idioma de la interfaz.
-                  </p>
-                </div>
-                {/* Simulamos un select deshabilitado si no hay soporte real */}
-                <select
-                  value={preferencias.idioma}
-                  onChange={(e) => {
-                    const valor = e.target.value;
-                    if (valor) togglePref("idioma", valor);
-                  }}
-                  disabled={true} // Asumimos que no hay endpoint para guardar idioma
-                  className="ml-4 w-[200px] rounded-border border border-border/70 bg-background p-2"
-                >
-                  <option value="es">Español</option>
-                  <option value="en">English</option>
-                </select>
-                <p className="text-xs text-muted-foreground ml-2">
-                  (Preferencia no guardable en esta versión)
+              <div className="rounded-xl border border-border p-4">
+                <p className="text-sm font-semibold">Tema visual</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Elige el aspecto de la aplicación. «Automático» sigue el modo de tu dispositivo.
                 </p>
+                <div
+                  className="mt-3 grid grid-cols-3 gap-2"
+                  role="radiogroup"
+                  aria-label="Tema visual"
+                >
+                  {(
+                    [
+                      { valor: "claro", etiqueta: "Claro", icono: Sun },
+                      { valor: "oscuro", etiqueta: "Oscuro", icono: Moon },
+                      { valor: "sistema", etiqueta: "Automático", icono: Monitor },
+                    ] as const
+                  ).map(({ valor, etiqueta, icono: Icono }) => (
+                    <button
+                      key={valor}
+                      type="button"
+                      role="radio"
+                      aria-checked={tema === valor}
+                      onClick={() => cambiarTema(valor)}
+                      className={cn(
+                        "flex flex-col items-center gap-1.5 rounded-xl border px-3 py-3 text-xs font-semibold transition-colors",
+                        tema === valor
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground",
+                      )}
+                    >
+                      <Icono className="size-5" /> {etiqueta}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {/* Tema visual */}
-              <div className="flex items-center justify-between gap-4 rounded-xl border border-border p-4 mt-4">
-                <div>
-                  <p className="text-sm font-semibold">Tema visual</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Elige entre tema claro y oscuro.
-                  </p>
-                </div>
-                <Switch
-                  checked={preferencias.tema === "oscuro"}
-                  onCheckedChange={(v) => togglePref("tema", v ? "oscuro" : "claro")}
-                  disabled={true} // Asumimos que no hay endpoint para guardar tema
-                  aria-label="Tema visual"
-                />
-                <p className="text-xs text-muted-foreground ml-2">
-                  (Preferencia no guardable en esta versión)
+              <div className="rounded-xl border border-border p-4">
+                <p className="text-sm font-semibold">Tamaño del texto</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Aumenta el texto para leer con más comodidad.
                 </p>
+                <div
+                  className="mt-3 grid grid-cols-2 gap-2"
+                  role="radiogroup"
+                  aria-label="Tamaño del texto"
+                >
+                  {(
+                    [
+                      { valor: "normal", etiqueta: "Normal" },
+                      { valor: "grande", etiqueta: "Grande" },
+                    ] as const
+                  ).map(({ valor, etiqueta }) => (
+                    <button
+                      key={valor}
+                      type="button"
+                      role="radio"
+                      aria-checked={texto === valor}
+                      onClick={() => cambiarTexto(valor)}
+                      className={cn(
+                        "rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors",
+                        texto === valor
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground",
+                      )}
+                    >
+                      {etiqueta}
+                    </button>
+                  ))}
+                </div>
               </div>
             </CardContent>
           </Card>

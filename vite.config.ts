@@ -8,7 +8,7 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
   // Reduce ruido de conexiones abortadas en dev (HMR, navegación SPA, etc.)
-   vite: {
+  vite: {
     logLevel: "warn",
   },
   tanstackStart: {

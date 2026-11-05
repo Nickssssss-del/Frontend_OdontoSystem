@@ -1,7 +1,8 @@
 import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "motion/react";
-import { FileText, Plus, Loader2, AlertCircle } from "lucide-react";
+import { FileText, Plus, Loader2, AlertCircle, Lock } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,22 @@ import {
   TableCell,
   TableHead,
 } from "@/components/ui/table";
-import { miPerfilApi, pacientesApi, type HistoriaClinica, type PacienteDetalle } from "@/lib/api";
+import {
+  historiasApi,
+  miPerfilApi,
+  pacientesApi,
+  type HistoriaClinica,
+  type PacienteDetalle,
+} from "@/lib/api";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import type { Appointment } from "@/lib/app-state";
 import { useAppState } from "@/lib/app-state";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -36,6 +52,60 @@ function HistorialClinicoPaciente() {
   const [cargando, setCargando] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [errorPaciente, setErrorPaciente] = React.useState<string | null>(null);
+
+  const [recarga, setRecarga] = React.useState(0);
+  const [citaNota, setCitaNota] = React.useState<Appointment | null>(null);
+  const [diagnostico, setDiagnostico] = React.useState("");
+  const [tratamiento, setTratamiento] = React.useState("");
+  const [notas, setNotas] = React.useState("");
+  const [guardando, setGuardando] = React.useState(false);
+
+  // Citas atendidas de este paciente que aún no tienen diagnóstico ni tratamiento.
+  const pendientes = React.useMemo(() => {
+    if (error || cargando) return [];
+    const conHistoria = new Set(historias.map((h) => h.cita_id));
+    const porId = new Map<string, Appointment>();
+    for (const c of [...agenda, ...appointments]) {
+      if (c.patientId === pacienteId && c.status === "COMPLETED" && !conHistoria.has(c.id)) {
+        porId.set(c.id, c);
+      }
+    }
+    return [...porId.values()].sort((a, b) =>
+      `${b.date} ${b.time}`.localeCompare(`${a.date} ${a.time}`),
+    );
+  }, [agenda, appointments, historias, pacienteId, error, cargando]);
+
+  const abrirNota = (cita: Appointment) => {
+    setCitaNota(cita);
+    setDiagnostico("");
+    setTratamiento("");
+    setNotas("");
+  };
+
+  const guardarNota = async () => {
+    if (!citaNota || guardando) return;
+    if (!diagnostico.trim() || !tratamiento.trim()) {
+      toast.error("Completa el diagnóstico y el tratamiento");
+      return;
+    }
+    setGuardando(true);
+    try {
+      await historiasApi.registrar(citaNota.id, {
+        diagnostico: diagnostico.trim(),
+        tratamiento: tratamiento.trim(),
+        ...(notas.trim() ? { notas: notas.trim() } : {}),
+      });
+      toast.success("Historia clínica guardada");
+      setCitaNota(null);
+      setRecarga((n) => n + 1);
+    } catch (e) {
+      toast.error("No se pudo guardar la historia clínica", {
+        description: e instanceof Error ? e.message : undefined,
+      });
+    } finally {
+      setGuardando(false);
+    }
+  };
 
   const nombreEnLista = React.useMemo(() => {
     const cita = [...agenda, ...appointments].find((c) => c.patientId === pacienteId);
@@ -80,7 +150,7 @@ function HistorialClinicoPaciente() {
     return () => {
       vivo = false;
     };
-  }, [pacienteId]);
+  }, [pacienteId, recarga]);
 
   const fmtFecha = (iso: string) =>
     new Date(iso).toLocaleDateString("es-PE", {
@@ -178,14 +248,41 @@ function HistorialClinicoPaciente() {
                 variant="outline"
                 size="sm"
                 className={cn("gap-1.5", "bg-background")}
-                disabled
-                title="Funcionalidad de nueva evolución próximamente"
+                disabled={pendientes.length === 0}
+                onClick={() => pendientes[0] && abrirNota(pendientes[0])}
+                title={
+                  pendientes.length === 0
+                    ? "No hay atenciones pendientes de registrar"
+                    : "Registrar diagnóstico y tratamiento"
+                }
               >
                 <Plus className="size-4" /> Nueva evolución
               </Button>
             </div>
           </CardHeader>
           <CardContent>
+            {pendientes.length > 0 && (
+              <div className="mb-4 space-y-2 rounded-xl border border-warning/40 bg-warning/10 p-4">
+                <p className="text-sm font-semibold text-warning-foreground">
+                  {pendientes.length === 1
+                    ? "1 atención sin diagnóstico ni tratamiento"
+                    : `${pendientes.length} atenciones sin diagnóstico ni tratamiento`}
+                </p>
+                {pendientes.map((c) => (
+                  <div
+                    key={c.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-card p-3 text-sm"
+                  >
+                    <span>
+                      {c.service} · {c.date} · {c.time}
+                    </span>
+                    <Button size="sm" onClick={() => abrirNota(c)}>
+                      Registrar
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
             {cargando && (
               <div className="flex justify-center py-8">
                 <Loader2 className="size-6 animate-spin text-primary" />
@@ -238,6 +335,47 @@ function HistorialClinicoPaciente() {
             )}
           </CardContent>
         </Card>
+
+        <Dialog open={!!citaNota} onOpenChange={(o) => !o && !guardando && setCitaNota(null)}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Registrar diagnóstico y tratamiento</DialogTitle>
+              <DialogDescription>
+                {citaNota ? `${citaNota.service} · ${citaNota.date} · ${citaNota.time}` : ""}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <Textarea
+                value={diagnostico}
+                onChange={(e) => setDiagnostico(e.target.value)}
+                rows={2}
+                aria-label="Diagnóstico"
+                placeholder="Diagnóstico (obligatorio)"
+              />
+              <Textarea
+                value={tratamiento}
+                onChange={(e) => setTratamiento(e.target.value)}
+                rows={2}
+                aria-label="Tratamiento"
+                placeholder="Tratamiento realizado (obligatorio)"
+              />
+              <Textarea
+                value={notas}
+                onChange={(e) => setNotas(e.target.value)}
+                rows={3}
+                aria-label="Notas"
+                placeholder="Indicaciones y próximo control (opcional)"
+              />
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Lock className="size-3 shrink-0" aria-hidden="true" /> Se guarda cifrado; solo el
+                paciente y tú pueden verlo.
+              </p>
+              <Button className="w-full" onClick={() => void guardarNota()} disabled={guardando}>
+                {guardando ? "Guardando…" : "Guardar historia clínica"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </motion.div>
     </AppShell>
   );

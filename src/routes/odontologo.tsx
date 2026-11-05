@@ -493,6 +493,8 @@ function Odontologo() {
                               onClick={() => {
                                 setNotaFor(cita);
                                 setNota(cita.note ?? "");
+                                setDiagnostico("");
+                                setTratamiento("");
                               }}
                               className="mt-2 rounded-full border border-border px-3 py-1.5 text-xs font-semibold hover:border-primary hover:text-primary"
                             >

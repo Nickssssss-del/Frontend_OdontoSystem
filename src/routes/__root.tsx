@@ -7,6 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
+import { SCRIPT_TEMA_INICIAL } from "@/lib/tema";
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
@@ -117,8 +118,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA_INICIAL }} />
         <HeadContent />
       </head>
       <body suppressHydrationWarning>
