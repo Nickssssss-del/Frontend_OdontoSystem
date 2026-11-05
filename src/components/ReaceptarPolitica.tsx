@@ -52,7 +52,7 @@ export function ReaceptarPolitica() {
       aria-describedby="politica-texto"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
     >
-      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-lg">
+      <div className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-lg">
         <h2 id="politica-titulo" className="font-display text-lg font-semibold text-foreground">
           Actualizamos nuestra política de privacidad
         </h2>

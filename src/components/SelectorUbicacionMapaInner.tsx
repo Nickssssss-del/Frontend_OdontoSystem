@@ -20,7 +20,7 @@ const ICA_CENTRO: Coordenadas = { lat: -14.06777, lng: -75.72861 };
 
 function crearIconoSeleccion() {
   const pinHtml = `
-    <div style="position: relative; display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); cursor: grab;">
+    <div style="position: absolute; left: 0; bottom: 0; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; width: max-content; cursor: grab;">
       <div style="background: #006B68; color: #FFFFFF; width: 38px; height: 38px; border-radius: 9999px; box-shadow: 0 4px 14px rgba(0, 107, 104, 0.45), 0 2px 6px rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center; border: 2.5px solid #FFFFFF;">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
           <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" />
@@ -35,8 +35,9 @@ function crearIconoSeleccion() {
   return L.divIcon({
     className: "selector-ubicacion-marker",
     html: pinHtml,
-    iconSize: [38, 52],
-    iconAnchor: [19, 52],
+    // Icono de 0×0: el pin se dibuja hacia arriba desde la coordenada.
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
     popupAnchor: [0, -52],
   });
 }
@@ -73,14 +74,20 @@ function CentradorMapa({ destino }: { destino?: Coordenadas | null | undefined }
   return null;
 }
 
-/** Fuerza invalidar el tamaño del mapa al montarse para evitar tiles grises */
+/** Recalcula el tamaño al montarse y cuando el contenedor cambia (girar el celular, menús, pestañas). */
 function MapSizeFixer() {
   const map = useMap();
   React.useEffect(() => {
-    const timer = setTimeout(() => {
-      map.invalidateSize();
-    }, 0);
-    return () => clearTimeout(timer);
+    const timer = setTimeout(() => map.invalidateSize(), 0);
+    let observador: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined") {
+      observador = new ResizeObserver(() => map.invalidateSize());
+      observador.observe(map.getContainer());
+    }
+    return () => {
+      clearTimeout(timer);
+      observador?.disconnect();
+    };
   }, [map]);
   return null;
 }

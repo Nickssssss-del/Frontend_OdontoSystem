@@ -22,20 +22,27 @@ function crearIconoMarcador(titulo: string) {
   return L.divIcon({
     className: "odontosystem-leaflet-marker",
     html: pinHtml,
-    iconSize: [34, 45],
-    iconAnchor: [17, 45],
+    // Icono de 0×0: el pin se dibuja hacia arriba desde la coordenada (ver markerHtml.ts).
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
     popupAnchor: [0, -45],
   });
 }
 
-/** Fuerza invalidar el tamaño del mapa al montarse para evitar tiles grises */
+/** Recalcula el tamaño al montarse y cuando el contenedor cambia (girar el celular, menús, pestañas). */
 function MapSizeFixer() {
   const map = useMap();
   React.useEffect(() => {
-    const timer = setTimeout(() => {
-      map.invalidateSize();
-    }, 0);
-    return () => clearTimeout(timer);
+    const timer = setTimeout(() => map.invalidateSize(), 0);
+    let observador: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined") {
+      observador = new ResizeObserver(() => map.invalidateSize());
+      observador.observe(map.getContainer());
+    }
+    return () => {
+      clearTimeout(timer);
+      observador?.disconnect();
+    };
   }, [map]);
   return null;
 }

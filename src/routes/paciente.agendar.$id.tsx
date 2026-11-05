@@ -36,6 +36,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { soles } from "@/lib/mock-data";
 import {
