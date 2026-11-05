@@ -1,27 +1,34 @@
 import * as React from "react";
 import { motion } from "motion/react";
 import { useNavigate } from "@tanstack/react-router";
-import { Bell, CheckCircle2, Clock, CreditCard, User, X, ChevronRight } from "lucide-react";
+import {
+  AlertTriangle,
+  Bell,
+  CheckCircle2,
+  ChevronRight,
+  Clock,
+  MessageSquareWarning,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAppState } from "@/lib/app-state";
 import { usuariosApi, type NotificacionUsuario } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 
-type EstadoApp = ReturnType<typeof useAppState>;
-
 /** Rutas válidas a las que puede navegar una notificación. */
-export type RutaNotificacion = "/paciente/panel" | "/paciente/catalogo" | "/dentist/agenda";
+export type RutaNotificacion =
+  "/paciente/panel" | "/paciente/catalogo" | "/dentist/agenda" | "/dentist/reclamos";
 
+/** Tipos que manda el backend en GET /api/usuarios/yo/notificaciones. */
 export type TipoNotificacion =
-  | "cita_confirmada"
-  | "cita_cancelada"
-  | "cita_recordatorio"
-  | "pago_aprobado"
-  | "pago_rechazado"
-  | "nueva_reserva"
-  | "cancelacion_reserva"
-  | "cambio_agenda";
+  | "CONFIRMACION_PAGO"
+  | "AVISO_CANCELACION"
+  | "AVISO_REPROGRAMACION"
+  | "RECORDATORIO_CITA"
+  | "ALERTA_STRIKE"
+  | "RECLAMO"
+  | "AVISO";
 
 export type Notificacion = {
   id: string;
@@ -30,209 +37,52 @@ export type Notificacion = {
   descripcion: string;
   fecha: string;
   leida: boolean;
-  ruta?: RutaNotificacion;
+  ruta?: RutaNotificacion | undefined;
   icono: React.ElementType;
   color: string;
   labelTipo: string;
 };
 
 const ICONOS_TIPO: Record<TipoNotificacion, React.ElementType> = {
-  cita_confirmada: CheckCircle2,
-  cita_cancelada: X,
-  cita_recordatorio: Clock,
-  pago_aprobado: CreditCard,
-  pago_rechazado: CreditCard,
-  nueva_reserva: User,
-  cancelacion_reserva: X,
-  cambio_agenda: Clock,
+  CONFIRMACION_PAGO: CheckCircle2,
+  AVISO_CANCELACION: X,
+  AVISO_REPROGRAMACION: Clock,
+  RECORDATORIO_CITA: Clock,
+  ALERTA_STRIKE: AlertTriangle,
+  RECLAMO: MessageSquareWarning,
+  AVISO: Bell,
 };
 
-const COLORES_TIPO: Record<TipoNotificacion, string> = {
-  cita_confirmada: "text-success-foreground bg-success/10 border-success/20",
-  cita_cancelada: "text-destructive-foreground bg-destructive/10 border-destructive/20",
-  cita_recordatorio: "text-warning-foreground bg-warning/10 border-warning/20",
-  pago_aprobado: "text-success-foreground bg-success/10 border-success/20",
-  pago_rechazado: "text-destructive-foreground bg-destructive/10 border-destructive/20",
-  nueva_reserva: "text-primary-foreground bg-primary/10 border-primary/20",
-  cancelacion_reserva: "text-destructive-foreground bg-destructive/10 border-destructive/20",
-  cambio_agenda: "text-warning-foreground bg-warning/10 border-warning/20",
+const COLOR_TIPO: Record<TipoNotificacion, string> = {
+  CONFIRMACION_PAGO: "text-success-foreground",
+  AVISO_CANCELACION: "text-destructive-foreground",
+  AVISO_REPROGRAMACION: "text-warning-foreground",
+  RECORDATORIO_CITA: "text-warning-foreground",
+  ALERTA_STRIKE: "text-destructive-foreground",
+  RECLAMO: "text-primary",
+  AVISO: "text-primary",
 };
 
 const LABEL_TIPO: Record<TipoNotificacion, string> = {
-  cita_confirmada: "Cita confirmada",
-  cita_cancelada: "Cita cancelada",
-  cita_recordatorio: "Recordatorio de cita",
-  pago_aprobado: "Pago aprobado",
-  pago_rechazado: "Pago rechazado",
-  nueva_reserva: "Nueva reserva",
-  cancelacion_reserva: "Reserva cancelada",
-  cambio_agenda: "Cambio de agenda",
+  CONFIRMACION_PAGO: "Cita",
+  AVISO_CANCELACION: "Cita cancelada",
+  AVISO_REPROGRAMACION: "Cita reprogramada",
+  RECORDATORIO_CITA: "Recordatorio de cita",
+  ALERTA_STRIKE: "Inasistencia",
+  RECLAMO: "Reclamo",
+  AVISO: "Aviso",
 };
 
-const CLAVE_LEIDAS = "odontosystem.notificaciones-leidas";
-
-function leerIdsLeidos(): string[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const crudo = window.localStorage.getItem(CLAVE_LEIDAS);
-    if (!crudo) return [];
-    const datos = JSON.parse(crudo) as unknown;
-    return Array.isArray(datos) ? datos.filter((id): id is string => typeof id === "string") : [];
-  } catch {
-    return [];
-  }
+/** El backend puede sumar tipos nuevos: los que la web no conoce se muestran como aviso general. */
+function tipoDe(tipo: string): TipoNotificacion {
+  return tipo in ICONOS_TIPO ? (tipo as TipoNotificacion) : "AVISO";
 }
 
-function guardarIdsLeidos(ids: string[]) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(CLAVE_LEIDAS, JSON.stringify(ids));
-  } catch {
-    // Modo privado o almacenamiento lleno: las leídas duran solo esta visita.
-  }
-}
-
-function fechaDia(iso: string): string {
-  const [anio, mes, dia] = iso.split("-").map(Number);
-  if (!anio || !mes || !dia) return iso;
-  return new Date(anio, mes - 1, dia).toLocaleDateString("es-PE");
-}
-
-function construirNotificacionesPaciente(datos: {
-  usuario: EstadoApp["usuario"];
-  appointments: EstadoApp["appointments"];
-}): Notificacion[] {
-  const { appointments } = datos;
-  const ahora = new Date().toISOString();
-  const lista: Notificacion[] = [];
-
-  for (const cita of appointments) {
-    const cuando = fechaDia(cita.date);
-    switch (cita.status) {
-      case "CONFIRMED":
-        lista.push({
-          id: `cita-${cita.id}-confirmada`,
-          tipo: "cita_confirmada",
-          titulo: "Cita confirmada",
-          descripcion: `Tu cita del ${cuando} a las ${cita.time} ha sido confirmada.`,
-          fecha: ahora,
-          leida: false,
-          ruta: "/paciente/panel",
-          icono: ICONOS_TIPO.cita_confirmada,
-          color: "text-success-foreground",
-          labelTipo: "Cita confirmada",
-        });
-        break;
-      case "CANCELLED":
-        lista.push({
-          id: `cita-${cita.id}-cancelada`,
-          tipo: "cita_cancelada",
-          titulo: "Cita cancelada",
-          descripcion: `Tu cita del ${cuando} a las ${cita.time} ha sido cancelada.`,
-          fecha: ahora,
-          leida: false,
-          ruta: "/paciente/panel",
-          icono: ICONOS_TIPO.cita_cancelada,
-          color: "text-destructive-foreground",
-          labelTipo: "Cita cancelada",
-        });
-        break;
-      case "PENDING_PAYMENT":
-      case "VERIFYING":
-      case "PAYMENT_REJECTED":
-        lista.push({
-          id: `cita-${cita.id}-recordatorio`,
-          tipo: "cita_recordatorio",
-          titulo: "Recordatorio de cita",
-          descripcion: `Tienes una cita el ${cuando} a las ${cita.time}.`,
-          fecha: ahora,
-          leida: false,
-          ruta: "/paciente/panel",
-          icono: ICONOS_TIPO.cita_recordatorio,
-          color: "text-warning-foreground",
-          labelTipo: "Recordatorio de cita",
-        });
-        break;
-    }
-  }
-
-  return lista.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
-}
-
-function construirNotificacionesOdontologo(datos: {
-  usuario: EstadoApp["usuario"];
-  appointments: EstadoApp["appointments"];
-}): Notificacion[] {
-  const { appointments } = datos;
-  const ahora = new Date().toISOString();
-  const lista: Notificacion[] = [];
-
-  for (const cita of appointments) {
-    const cuando = fechaDia(cita.date);
-    switch (cita.status) {
-      case "CONFIRMED":
-        lista.push({
-          id: `cita-${cita.id}-confirmada`,
-          tipo: "cita_confirmada",
-          titulo: "Cita confirmada",
-          descripcion: `Cita de ${cita.patient} confirmada para el ${cuando} a las ${cita.time}.`,
-          fecha: ahora,
-          leida: false,
-          ruta: "/dentist/agenda",
-          icono: ICONOS_TIPO.cita_confirmada,
-          color: "text-success-foreground",
-          labelTipo: "Cita confirmada",
-        });
-        break;
-      case "PENDING_PAYMENT":
-      case "VERIFYING":
-      case "PAYMENT_REJECTED":
-        lista.push({
-          id: `cita-${cita.id}-nueva`,
-          tipo: "nueva_reserva",
-          titulo: "Nueva reserva",
-          descripcion: `${cita.patient} ha solicitado una cita para el ${cuando} a las ${cita.time}.`,
-          fecha: ahora,
-          leida: false,
-          ruta: "/dentist/agenda",
-          icono: ICONOS_TIPO.nueva_reserva,
-          color: "text-primary-foreground",
-          labelTipo: "Nueva reserva",
-        });
-        break;
-      case "CANCELLED":
-        lista.push({
-          id: `cita-${cita.id}-cancelacion`,
-          tipo: "cancelacion_reserva",
-          titulo: "Reserva cancelada",
-          descripcion: `${cita.patient} ha cancelado su cita del ${cuando} a las ${cita.time}.`,
-          fecha: ahora,
-          leida: false,
-          ruta: "/dentist/agenda",
-          icono: ICONOS_TIPO.cancelacion_reserva,
-          color: "text-destructive-foreground",
-          labelTipo: "Reserva cancelada",
-        });
-        break;
-      case "COMPLETED":
-      case "NO_SHOW":
-        lista.push({
-          id: `cita-${cita.id}-cambio`,
-          tipo: "cambio_agenda",
-          titulo: "Agenda actualizada",
-          descripcion: `Cita de ${cita.patient} el ${cuando}.`,
-          fecha: ahora,
-          leida: false,
-          ruta: "/dentist/agenda",
-          icono: ICONOS_TIPO.cambio_agenda,
-          color: "text-warning-foreground",
-          labelTipo: "Cambio de agenda",
-        });
-        break;
-    }
-  }
-
-  return lista.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+/** A dónde lleva cada aviso: los de citas a la agenda o al panel, los reclamos a su sección. */
+function rutaDe(tipo: TipoNotificacion, esOdontologo: boolean): RutaNotificacion | undefined {
+  if (tipo === "RECLAMO") return esOdontologo ? "/dentist/reclamos" : undefined;
+  if (tipo === "AVISO") return undefined;
+  return esOdontologo ? "/dentist/agenda" : "/paciente/panel";
 }
 
 function formatoFechaRelativa(fechaISO: string): string {
@@ -268,91 +118,77 @@ export function NotificacionesPanel({
   children,
 }: NotificacionesPanelProps) {
   const navigate = useNavigate();
-  const { usuario, appointments } = useAppState();
+  const { usuario } = useAppState();
   const esOdontologo = usuario?.rol === "ODONTOLOGO";
-  const [desdeApi, setDesdeApi] = React.useState<NotificacionUsuario[] | null>(null);
-  const [leidas, setLeidas] = React.useState<Set<string>>(() => new Set(leerIdsLeidos()));
+  /** null = cargando; "error" = la API no respondió. */
+  const [desdeApi, setDesdeApi] = React.useState<NotificacionUsuario[] | "error" | null>(null);
+  const [noLeidasApi, setNoLeidasApi] = React.useState(0);
 
-  React.useEffect(() => {
-    if (!usuario) {
-      setDesdeApi(null);
-      return;
-    }
+  const cargar = React.useCallback(() => {
+    if (!usuario) return () => {};
     let vivo = true;
+    setDesdeApi(null);
     usuariosApi
       .notificaciones()
       .then((respuesta) => {
         if (!vivo) return;
-        setDesdeApi(respuesta.notificaciones);
+        setDesdeApi(respuesta.notificaciones ?? []);
+        setNoLeidasApi(respuesta.no_leidas ?? 0);
       })
       .catch(() => {
-        if (vivo) setDesdeApi(null);
+        if (vivo) setDesdeApi("error");
       });
     return () => {
       vivo = false;
     };
   }, [usuario]);
 
-  const notificaciones = React.useMemo(() => {
-    if (desdeApi) {
-      return desdeApi.map((aviso): Notificacion => {
-        const tipo = (aviso.tipo in ICONOS_TIPO ? aviso.tipo : "cambio_agenda") as TipoNotificacion;
-        return {
-          id: aviso.id,
-          tipo,
-          titulo: aviso.titulo,
-          descripcion: aviso.mensaje,
-          fecha: aviso.creado_en,
-          leida: aviso.leida,
-          icono: ICONOS_TIPO[tipo],
-          color: "text-primary",
-          labelTipo: LABEL_TIPO[tipo],
-        };
-      });
-    }
-    if (esOdontologo) return construirNotificacionesOdontologo({ usuario, appointments });
-    return construirNotificacionesPaciente({ usuario, appointments });
-  }, [desdeApi, esOdontologo, usuario, appointments]);
+  // Se recarga al iniciar sesión y cada vez que se abre el panel, para ver los avisos nuevos.
+  React.useEffect(() => cargar(), [cargar]);
+  React.useEffect(() => (open ? cargar() : undefined), [open, cargar]);
 
-  const noLeidas =
-    desdeApi !== null
-      ? notificaciones.filter((n) => !n.leida).length
-      : notificaciones.filter((n) => !leidas.has(n.id)).length;
-
-  const marcarLeidaLocal = (id: string) => {
-    setLeidas((prev) => {
-      const siguiente = new Set(prev);
-      siguiente.add(id);
-      guardarIdsLeidos([...siguiente]);
-      return siguiente;
-    });
-  };
+  const lista = Array.isArray(desdeApi) ? desdeApi : [];
+  const notificaciones = lista.map((aviso): Notificacion => {
+    const tipo = tipoDe(aviso.tipo);
+    return {
+      id: aviso.id,
+      tipo,
+      titulo: aviso.titulo,
+      descripcion: aviso.mensaje,
+      fecha: aviso.creado_en,
+      leida: aviso.leida,
+      ruta: rutaDe(tipo, esOdontologo),
+      icono: ICONOS_TIPO[tipo],
+      color: COLOR_TIPO[tipo],
+      labelTipo: LABEL_TIPO[tipo],
+    };
+  });
+  const noLeidas = noLeidasApi;
 
   const marcarLeida = (id: string) => {
-    if (desdeApi === null) {
-      marcarLeidaLocal(id);
-      return;
-    }
+    if (!Array.isArray(desdeApi)) return;
     const previa = desdeApi;
+    const previasNoLeidas = noLeidasApi;
     const aviso = previa.find((item) => item.id === id);
     if (!aviso || aviso.leida) return;
     setDesdeApi(previa.map((item) => (item.id === id ? { ...item, leida: true } : item)));
-    void usuariosApi.marcarNotificacionLeida(id).catch(() => setDesdeApi(previa));
+    setNoLeidasApi(Math.max(0, previasNoLeidas - 1));
+    void usuariosApi.marcarNotificacionLeida(id).catch(() => {
+      setDesdeApi(previa);
+      setNoLeidasApi(previasNoLeidas);
+    });
   };
 
   const marcarTodasLeidas = () => {
-    if (desdeApi === null) {
-      setLeidas((prev) => {
-        const siguiente = new Set(prev);
-        for (const aviso of notificaciones) siguiente.add(aviso.id);
-        guardarIdsLeidos([...siguiente]);
-        return siguiente;
-      });
-      return;
-    }
+    if (!Array.isArray(desdeApi)) return;
     const previa = desdeApi;
+    const previasNoLeidas = noLeidasApi;
     setDesdeApi(previa.map((aviso) => ({ ...aviso, leida: true })));
-    void usuariosApi.marcarTodasLeidas().catch(() => setDesdeApi(previa));
+    setNoLeidasApi(0);
+    void usuariosApi.marcarTodasLeidas().catch(() => {
+      setDesdeApi(previa);
+      setNoLeidasApi(previasNoLeidas);
+    });
   };
 
   const navegarARuta = (ruta?: RutaNotificacion) => {
@@ -381,7 +217,24 @@ export function NotificacionesPanel({
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto pr-2">
-        {notificaciones.length === 0 ? (
+        {desdeApi === null ? (
+          <p className="py-12 text-center text-sm text-muted-foreground" role="status">
+            Cargando notificaciones…
+          </p>
+        ) : desdeApi === "error" ? (
+          <div
+            className="flex flex-col items-center justify-center py-12 text-center px-4"
+            role="alert"
+          >
+            <Bell className="size-8 mb-3 text-border" />
+            <h3 className="font-medium text-foreground">
+              No se pudieron cargar las notificaciones
+            </h3>
+            <Button variant="outline" size="sm" className="mt-3" onClick={() => cargar()}>
+              Reintentar
+            </Button>
+          </div>
+        ) : notificaciones.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center px-4">
             <Bell className="size-8 mb-3 text-border" />
             <h3 className="font-medium text-foreground">Sin notificaciones</h3>
@@ -399,7 +252,7 @@ export function NotificacionesPanel({
             <div className="divide-y divide-border/60">
               {notificaciones.map((notif) => {
                 const Icon = notif.icono;
-                const esLeida = desdeApi !== null ? notif.leida : leidas.has(notif.id);
+                const esLeida = notif.leida;
                 return (
                   <motion.div
                     key={notif.id}

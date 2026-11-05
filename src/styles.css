@@ -1,4 +1,4 @@
-@import "tailwindcss" source(none);
+@import "tailwindcss";
 @source "../src";
 @import "tw-animate-css";
 
@@ -292,4 +292,49 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ---- Mapas: punto "Mi ubicación" ---- */
+.ubicacion-usuario-marker {
+  background: none;
+  border: 0;
+}
+.ubicacion-usuario-punto {
+  position: absolute;
+  inset: 3px;
+  border-radius: 9999px;
+  background: #2563eb;
+  border: 3px solid #fff;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
+}
+.ubicacion-usuario-pulso {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: rgba(37, 99, 235, 0.35);
+  animation: ubicacion-usuario-pulso 2s ease-out infinite;
+}
+@keyframes ubicacion-usuario-pulso {
+  0% {
+    transform: scale(0.6);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ubicacion-usuario-pulso {
+    animation: none;
+    opacity: 0.5;
+  }
+}
+
+/* Popups de Leaflet: nunca más anchos que la pantalla en celulares pequeños. */
+.leaflet-popup-content-wrapper {
+  max-width: calc(100vw - 48px);
+}
+.leaflet-popup-content {
+  margin: 10px 12px;
 }

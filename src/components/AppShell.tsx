@@ -21,6 +21,7 @@ import * as React from "react";
 import type { ReactNode } from "react";
 import { ChatbotWidget } from "./ChatbotWidget";
 import { NotificacionesPanel } from "./NotificacionesPanel";
+import { ReaceptarPolitica } from "./ReaceptarPolitica";
 import { useAppState } from "@/lib/app-state";
 import {
   DropdownMenu,
@@ -468,6 +469,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="p-4 sm:p-6 md:p-8">{children}</div>
         </main>
         <ChatbotWidget />
+        <ReaceptarPolitica />
       </div>
     );
   }
@@ -478,6 +480,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <PatientHeader />
       <main className="mx-auto max-w-7xl px-4 pb-24 pt-8">{children}</main>
       <ChatbotWidget />
+      <ReaceptarPolitica />
     </div>
   );
 }

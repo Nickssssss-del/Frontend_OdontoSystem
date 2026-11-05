@@ -19,9 +19,10 @@ import {
   TimerOff,
   User,
   Wallet,
+  X,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { QrArt } from "@/components/ChatbotWidget";
+import { LogoBilletera, nombreBilletera } from "@/components/pagos/LogoBilletera";
 import { PasarelaPago } from "@/components/PasarelaPago";
 import { SelectorTurnos } from "@/components/SelectorTurnos";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -29,6 +30,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { soles } from "@/lib/mock-data";
 import {
   ApiError,
@@ -44,6 +53,9 @@ import {
 import { fechaDe, fechaLarga, horaDe } from "@/lib/odontologos";
 import { useAppState } from "@/lib/app-state";
 import { cn } from "@/lib/utils";
+
+import yapeQr from "@/assets/pagos/yapeqr.png";
+import plinQr from "@/assets/pagos/plin-qr.png";
 
 type AgendarSearch = {
   servicio?: string | undefined;
@@ -121,6 +133,11 @@ function Agendar() {
     };
   }, []);
   const pasarelaReal = config !== null && config.modo !== "simulado";
+  /** Lo que el backend dice de cada método (PLIN puede venir como "Próximamente"). Sin dato, se permite. */
+  const estadoMetodo = (metodo: "YAPE" | "PLIN") =>
+    config?.metodos?.find((m) => m.metodo === metodo);
+  const billeteraDisponible = (b: "yape" | "plin") =>
+    estadoMetodo(b === "yape" ? "YAPE" : "PLIN")?.disponible !== false;
 
   const servicio = servicios.find((s) => s.id === servicioId);
   const step = pago ? 3 : cita ? 2 : 1;
@@ -644,7 +661,9 @@ function Agendar() {
                           <span className="flex items-center gap-1.5 text-sm font-semibold">
                             <Smartphone className="size-4 text-primary" /> Billetera Digital
                           </span>
-                          <span className="mt-0.5 block text-xs text-muted-foreground">
+                          <span className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <LogoBilletera billetera="yape" className="size-5 text-[9px]" />
+                            <LogoBilletera billetera="plin" className="size-5 text-[9px]" />
                             Yape o Plin
                           </span>
                         </span>
@@ -679,30 +698,108 @@ function Agendar() {
                           exit={{ opacity: 0, y: -8 }}
                         >
                           <div className="mt-4 flex gap-2">
-                            {(["yape", "plin"] as const).map((m) => (
-                              <button
-                                key={m}
-                                onClick={() => setBilletera(m)}
-                                className={cn(
-                                  "flex-1 rounded-xl border py-2.5 text-sm font-semibold capitalize transition-colors",
-                                  billetera === m
-                                    ? "border-primary bg-primary/10 text-primary"
-                                    : "border-border text-muted-foreground",
+                            {(["yape", "plin"] as const).map((m) => {
+                              const disponible = billeteraDisponible(m);
+                              const nota = estadoMetodo(m === "yape" ? "YAPE" : "PLIN")?.nota;
+                              return (
+                                <button
+                                  key={m}
+                                  type="button"
+                                  onClick={() => setBilletera(m)}
+                                  disabled={!disponible}
+                                  aria-pressed={billetera === m}
+                                  className={cn(
+                                    "flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+                                    billetera === m
+                                      ? "border-primary bg-primary/10 text-primary"
+                                      : "border-border text-muted-foreground",
+                                  )}
+                                >
+                                  <LogoBilletera billetera={m} />
+                                  <span>{nombreBilletera(m)}</span>
+                                  {!disponible && (
+                                    <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                                      {nota ?? "No disponible"}
+                                    </span>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          {billeteraDisponible(billetera) ? (
+                            <div className="mt-4 rounded-2xl border border-border bg-white p-6 text-center">
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <button
+                                    type="button"
+                                    className="inline-block cursor-zoom-in"
+                                    aria-label={`Ampliar QR de ${billetera === "yape" ? "Yape" : "Plin"}`}
+                                  >
+                                    <img
+                                      src={billetera === "yape" ? yapeQr : plinQr}
+                                      alt={`Código QR de ${billetera === "yape" ? "Yape" : "Plin"} para pagar ${soles(deposito)}`}
+                                      className={cn(
+                                        "object-contain bg-white p-4 w-full max-w-xs mx-auto",
+                                        billetera === "plin" && "max-h-64",
+                                      )}
+                                    />
+                                  </button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-sm p-4">
+                                  <DialogHeader>
+                                    <DialogTitle className="text-base">
+                                      QR de {billetera === "yape" ? "Yape" : "Plin"}
+                                    </DialogTitle>
+                                    <DialogDescription>
+                                      Escanea para pagar {soles(deposito)}
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <div className="flex justify-center">
+                                    <img
+                                      src={billetera === "yape" ? yapeQr : plinQr}
+                                      alt={`Código QR de ${billetera === "yape" ? "Yape" : "Plin"} para pagar ${soles(deposito)}`}
+                                      className={cn(
+                                        "object-contain bg-white p-4 w-full",
+                                        billetera === "plin" && "max-h-[70vh]",
+                                      )}
+                                    />
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                              <div className="mt-4 space-y-2 text-sm">
+                                <p className="font-medium text-foreground">
+                                  {billetera === "yape" ? "Yape" : "Plin"} · {soles(deposito)}
+                                </p>
+                                {(!pasarelaReal || config?.modo_prueba) && (
+                                  <p className="text-xs text-amber-700 dark:text-amber-300">
+                                    Modo prueba: no se cobra dinero real
+                                  </p>
                                 )}
-                              >
-                                {m}
-                              </button>
-                            ))}
-                          </div>
-                          <div className="mt-4 rounded-2xl border border-border bg-muted/40 p-6 text-center">
-                            <QrArt />
-                            <p className="mt-3 text-sm text-muted-foreground">
-                              {billetera === "yape" ? "Yape" : "Plin"} · OdontoSystem ·{" "}
-                              {soles(deposito)} (simulado)
-                            </p>
-                          </div>
+                                <ol className="space-y-1 text-left text-muted-foreground text-xs">
+                                  <li className="flex items-start gap-1.5">
+                                    <span className="flex-shrink-0 text-primary">1.</span>
+                                    Abre {billetera === "yape" ? "Yape" : "Plin"} en tu celular.
+                                  </li>
+                                  <li className="flex items-start gap-1.5">
+                                    <span className="flex-shrink-0 text-primary">2.</span>
+                                    Escanea el código QR.
+                                  </li>
+                                  <li className="flex items-start gap-1.5">
+                                    <span className="flex-shrink-0 text-primary">3.</span>
+                                    Paga el importe y vuelve a pulsar{" "}
+                                    <span className="font-semibold">"Ya pagué"</span>.
+                                  </li>
+                                </ol>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="mt-4 rounded-2xl border border-border bg-muted/40 p-6 text-center text-sm text-muted-foreground">
+                              <p>{billetera === "yape" ? "Yape" : "Plin"} no está disponible.</p>
+                              <p className="mt-1">Selecciona otra billetera para ver su QR.</p>
+                            </div>
+                          )}
                           <Button
-                            disabled={enviando}
+                            disabled={enviando || !billeteraDisponible(billetera)}
                             onClick={() => pagar(billetera === "yape" ? "YAPE" : "PLIN")}
                             className="mt-5 w-full rounded-full"
                           >
