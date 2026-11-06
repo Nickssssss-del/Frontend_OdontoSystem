@@ -48,42 +48,15 @@ import {
   Sun,
   UserRound,
 } from "lucide-react";
+import {
+  guardarTamanoTexto,
+  guardarTema,
+  leerTamanoTexto,
+  leerTema,
+  type TamanoTexto,
+  type Tema,
+} from "@/lib/tema";
 import { toast } from "sonner";
-
-type Tema = "claro" | "oscuro" | "sistema";
-type TamanoTexto = "normal" | "grande";
-
-const CLAVE_TEMA = "odontosystem.tema";
-const CLAVE_TAMANO_TEXTO = "odontosystem.tamano-texto";
-
-function leerTema(): Tema {
-  if (typeof window === "undefined") return "claro";
-  const valor = window.localStorage.getItem(CLAVE_TEMA);
-  return valor === "oscuro" || valor === "sistema" ? valor : "claro";
-}
-
-function aplicarTema(tema: Tema) {
-  if (typeof document === "undefined") return;
-  const oscuro =
-    tema === "oscuro" ||
-    (tema === "sistema" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-  document.documentElement.classList.toggle("dark", oscuro);
-}
-
-function guardarTema(tema: Tema) {
-  if (typeof window !== "undefined") window.localStorage.setItem(CLAVE_TEMA, tema);
-  aplicarTema(tema);
-}
-
-function leerTamanoTexto(): TamanoTexto {
-  if (typeof window === "undefined") return "normal";
-  return window.localStorage.getItem(CLAVE_TAMANO_TEXTO) === "grande" ? "grande" : "normal";
-}
-
-function guardarTamanoTexto(tamano: TamanoTexto) {
-  if (typeof window !== "undefined") window.localStorage.setItem(CLAVE_TAMANO_TEXTO, tamano);
-  document.documentElement.classList.toggle("text-large", tamano === "grande");
-}
 
 export const Route = createFileRoute("/paciente/configuracion")({
   head: () => ({
