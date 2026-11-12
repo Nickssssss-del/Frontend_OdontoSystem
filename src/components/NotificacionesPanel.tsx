@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { useAppState } from "@/lib/app-state";
 import { usuariosApi, type NotificacionUsuario } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { fechaRelativaNotificacion } from "@/lib/fechaNotificacion";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 
 /** Rutas válidas a las que puede navegar una notificación. */
@@ -83,21 +84,6 @@ function rutaDe(tipo: TipoNotificacion, esOdontologo: boolean): RutaNotificacion
   if (tipo === "RECLAMO") return esOdontologo ? "/dentist/reclamos" : undefined;
   if (tipo === "AVISO") return undefined;
   return esOdontologo ? "/dentist/agenda" : "/paciente/panel";
-}
-
-function formatoFechaRelativa(fechaISO: string): string {
-  const fecha = new Date(fechaISO);
-  if (Number.isNaN(fecha.getTime())) return "Sin datos";
-  const ahora = new Date();
-  const diffMs = fecha.getTime() - ahora.getTime();
-  const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffDias > 0) return fecha.toLocaleDateString("es-PE");
-  if (diffDias === 0) return "Hoy";
-  if (diffDias === -1) return "Ayer";
-  if (diffDias < -1 && diffDias >= -7) return `Hace ${Math.abs(diffDias)} días`;
-
-  return fecha.toLocaleDateString("es-PE");
 }
 
 interface NotificacionesPanelProps {
@@ -294,7 +280,7 @@ export function NotificacionesPanel({
                           !esLeida ? "text-primary" : "text-muted-foreground",
                         )}
                       >
-                        {formatoFechaRelativa(notif.fecha)}
+                        {fechaRelativaNotificacion(notif.fecha)}
                       </p>
                       {!esLeida && (
                         <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-[10px] font-bold text-primary bg-primary/10">
