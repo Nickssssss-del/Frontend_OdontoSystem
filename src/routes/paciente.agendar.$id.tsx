@@ -360,7 +360,7 @@ function Agendar() {
         )}
       </AnimatePresence>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1.5fr_1fr]">
         <div className="rounded-3xl border border-mint/60 bg-card p-6 shadow-sm">
           {error && !expired && (
             <p className="mb-4 rounded-xl border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">

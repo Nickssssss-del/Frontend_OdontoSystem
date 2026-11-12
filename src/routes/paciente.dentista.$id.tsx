@@ -140,7 +140,7 @@ function PerfilDentista() {
         </Card>
       </motion.div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1.6fr_1fr]">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1.6fr_1fr]">
         <div className="space-y-6">
           {/* Horarios disponibles */}
           <Card className="rounded-3xl border-mint/60 shadow-sm">
