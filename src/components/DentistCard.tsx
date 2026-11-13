@@ -4,6 +4,7 @@ import { BadgeCheck, MapPin, Star } from "lucide-react";
 import type { Dentist } from "@/lib/mock-data";
 import { soles } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
+import { ANCHO_FOTO, fotoOptimizada } from "@/lib/cloudinary";
 
 export function DentistCard({ dentist, index = 0 }: { dentist: Dentist; index?: number }) {
   return (
@@ -25,7 +26,7 @@ export function DentistCard({ dentist, index = 0 }: { dentist: Dentist; index?: 
       >
         {dentist.fotoUrl ? (
           <img
-            src={dentist.fotoUrl}
+            src={fotoOptimizada(dentist.fotoUrl, ANCHO_FOTO.miniatura)}
             alt={`Foto de ${dentist.name}`}
             loading="lazy"
             className="size-16 rounded-full border-2 border-card object-cover shadow-sm"

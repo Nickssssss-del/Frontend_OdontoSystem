@@ -4,6 +4,7 @@ import { MapPin } from "lucide-react";
 import type { Dentist } from "@/lib/mock-data";
 import { soles } from "@/lib/mock-data";
 import type { DentistMapInnerProps } from "@/components/DentistMapInner";
+import { ANCHO_FOTO, fotoOptimizada } from "@/lib/cloudinary";
 
 export type DentistMapProps = {
   dentists: Dentist[];
@@ -67,7 +68,7 @@ export function DentistMap({ dentists, altura = 320 }: DentistMapProps) {
             >
               {d.fotoUrl ? (
                 <img
-                  src={d.fotoUrl}
+                  src={fotoOptimizada(d.fotoUrl, ANCHO_FOTO.miniatura)}
                   alt={`Foto de ${d.name}`}
                   className="size-10 shrink-0 rounded-xl object-cover"
                 />

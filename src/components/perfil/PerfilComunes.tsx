@@ -19,6 +19,7 @@ import { usuariosApi, type UsuarioYo } from "@/lib/api";
 import { iniciales } from "@/lib/odontologos";
 import { cn } from "@/lib/utils";
 import { mensajeDeError } from "./perfilUtils";
+import { ANCHO_FOTO, fotoOptimizada } from "@/lib/cloudinary";
 
 /**
  * Avatar con la foto de perfil del backend (GET /api/usuarios/yo), iniciales
@@ -62,7 +63,7 @@ export function AvatarPerfil({
     <div className="relative size-20 shrink-0">
       <Avatar className="size-20 border border-border/70 shadow-sm">
         <AvatarImage
-          src={fotoUrl ?? undefined}
+          src={fotoOptimizada(fotoUrl, ANCHO_FOTO.perfil) ?? undefined}
           alt={`Foto de ${nombre}`}
           className="object-cover"
         />
