@@ -52,7 +52,9 @@ const POLITICA_CSP = [
   "script-src 'self' 'unsafe-inline' https://accounts.google.com https://sdk.mercadopago.com https://*.mercadopago.com https://*.mlstatic.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com",
   "font-src 'self' data: https://fonts.gstatic.com",
-  "img-src 'self' data: blob: https:",
+  // Imágenes: solo los orígenes que usa la web (antes «https:», cualquier sitio; ZAP 10055).
+  // Fotos en Cloudinary, mosaicos de OpenStreetMap ({s} = a, b o c) e íconos de Mercado Pago.
+  "img-src 'self' data: blob: https://res.cloudinary.com https://a.tile.openstreetmap.org https://b.tile.openstreetmap.org https://c.tile.openstreetmap.org https://*.mercadopago.com https://*.mlstatic.com",
   `connect-src 'self' ${API_ORIGEN} https://accounts.google.com https://*.mercadopago.com https://*.mercadolibre.com https://*.mlstatic.com`,
   "frame-src https://accounts.google.com https://*.mercadopago.com https://*.mercadolibre.com",
   "frame-ancestors 'none'",
