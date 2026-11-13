@@ -16,6 +16,7 @@ import {
   type ServicioOdontologo,
 } from "@/lib/api";
 import { mensajeDe, soles } from "@/lib/formato";
+import { ANCHO_FOTO, fotoOptimizada } from "@/lib/cloudinary";
 
 export const Route = createFileRoute("/dentist/consultorio")({
   head: () => ({ meta: [{ title: "Mi consultorio | OdontoSystem Odontólogo" }] }),
@@ -361,7 +362,7 @@ function DentistConsultorio() {
                   className="group relative overflow-hidden rounded-xl border border-border/70"
                 >
                   <img
-                    src={f.url}
+                    src={fotoOptimizada(f.url, ANCHO_FOTO.grande)}
                     alt={f.descripcion ?? "Foto del consultorio"}
                     className="aspect-[4/3] w-full object-cover"
                     loading="lazy"

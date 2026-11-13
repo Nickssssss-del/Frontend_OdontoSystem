@@ -33,6 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
+import { ANCHO_FOTO, fotoOptimizada } from "@/lib/cloudinary";
 
 export const Route = createFileRoute("/paciente/catalogo")({
   head: () => ({
@@ -479,7 +480,7 @@ function Catalogo() {
                       >
                         {d.fotoUrl ? (
                           <img
-                            src={d.fotoUrl}
+                            src={fotoOptimizada(d.fotoUrl, ANCHO_FOTO.miniatura)}
                             alt={`Foto de ${d.name}`}
                             loading="lazy"
                             className="size-16 rounded-lg object-cover"

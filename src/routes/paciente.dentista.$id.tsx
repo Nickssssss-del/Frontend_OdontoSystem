@@ -12,6 +12,7 @@ import { SelectorTurnos } from "@/components/SelectorTurnos";
 import { MapaConsultorio } from "@/components/MapaConsultorio";
 import { useAppState } from "@/lib/app-state";
 import { cn } from "@/lib/utils";
+import { ANCHO_FOTO, fotoOptimizada } from "@/lib/cloudinary";
 
 export const Route = createFileRoute("/paciente/dentista/$id")({
   loader: async ({ params }) => {
@@ -74,7 +75,7 @@ function PerfilDentista() {
           <div className="flex h-36 items-center justify-center bg-gradient-to-br from-primary/25 to-accent/40">
             {perfil.foto_url ? (
               <img
-                src={perfil.foto_url}
+                src={fotoOptimizada(perfil.foto_url, ANCHO_FOTO.perfil)}
                 alt={`Foto de ${perfil.nombre}`}
                 className="size-24 rounded-full border-4 border-white/80 object-cover shadow-sm"
               />
@@ -128,7 +129,7 @@ function PerfilDentista() {
                 {perfil.fotos.map((f) => (
                   <img
                     key={f.id}
-                    src={f.url}
+                    src={fotoOptimizada(f.url, ANCHO_FOTO.galeria)}
                     alt={f.descripcion ?? "Foto del consultorio"}
                     loading="lazy"
                     className="h-24 w-36 shrink-0 rounded-xl object-cover"
