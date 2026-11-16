@@ -490,6 +490,11 @@ export type ResenasOdontologo = {
   resenas: ResenaPublica[];
 };
 
+/** GET /api/odontologos/yo/historias?paciente_id= — el backend exige el id del paciente. */
+export function rutaHistoriasDePaciente(pacienteId: string): string {
+  return `/api/odontologos/yo/historias${consulta({ paciente_id: pacienteId })}`;
+}
+
 function consulta(parametros: Record<string, string | number | undefined>): string {
   const p = new URLSearchParams();
   for (const [clave, valor] of Object.entries(parametros)) {
@@ -981,9 +986,7 @@ export const miPerfilApi = {
    * (el backend exige paciente_id: sin él responde 400).
    */
   historias(pacienteId: string): Promise<HistoriaClinica[]> {
-    return llamar<HistoriaClinica[]>(
-      `/api/odontologos/yo/historias${consulta({ paciente_id: pacienteId })}`,
-    );
+    return llamar<HistoriaClinica[]>(rutaHistoriasDePaciente(pacienteId));
   },
 };
 

@@ -31,6 +31,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { RUTAS_MENU_DENTISTA, type RutaMenuDentista } from "@/lib/nav-dentista";
 import { cn } from "@/lib/utils";
 
 /** Iniciales para el avatar: "Nicole Ramírez" → "NR". */
@@ -262,17 +263,18 @@ function DentistSidebar({
   // En el celular el panel siempre muestra las etiquetas; en escritorio depende de "open".
   const expandido = open || movilAbierto;
 
-  const navItems = [
-    { to: "/dentist/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { to: "/dentist/agenda", label: "Agenda", icon: Calendar },
-    { to: "/dentist/pacientes", label: "Pacientes", icon: Users },
-    { to: "/dentist/horarios", label: "Horarios", icon: Clock },
-    { to: "/dentist/consultorio", label: "Consultorio", icon: Stethoscope },
-    { to: "/dentist/liquidaciones", label: "Liquidaciones", icon: Wallet },
-    { to: "/dentist/reclamos", label: "Reclamos", icon: MessageSquareWarning },
-    { to: "/dentist/perfil", label: "Mi perfil", icon: User },
-    { to: "/odontologo/configuracion", label: "Configuración", icon: Settings },
-  ] as const;
+  const menuDentista: Record<RutaMenuDentista, { label: string; icon: typeof Calendar }> = {
+    "/dentist/dashboard": { label: "Dashboard", icon: LayoutDashboard },
+    "/dentist/agenda": { label: "Agenda", icon: Calendar },
+    "/dentist/pacientes": { label: "Pacientes", icon: Users },
+    "/dentist/horarios": { label: "Horarios", icon: Clock },
+    "/dentist/consultorio": { label: "Consultorio", icon: Stethoscope },
+    "/dentist/liquidaciones": { label: "Liquidaciones", icon: Wallet },
+    "/dentist/reclamos": { label: "Reclamos", icon: MessageSquareWarning },
+    "/dentist/perfil": { label: "Mi perfil", icon: User },
+    "/dentist/configuracion": { label: "Configuración", icon: Settings },
+  };
+  const navItems = RUTAS_MENU_DENTISTA.map((to) => ({ to, ...menuDentista[to] }));
 
   return (
     <aside
@@ -395,7 +397,7 @@ function DentistSidebar({
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to="/odontologo/configuracion">
+              <Link to="/dentist/configuracion">
                 <Settings className="size-4 mr-2" />
                 Configuración
               </Link>

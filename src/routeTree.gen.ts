@@ -14,6 +14,7 @@ import { Route as OdontologoRouteImport } from './routes/odontologo'
 import { Route as ReclamosRouteImport } from './routes/reclamos'
 import { Route as RecuperarRouteImport } from './routes/recuperar'
 import { Route as DentistAgendaRouteImport } from './routes/dentist.agenda'
+import { Route as DentistConfiguracionRouteImport } from './routes/dentist.configuracion'
 import { Route as DentistConsultorioRouteImport } from './routes/dentist.consultorio'
 import { Route as DentistDashboardRouteImport } from './routes/dentist.dashboard'
 import { Route as DentistHorariosRouteImport } from './routes/dentist.horarios'
@@ -53,6 +54,11 @@ const RecuperarRoute = RecuperarRouteImport.update({
 const DentistAgendaRoute = DentistAgendaRouteImport.update({
   id: '/dentist/agenda',
   path: '/dentist/agenda',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DentistConfiguracionRoute = DentistConfiguracionRouteImport.update({
+  id: '/dentist/configuracion',
+  path: '/dentist/configuracion',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DentistConsultorioRoute = DentistConsultorioRouteImport.update({
@@ -138,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/reclamos': typeof ReclamosRoute
   '/recuperar': typeof RecuperarRoute
   '/dentist/agenda': typeof DentistAgendaRoute
+  '/dentist/configuracion': typeof DentistConfiguracionRoute
   '/dentist/consultorio': typeof DentistConsultorioRoute
   '/dentist/dashboard': typeof DentistDashboardRoute
   '/dentist/horarios': typeof DentistHorariosRoute
@@ -160,6 +167,7 @@ export interface FileRoutesByTo {
   '/reclamos': typeof ReclamosRoute
   '/recuperar': typeof RecuperarRoute
   '/dentist/agenda': typeof DentistAgendaRoute
+  '/dentist/configuracion': typeof DentistConfiguracionRoute
   '/dentist/consultorio': typeof DentistConsultorioRoute
   '/dentist/dashboard': typeof DentistDashboardRoute
   '/dentist/horarios': typeof DentistHorariosRoute
@@ -183,6 +191,7 @@ export interface FileRoutesById {
   '/reclamos': typeof ReclamosRoute
   '/recuperar': typeof RecuperarRoute
   '/dentist/agenda': typeof DentistAgendaRoute
+  '/dentist/configuracion': typeof DentistConfiguracionRoute
   '/dentist/consultorio': typeof DentistConsultorioRoute
   '/dentist/dashboard': typeof DentistDashboardRoute
   '/dentist/horarios': typeof DentistHorariosRoute
@@ -207,6 +216,7 @@ export interface FileRouteTypes {
     | '/reclamos'
     | '/recuperar'
     | '/dentist/agenda'
+    | '/dentist/configuracion'
     | '/dentist/consultorio'
     | '/dentist/dashboard'
     | '/dentist/horarios'
@@ -229,6 +239,7 @@ export interface FileRouteTypes {
     | '/reclamos'
     | '/recuperar'
     | '/dentist/agenda'
+    | '/dentist/configuracion'
     | '/dentist/consultorio'
     | '/dentist/dashboard'
     | '/dentist/horarios'
@@ -251,6 +262,7 @@ export interface FileRouteTypes {
     | '/reclamos'
     | '/recuperar'
     | '/dentist/agenda'
+    | '/dentist/configuracion'
     | '/dentist/consultorio'
     | '/dentist/dashboard'
     | '/dentist/horarios'
@@ -274,6 +286,7 @@ export interface RootRouteChildren {
   ReclamosRoute: typeof ReclamosRoute
   RecuperarRoute: typeof RecuperarRoute
   DentistAgendaRoute: typeof DentistAgendaRoute
+  DentistConfiguracionRoute: typeof DentistConfiguracionRoute
   DentistConsultorioRoute: typeof DentistConsultorioRoute
   DentistDashboardRoute: typeof DentistDashboardRoute
   DentistHorariosRoute: typeof DentistHorariosRoute
@@ -325,6 +338,13 @@ declare module '@tanstack/react-router' {
       path: '/dentist/agenda'
       fullPath: '/dentist/agenda'
       preLoaderRoute: typeof DentistAgendaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dentist/configuracion': {
+      id: '/dentist/configuracion'
+      path: '/dentist/configuracion'
+      fullPath: '/dentist/configuracion'
+      preLoaderRoute: typeof DentistConfiguracionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dentist/consultorio': {
@@ -453,6 +473,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReclamosRoute: ReclamosRoute,
   RecuperarRoute: RecuperarRoute,
   DentistAgendaRoute: DentistAgendaRoute,
+  DentistConfiguracionRoute: DentistConfiguracionRoute,
   DentistConsultorioRoute: DentistConsultorioRoute,
   DentistDashboardRoute: DentistDashboardRoute,
   DentistHorariosRoute: DentistHorariosRoute,

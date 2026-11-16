@@ -145,7 +145,7 @@ function SettingRow({
   );
 }
 
-function ConfiguracionOdontologo() {
+export function ConfiguracionOdontologo() {
   const { blockedToday, setBlockedToday, cerrarSesion, usuario: sesion } = useAppState();
   const navigate = useNavigate();
   const sesionBackend = leerSesion();

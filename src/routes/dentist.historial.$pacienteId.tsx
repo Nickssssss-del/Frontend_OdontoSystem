@@ -1,7 +1,7 @@
 import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "motion/react";
-import { FileText, Plus, Loader2, AlertCircle } from "lucide-react";
+import { FileText, Loader2, AlertCircle } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,8 +14,14 @@ import {
   TableHead,
 } from "@/components/ui/table";
 import { miPerfilApi, pacientesApi, type HistoriaClinica, type PacienteDetalle } from "@/lib/api";
+import { mensajeDeError } from "@/components/perfil/perfilUtils";
+import {
+  estadoListaHistorias,
+  fechaAtencionVisible,
+  historiasDelPaciente,
+  idPacienteConsultable,
+} from "@/lib/historias-clinicas";
 import { useAppState } from "@/lib/app-state";
-import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/dentist/historial/$pacienteId")({
@@ -31,11 +37,25 @@ export const Route = createFileRoute("/dentist/historial/$pacienteId")({
 function HistorialClinicoPaciente() {
   const { pacienteId } = Route.useParams();
   const { agenda, appointments } = useAppState();
-  const [historias, setHistorias] = React.useState<HistoriaClinica[]>([]);
+  const [vista, setVista] = React.useState<{
+    pacienteId: string;
+    historias: HistoriaClinica[];
+  } | null>(null);
   const [paciente, setPaciente] = React.useState<PacienteDetalle | null>(null);
   const [cargando, setCargando] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [errorPaciente, setErrorPaciente] = React.useState<string | null>(null);
+  const [intento, setIntento] = React.useState(0);
+  const [pacientePedido, setPacientePedido] = React.useState(pacienteId);
+
+  if (pacientePedido !== pacienteId) {
+    setPacientePedido(pacienteId);
+    setVista(null);
+    setPaciente(null);
+    setCargando(true);
+    setError(null);
+    setErrorPaciente(null);
+  }
 
   const nombreEnLista = React.useMemo(() => {
     const cita = [...agenda, ...appointments].find((c) => c.patientId === pacienteId);
@@ -49,22 +69,33 @@ function HistorialClinicoPaciente() {
     setError(null);
     setErrorPaciente(null);
     setPaciente(null);
-    // cargar historial
-    miPerfilApi
-      .historias(pacienteId)
+    setVista(null);
+
+    const idConsulta = idPacienteConsultable(pacienteId);
+    if (!idConsulta) {
+      setCargando(false);
+      setError(
+        "No se consulta el historial: el valor recibido no es un identificador de paciente. Un nombre no se envía como paciente_id.",
+      );
+      return () => {
+        vivo = false;
+      };
+    }
+
+    const historiasP = miPerfilApi
+      .historias(idConsulta)
       .then((historiasData) => {
         if (!vivo) return;
-        setHistorias(historiasData);
+        setVista({ pacienteId: idConsulta, historias: historiasData });
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         if (!vivo) return;
-        setError(
-          err?.response?.data?.message ?? err?.message ?? "No se pudo cargar el historial clínico.",
-        );
-        setHistorias([]);
+        setVista(null);
+        setError(mensajeDeError(err, "No se pudo cargar el historial clínico."));
       });
-    pacientesApi
-      .detalle(pacienteId)
+
+    const pacienteP = pacientesApi
+      .detalle(idConsulta)
       .then((pacienteData) => {
         if (!vivo) return;
         setPaciente(pacienteData);
@@ -73,21 +104,26 @@ function HistorialClinicoPaciente() {
         if (!vivo) return;
         setPaciente(null);
         setErrorPaciente("No se pudieron cargar los datos del paciente");
-      })
-      .finally(() => {
-        if (vivo) setCargando(false);
       });
+
+    void Promise.allSettled([historiasP, pacienteP]).then(() => {
+      if (vivo) setCargando(false);
+    });
+
     return () => {
       vivo = false;
     };
-  }, [pacienteId]);
+  }, [pacienteId, intento]);
 
-  const fmtFecha = (iso: string) =>
-    new Date(iso).toLocaleDateString("es-PE", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
+  const idConsulta = idPacienteConsultable(pacienteId);
+  const historias = historiasDelPaciente(vista, idConsulta ?? pacienteId);
+  const estadoLista = estadoListaHistorias({
+    cargando,
+    error,
+    total: historias.length,
+  });
+
+  const fmtFecha = fechaAtencionVisible;
 
   const nombreVisible = paciente ? `${paciente.nombre} ${paciente.apellido}`.trim() : nombreEnLista;
   const alergias = errorPaciente ? "Sin datos" : paciente?.alergias?.trim() || "Sin datos";
@@ -165,49 +201,61 @@ function HistorialClinicoPaciente() {
 
         <Card>
           <CardHeader>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="size-5 text-primary" /> Historial de atenciones
                 </CardTitle>
                 <CardDescription>
-                  Cada fila corresponde a una cita completada con nota clínica.
+                  Historias clínicas que registraste para este paciente, de la más reciente a la más
+                  antigua.
                 </CardDescription>
               </div>
               <Button
+                type="button"
                 variant="outline"
                 size="sm"
-                className={cn("gap-1.5", "bg-background")}
-                disabled
-                title="Funcionalidad de nueva evolución próximamente"
+                className="w-full sm:w-auto"
+                onClick={() => setIntento((n) => n + 1)}
+                disabled={cargando}
               >
-                <Plus className="size-4" /> Nueva evolución
+                Reintentar
               </Button>
             </div>
           </CardHeader>
           <CardContent>
-            {cargando && (
+            {estadoLista === "cargando" && (
               <div className="flex justify-center py-8">
                 <Loader2 className="size-6 animate-spin text-primary" />
               </div>
             )}
-            {error && !cargando && (
-              <div className="flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+            {estadoLista === "error" && (
+              <div className="flex flex-col gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive sm:flex-row sm:items-center">
                 <AlertCircle className="size-5 shrink-0" />
-                {error}
+                <p className="flex-1">{error}</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full sm:w-auto"
+                  onClick={() => setIntento((n) => n + 1)}
+                >
+                  Reintentar consulta
+                </Button>
               </div>
             )}
-            {!cargando && !error && historias.length === 0 && (
-              <p className="text-center py-8 text-muted-foreground">
-                No hay atenciones registradas para este paciente.
+            {estadoLista === "vacio" && (
+              <p className="py-8 text-center text-muted-foreground">
+                No hay historias clínicas registradas para este paciente.
               </p>
             )}
-            {!cargando && !error && historias.length > 0 && (
+            {estadoLista === "lista" && (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Fecha</TableHead>
+                      <TableHead>Cita</TableHead>
                       <TableHead>Diagnóstico</TableHead>
                       <TableHead>Tratamiento</TableHead>
                       <TableHead>Notas</TableHead>
@@ -222,9 +270,10 @@ function HistorialClinicoPaciente() {
                       )
                       .map((h) => (
                         <TableRow key={h.id} className="hover:bg-muted/50">
-                          <TableCell className="font-medium whitespace-nowrap">
+                          <TableCell className="whitespace-nowrap font-medium">
                             {fmtFecha(h.fecha_cita)}
                           </TableCell>
+                          <TableCell>{h.servicio}</TableCell>
                           <TableCell>{h.diagnostico}</TableCell>
                           <TableCell>{h.tratamiento}</TableCell>
                           <TableCell className="max-w-xs truncate">
