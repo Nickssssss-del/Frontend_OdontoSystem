@@ -129,13 +129,42 @@ export function liberarOperacion(enCurso: Set<string>, citaId: string): void {
   enCurso.delete(citaId);
 }
 
-export type ErroresHistoria = { diagnostico?: string; tratamiento?: string };
+/** Tope de HistoriaRequest (@Size max = 4000) en POST /api/citas/{id}/historia. */
+export const MAX_TEXTO_HISTORIA = 4000;
 
-export function erroresHistoria(diagnostico: string, tratamiento: string): ErroresHistoria | null {
+export type ErroresHistoria = { diagnostico?: string; tratamiento?: string; notas?: string };
+
+function errorDeLargo(valor: string, mensaje: string): string | undefined {
+  return valor.trim().length > MAX_TEXTO_HISTORIA ? mensaje : undefined;
+}
+
+export function erroresHistoria(
+  diagnostico: string,
+  tratamiento: string,
+  notas?: string,
+): ErroresHistoria | null {
   const errores: ErroresHistoria = {};
   if (!diagnostico.trim()) errores.diagnostico = "El diagnóstico es obligatorio.";
+  else {
+    const largo = errorDeLargo(
+      diagnostico,
+      "El diagnóstico no puede superar los 4000 caracteres.",
+    );
+    if (largo) errores.diagnostico = largo;
+  }
   if (!tratamiento.trim()) errores.tratamiento = "El tratamiento es obligatorio.";
-  return errores.diagnostico || errores.tratamiento ? errores : null;
+  else {
+    const largo = errorDeLargo(
+      tratamiento,
+      "El tratamiento no puede superar los 4000 caracteres.",
+    );
+    if (largo) errores.tratamiento = largo;
+  }
+  if (notas?.trim()) {
+    const largo = errorDeLargo(notas, "Las notas no pueden superar los 4000 caracteres.");
+    if (largo) errores.notas = largo;
+  }
+  return errores.diagnostico || errores.tratamiento || errores.notas ? errores : null;
 }
 
 /** Cuerpo de POST /api/citas/{id}/historia. notas solo si el odontólogo escribió algo. */
@@ -148,9 +177,9 @@ export function cuerpoHistoria(
   | { ok: true; cuerpo: { diagnostico: string; tratamiento: string; notas?: string } } {
   const diagnosticoLimpio = diagnostico.trim();
   const tratamientoLimpio = tratamiento.trim();
-  const errores = erroresHistoria(diagnosticoLimpio, tratamientoLimpio);
-  if (errores) return { ok: false, errores };
   const notasLimpias = notas?.trim();
+  const errores = erroresHistoria(diagnosticoLimpio, tratamientoLimpio, notasLimpias);
+  if (errores) return { ok: false, errores };
   return {
     ok: true,
     cuerpo: {

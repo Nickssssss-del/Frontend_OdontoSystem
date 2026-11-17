@@ -163,6 +163,16 @@ describe("historia clínica", () => {
     expect(cuerpoHistoria("Caries", "").ok).toBe(false);
   });
 
+  it("no arma el POST si diagnóstico, tratamiento o notas superan los 4000 caracteres", () => {
+    const largo = "a".repeat(4001);
+    expect(erroresHistoria(largo, "Resina")?.diagnostico).toMatch(/4000/);
+    expect(erroresHistoria("Caries", largo)?.tratamiento).toMatch(/4000/);
+    expect(erroresHistoria("Caries", "Resina", largo)?.notas).toMatch(/4000/);
+    expect(cuerpoHistoria(largo, "Resina").ok).toBe(false);
+    expect(cuerpoHistoria("Caries", "Resina", largo).ok).toBe(false);
+    expect(cuerpoHistoria("a".repeat(4000), "b".repeat(4000)).ok).toBe(true);
+  });
+
   it("no marca la historia como registrada si la petición falla", () => {
     expect(historiaQuedoRegistrada(false)).toBe(false);
     expect(historiaQuedoRegistrada(true)).toBe(true);

@@ -144,6 +144,7 @@ export function RegistrarHistoriaDialog({ cita, onClose, onRegistrada, onYaExist
               onChange={(e) => setNotas(e.target.value)}
               placeholder="Observaciones adicionales"
             />
+            {errores?.notas && <p className="text-sm text-destructive">{errores.notas}</p>}
           </div>
         </div>
         <DialogFooter className="gap-2">
