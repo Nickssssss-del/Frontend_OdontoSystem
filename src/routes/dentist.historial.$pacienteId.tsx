@@ -129,6 +129,10 @@ function HistorialClinicoPaciente() {
   const alergias = errorPaciente ? "Sin datos" : paciente?.alergias?.trim() || "Sin datos";
   const antecedentes = errorPaciente ? "Sin datos" : paciente?.antecedentes?.trim() || "Sin datos";
 
+  const historiasOrdenadas = historias
+    .slice()
+    .sort((a, b) => new Date(b.fecha_cita).getTime() - new Date(a.fecha_cita).getTime());
+
   return (
     <AppShell>
       <motion.div
@@ -250,7 +254,35 @@ function HistorialClinicoPaciente() {
               </p>
             )}
             {estadoLista === "lista" && (
-              <div className="overflow-x-auto">
+              <ul className="space-y-3 md:hidden" aria-label="Historias clínicas">
+                {historiasOrdenadas.map((h) => (
+                  <li key={h.id} className="rounded-xl border border-border/70 bg-card p-4">
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                      <p className="font-semibold">{fmtFecha(h.fecha_cita)}</p>
+                      <p className="text-sm text-muted-foreground">{h.servicio}</p>
+                    </div>
+                    <dl className="mt-3 space-y-2 text-sm">
+                      <div>
+                        <dt className="text-xs font-medium text-muted-foreground">Diagnóstico</dt>
+                        <dd className="break-words">{h.diagnostico}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs font-medium text-muted-foreground">Tratamiento</dt>
+                        <dd className="break-words">{h.tratamiento}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs font-medium text-muted-foreground">Notas</dt>
+                        <dd className="break-words">
+                          {h.notas ?? <span className="text-muted-foreground">—</span>}
+                        </dd>
+                      </div>
+                    </dl>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {estadoLista === "lista" && (
+              <div className="hidden overflow-x-auto md:block">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -262,25 +294,19 @@ function HistorialClinicoPaciente() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {historias
-                      .slice()
-                      .sort(
-                        (a, b) =>
-                          new Date(b.fecha_cita).getTime() - new Date(a.fecha_cita).getTime(),
-                      )
-                      .map((h) => (
-                        <TableRow key={h.id} className="hover:bg-muted/50">
-                          <TableCell className="whitespace-nowrap font-medium">
-                            {fmtFecha(h.fecha_cita)}
-                          </TableCell>
-                          <TableCell>{h.servicio}</TableCell>
-                          <TableCell>{h.diagnostico}</TableCell>
-                          <TableCell>{h.tratamiento}</TableCell>
-                          <TableCell className="max-w-xs truncate">
-                            {h.notas ?? <span className="text-muted-foreground">—</span>}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                    {historiasOrdenadas.map((h) => (
+                      <TableRow key={h.id} className="hover:bg-muted/50">
+                        <TableCell className="whitespace-nowrap font-medium">
+                          {fmtFecha(h.fecha_cita)}
+                        </TableCell>
+                        <TableCell>{h.servicio}</TableCell>
+                        <TableCell>{h.diagnostico}</TableCell>
+                        <TableCell>{h.tratamiento}</TableCell>
+                        <TableCell className="max-w-xs truncate">
+                          {h.notas ?? <span className="text-muted-foreground">—</span>}
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
               </div>

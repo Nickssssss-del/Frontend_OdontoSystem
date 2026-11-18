@@ -302,7 +302,34 @@ function DentistDashboard() {
               <CardDescription>Citas programadas para hoy</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
+              <ul className="divide-y divide-border/70 md:hidden" aria-label="Citas de hoy">
+                {citasHoy.slice(0, 8).map((apt) => (
+                  <li key={apt.id} className="flex items-start gap-3 py-3">
+                    <p className="w-12 shrink-0 font-semibold text-sm">{apt.time}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium">{apt.patient}</p>
+                      <p className="text-xs text-muted-foreground">{apt.service}</p>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <p className="text-sm font-medium">S/ {apt.amount}</p>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          apt.status === "COMPLETED" &&
+                            "bg-success/10 text-success border-success/30",
+                          apt.status === "CONFIRMED" &&
+                            "bg-primary/10 text-primary border-primary/30",
+                          apt.status === "VERIFYING" &&
+                            "bg-warning/10 text-warning border-warning/30",
+                        )}
+                      >
+                        {statusLabel[apt.status]}
+                      </Badge>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <div className="hidden overflow-x-auto md:block">
                 <Table>
                   <TableHeader>
                     <TableRow>
