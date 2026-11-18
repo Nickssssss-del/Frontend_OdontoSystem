@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { Bot, MapPin, MessageSquare, Send, Star, X } from "lucide-react";
 import {
@@ -75,7 +75,22 @@ function aMensajeBot(respuesta: RespuestaChatbot): Mensaje {
   };
 }
 
+/**
+ * Pantallas donde el botón flotante tapa la acción principal en el celular (login y reserva).
+ * En escritorio sí se muestra: ahí hay espacio de sobra.
+ */
+function ocultarChatEnMovil(pathname: string): boolean {
+  return (
+    pathname === "/" ||
+    pathname.startsWith("/recuperar") ||
+    pathname.startsWith("/paciente/dentista/") ||
+    pathname.startsWith("/paciente/agendar/")
+  );
+}
+
 export function ChatbotWidget() {
+  const { pathname } = useLocation();
+  const soloEscritorio = ocultarChatEnMovil(pathname);
   const [open, setOpen] = React.useState(false);
   const [input, setInput] = React.useState("");
   const [mensajes, setMensajes] = React.useState<Mensaje[]>([]);
@@ -175,7 +190,10 @@ export function ChatbotWidget() {
         onClick={() => setOpen((o) => !o)}
         whileHover={{ scale: 1.06 }}
         whileTap={{ scale: 0.94 }}
-        className="fixed bottom-5 right-5 z-50 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30"
+        className={cn(
+          "fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-50 size-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 sm:right-5 sm:bottom-5 sm:size-14",
+          soloEscritorio ? "hidden md:flex" : "flex",
+        )}
         aria-label={open ? "Cerrar chat" : "Abrir chat de OdontoBot"}
       >
         <AnimatePresence initial={false} mode="wait">
@@ -201,7 +219,10 @@ export function ChatbotWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 24, scale: 0.96 }}
             transition={{ type: "spring", stiffness: 320, damping: 30 }}
-            className="fixed bottom-24 right-5 z-50 flex h-[560px] w-[min(94vw,380px)] flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-2xl"
+            className={cn(
+              "fixed right-3 bottom-[calc(max(1rem,env(safe-area-inset-bottom))+3.75rem)] z-50 h-[min(560px,calc(100dvh-8rem))] w-[min(94vw,380px)] flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-2xl sm:right-5 sm:bottom-24",
+              soloEscritorio ? "hidden md:flex" : "flex",
+            )}
           >
             <header className="flex items-center gap-3 border-b border-border bg-primary/10 px-4 py-3">
               <span className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground">

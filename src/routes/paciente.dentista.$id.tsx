@@ -179,7 +179,7 @@ function PerfilDentista() {
                     <Button
                       asChild={!!inicio}
                       disabled={!inicio}
-                      className="mt-6 w-full rounded-full"
+                      className="mt-6 h-auto min-h-11 w-full whitespace-normal rounded-full py-2.5 text-center leading-snug"
                       size="lg"
                     >
                       {inicio ? (
@@ -187,9 +187,17 @@ function PerfilDentista() {
                           to="/paciente/agendar/$id"
                           params={{ id: perfil.id }}
                           search={{ servicio: servicioId, inicio }}
+                          className="flex flex-col items-center"
                         >
-                          Reservar {servicio?.titulo ?? "cita"} · {partesDia(fechaDe(inicio)).dia}{" "}
-                          {partesDia(fechaDe(inicio)).numero} {horaDe(inicio)}
+                          <span>
+                            Reservar · {partesDia(fechaDe(inicio)).dia}{" "}
+                            {partesDia(fechaDe(inicio)).numero}, {horaDe(inicio)}
+                          </span>
+                          {servicio?.titulo && (
+                            <span className="text-xs font-normal opacity-85">
+                              {servicio.titulo}
+                            </span>
+                          )}
                         </Link>
                       ) : (
                         <span>Selecciona un horario para reservar</span>
