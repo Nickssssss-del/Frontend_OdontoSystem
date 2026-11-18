@@ -146,18 +146,12 @@ export function erroresHistoria(
   const errores: ErroresHistoria = {};
   if (!diagnostico.trim()) errores.diagnostico = "El diagnóstico es obligatorio.";
   else {
-    const largo = errorDeLargo(
-      diagnostico,
-      "El diagnóstico no puede superar los 4000 caracteres.",
-    );
+    const largo = errorDeLargo(diagnostico, "El diagnóstico no puede superar los 4000 caracteres.");
     if (largo) errores.diagnostico = largo;
   }
   if (!tratamiento.trim()) errores.tratamiento = "El tratamiento es obligatorio.";
   else {
-    const largo = errorDeLargo(
-      tratamiento,
-      "El tratamiento no puede superar los 4000 caracteres.",
-    );
+    const largo = errorDeLargo(tratamiento, "El tratamiento no puede superar los 4000 caracteres.");
     if (largo) errores.tratamiento = largo;
   }
   if (notas?.trim()) {
