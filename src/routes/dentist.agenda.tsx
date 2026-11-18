@@ -277,8 +277,8 @@ function DentistAgenda() {
     });
 
     return (
-      <div className="overflow-x-auto">
-        <div className="inline-flex min-w-full gap-3 pb-4">
+      <div className="sm:overflow-x-auto">
+        <div className="flex flex-col gap-3 pb-4 sm:inline-flex sm:min-w-full sm:flex-row">
           {dias.map((day, idx) => {
             const date = semana[idx];
             if (!date) return null;
@@ -294,7 +294,7 @@ function DentistAgenda() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.05 }}
                 className={cn(
-                  "min-w-[10.5rem] flex-1 rounded-lg border border-border/70 p-4 transition-all",
+                  "rounded-lg border border-border/70 p-4 transition-all sm:min-w-[10.5rem] sm:flex-1",
                   isToday ? "border-primary/50 bg-primary/10" : "bg-muted/30",
                 )}
               >
@@ -349,21 +349,25 @@ function DentistAgenda() {
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
     const daysInMonth = lastDay.getDate();
-    const startingDayOfWeek = firstDay.getDay() || 6;
+    // getDay(): domingo = 0; la grilla empieza en lunes, así que el domingo va en la columna 7.
+    const startingDayOfWeek = firstDay.getDay() || 7;
     const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
     const emptyDays = Array.from({ length: startingDayOfWeek - 1 });
     const dayNames = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
     return (
       <div className="space-y-4">
-        <div className="grid grid-cols-7 gap-2">
+        <div className="grid grid-cols-7 gap-1 sm:gap-2">
           {dayNames.map((day) => (
-            <div key={day} className="p-2 text-center text-xs font-semibold text-muted-foreground">
+            <div
+              key={day}
+              className="p-1 text-center text-xs font-semibold text-muted-foreground sm:p-2"
+            >
               {day}
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-2">
+        <div className="grid grid-cols-7 gap-1 sm:gap-2">
           {emptyDays.map((_, i) => (
             <div key={`empty-${i}`} className="aspect-square" />
           ))}
@@ -379,7 +383,7 @@ function DentistAgenda() {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className={cn(
-                  "flex aspect-square flex-col rounded-lg border border-border/70 p-2 text-xs transition-shadow hover:shadow-md",
+                  "flex aspect-square min-w-0 flex-col rounded-lg border border-border/70 p-1 text-xs transition-shadow hover:shadow-md sm:p-2",
                   isToday ? "border-primary/50 bg-primary/10" : "bg-muted/30",
                 )}
               >
@@ -395,7 +399,15 @@ function DentistAgenda() {
                   <p className="font-semibold">{day}</p>
                   <div className="flex-1 overflow-hidden">
                     {dayAppointments.length > 0 && (
-                      <div className="mt-1 space-y-1">
+                      <span
+                        className="mt-1 inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground sm:hidden"
+                        aria-label={`${dayAppointments.length} cita(s)`}
+                      >
+                        {dayAppointments.length}
+                      </span>
+                    )}
+                    {dayAppointments.length > 0 && (
+                      <div className="mt-1 hidden space-y-1 sm:block">
                         {dayAppointments.slice(0, 2).map((apt) => (
                           <div
                             key={apt.id}
@@ -451,8 +463,9 @@ function DentistAgenda() {
         </div>
 
         <Card className="mb-8">
-          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
+          {/* En fila solo desde lg: entre 768 y 1023 px el menú lateral deja poco ancho y el selector se salía. */}
+          <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0">
               <CardTitle>Selecciona vista</CardTitle>
               <CardDescription>Día, semana o mes. Incluye citas pasadas y futuras.</CardDescription>
             </div>
@@ -493,7 +506,7 @@ function DentistAgenda() {
               <div
                 role="group"
                 aria-label="Vista de la agenda"
-                className="grid w-full grid-cols-3 rounded-lg bg-muted p-1"
+                className="grid w-full grid-cols-3 rounded-lg bg-muted p-1 sm:w-auto sm:min-w-[15rem]"
               >
                 {(
                   [

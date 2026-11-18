@@ -289,7 +289,109 @@ function DentistPacientes() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
+              <ul className="space-y-3 md:hidden" aria-label="Pacientes">
+                {filteredPatients.length > 0 ? (
+                  filteredPatients.map((patient) => (
+                    <li key={patient.id} className="rounded-xl border border-border/70 bg-card p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-semibold">{patient.name}</p>
+                          {patient.email && (
+                            <p className="truncate text-xs text-muted-foreground">
+                              {patient.email}
+                            </p>
+                          )}
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "shrink-0",
+                            patient.status === "active"
+                              ? "bg-success/10 text-success border-success/30"
+                              : "bg-muted text-muted-foreground",
+                          )}
+                        >
+                          {patient.status === "active" ? "Activo" : "Inactivo"}
+                        </Badge>
+                      </div>
+                      <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <dt className="text-xs text-muted-foreground">Última cita</dt>
+                          <dd>{fechaLista(patient.lastVisit)}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-xs text-muted-foreground">Citas</dt>
+                          <dd className="font-medium">{patient.appointmentsCount}</dd>
+                        </div>
+                        {hayEdad && (
+                          <div>
+                            <dt className="text-xs text-muted-foreground">Edad</dt>
+                            <dd>{patient.age ?? "\u2014"}</dd>
+                          </div>
+                        )}
+                        {patient.specialty && (
+                          <div>
+                            <dt className="text-xs text-muted-foreground">Especialidad</dt>
+                            <dd>{patient.specialty}</dd>
+                          </div>
+                        )}
+                      </dl>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {patient.idConsulta ? (
+                          <Button asChild size="sm" className="min-h-10 flex-1 rounded-xl">
+                            <Link
+                              to="/dentist/historial/$pacienteId"
+                              params={{ pacienteId: patient.idConsulta }}
+                            >
+                              <Eye className="size-4" />
+                              Ver historial
+                            </Link>
+                          </Button>
+                        ) : (
+                          <p className="flex-1 text-xs text-muted-foreground">
+                            Historial no disponible: falta el identificador
+                          </p>
+                        )}
+                        {patient.email && (
+                          <Button
+                            asChild
+                            size="sm"
+                            variant="outline"
+                            className="size-10 rounded-xl p-0"
+                          >
+                            <a
+                              href={`mailto:${patient.email}`}
+                              aria-label={`Escribir a ${patient.name}`}
+                            >
+                              <Mail className="size-4" />
+                            </a>
+                          </Button>
+                        )}
+                        {patient.phone && (
+                          <Button
+                            asChild
+                            size="sm"
+                            variant="outline"
+                            className="size-10 rounded-xl p-0"
+                          >
+                            <a
+                              href={`tel:${patient.phone}`}
+                              aria-label={`Llamar a ${patient.name}`}
+                            >
+                              <Phone className="size-4" />
+                            </a>
+                          </Button>
+                        )}
+                      </div>
+                    </li>
+                  ))
+                ) : (
+                  <li className="py-8 text-center text-muted-foreground">
+                    No se encontraron pacientes
+                  </li>
+                )}
+              </ul>
+              <div className="hidden overflow-x-auto md:block">
                 <Table>
                   <TableHeader>
                     <TableRow>
