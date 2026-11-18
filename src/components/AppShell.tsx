@@ -468,7 +468,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             sidebarOpen ? "md:ml-56" : "md:ml-20",
           )}
         >
-          <div className="p-4 sm:p-6 md:p-8">{children}</div>
+          <div className="p-4 pb-28 sm:p-6 sm:pb-28 md:p-8">{children}</div>
         </main>
         <ChatbotWidget />
         <ReaceptarPolitica />

@@ -417,7 +417,7 @@ export function ConfiguracionOdontologo() {
                   />
                 </div>
               )}
-              <div className="mt-5 flex items-center gap-3">
+              <div className="mt-5 flex flex-wrap items-center gap-3">
                 {!editandoCuenta ? (
                   <Button
                     type="button"

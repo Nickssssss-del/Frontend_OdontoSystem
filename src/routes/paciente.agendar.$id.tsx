@@ -618,7 +618,7 @@ function Agendar() {
                 <Button
                   disabled={!inicio || enviando}
                   onClick={bloquearCupo}
-                  className="mt-6 w-full rounded-full"
+                  className="mt-6 h-auto min-h-11 w-full whitespace-normal rounded-full py-2.5 text-center leading-snug"
                 >
                   {enviando && <Loader2 className="size-4 animate-spin" />}
                   {enviando ? "Apartando turno…" : "Apartar turno y continuar al pago"}

@@ -338,3 +338,24 @@
 .leaflet-popup-content {
   margin: 10px 12px;
 }
+
+/*
+ * iPhone (Safari): si algo sobresale del ancho, Safari aleja toda la página y queda una franja vacía a
+ * la derecha. clip corta el desborde sin crear un contenedor con scroll (el header sticky sigue funcionando).
+ */
+html,
+body {
+  overflow-x: clip;
+}
+
+/*
+ * iPhone (Safari) acerca la página al tocar un campo con letra menor a 16 px y no vuelve a alejarla.
+ * Fuera de capa para ganarle a text-sm; en escritorio (md) se mantiene el tamaño de cada campo.
+ */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
