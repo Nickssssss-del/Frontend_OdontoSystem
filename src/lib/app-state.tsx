@@ -15,6 +15,7 @@ import {
   type Rol,
 } from "@/lib/api";
 import { fechaDe, fechaLima, horaDe, rangoAgenda } from "@/lib/odontologos";
+import { fusionarCita } from "@/lib/atencion-cita";
 import {
   type Appointment,
   type AppointmentStatus,
@@ -66,8 +67,8 @@ type Ctx = {
   recargarCitas: () => Promise<void>;
   /** Acciones del odontólogo sobre una cita (llaman al backend y recargan la agenda). */
   confirmarCita: (id: string) => Promise<void>;
-  completarCita: (id: string) => Promise<void>;
-  marcarInasistencia: (id: string) => Promise<void>;
+  completarCita: (id: string) => Promise<Appointment>;
+  marcarInasistencia: (id: string) => Promise<Appointment>;
   /** El backend no maneja comprobantes manuales (pasarela simulada): aprobar = confirmar la cita. */
   approveVoucher: (id: string) => void;
   blockedToday: boolean;
@@ -185,10 +186,11 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   }, [rol, recargarCitas]);
 
   const accionCita = React.useCallback(
-    async (fn: () => Promise<unknown>, errorTexto: string) => {
+    async <T,>(fn: () => Promise<T>, errorTexto: string): Promise<T> => {
       try {
-        await fn();
+        const valor = await fn();
         await recargarCitas();
+        return valor;
       } catch (e) {
         toast.error(errorTexto, { description: e instanceof Error ? e.message : undefined });
         throw e;
@@ -246,11 +248,28 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     citasCargando,
     recargarCitas,
     confirmarCita: (id) =>
-      accionCita(() => agendaApi.confirmar(id), "No se pudo confirmar la cita"),
+      accionCita(async () => {
+        const cita = await agendaApi.confirmar(id);
+        const actualizada = citaAAppointment(cita);
+        setAgenda((lista) => fusionarCita(lista, actualizada, id));
+        setAppointments((lista) => fusionarCita(lista, actualizada, id));
+      }, "No se pudo confirmar la cita"),
     completarCita: (id) =>
-      accionCita(() => agendaApi.completar(id), "No se pudo marcar como atendida"),
+      accionCita(async () => {
+        const cita = await agendaApi.completar(id);
+        const actualizada = citaAAppointment(cita);
+        setAgenda((lista) => fusionarCita(lista, actualizada, id));
+        setAppointments((lista) => fusionarCita(lista, actualizada, id));
+        return actualizada;
+      }, "No se pudo marcar como atendida"),
     marcarInasistencia: (id) =>
-      accionCita(() => agendaApi.inasistencia(id), "No se pudo registrar la inasistencia"),
+      accionCita(async () => {
+        const cita = await agendaApi.inasistencia(id);
+        const actualizada = citaAAppointment(cita);
+        setAgenda((lista) => fusionarCita(lista, actualizada, id));
+        setAppointments((lista) => fusionarCita(lista, actualizada, id));
+        return actualizada;
+      }, "No se pudo registrar la inasistencia"),
     approveVoucher: (id) => {
       void accionCita(() => agendaApi.confirmar(id), "No se pudo confirmar la cita").catch(
         () => undefined,

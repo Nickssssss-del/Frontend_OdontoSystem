@@ -3,9 +3,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { Search, Eye, MoreHorizontal, Mail, Phone } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { useAppState, type Appointment } from "@/lib/app-state";
+import { useAppState } from "@/lib/app-state";
 import { pacientesApi, type PacienteResumen } from "@/lib/api";
 import { fechaLima } from "@/lib/odontologos";
+import { agruparPacientesPorId, idPacienteConsultable } from "@/lib/historias-clinicas";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,8 @@ export const Route = createFileRoute("/dentist/pacientes")({
 
 type Patient = {
   id: string;
+  /** Identificador real para GET historias. null: no se consulta. */
+  idConsulta: string | null;
   name: string;
   age: number | null;
   phone: string;
@@ -52,8 +55,10 @@ type Patient = {
 };
 
 function resumenAPaciente(p: PacienteResumen): Patient {
+  const idConsulta = idPacienteConsultable(p.id);
   return {
-    id: p.id,
+    id: idConsulta ?? p.id,
+    idConsulta,
     name: p.nombre_completo,
     age: null,
     phone: p.telefono ?? "",
@@ -101,38 +106,35 @@ function DentistPacientes() {
     };
   }, []);
 
-  // Respaldo: la agenda solo trae pacientes con cita en la ventana cargada.
-  const desdeAgenda = React.useMemo<Patient[]>(() => {
+  const desdeAgenda = React.useMemo(() => {
     const hoy = fechaLima(0);
-    const porPaciente = new Map<string, Appointment[]>();
-    for (const cita of [...agenda, ...appointments]) {
-      const clave = cita.patientId ?? cita.patient;
-      const lista = porPaciente.get(clave) ?? [];
-      if (!lista.some((c) => c.id === cita.id)) lista.push(cita);
-      porPaciente.set(clave, lista);
-    }
-    return [...porPaciente.entries()].map(([id, citas]) => {
-      const ordenadas = [...citas].sort((x, y) =>
+    const { porId, sinIdentificador } = agruparPacientesPorId([...agenda, ...appointments]);
+    const pacientes = [...porId.entries()].map(([id, citas]) => {
+      const unicas = citas.filter(
+        (cita, indice) => citas.findIndex((otra) => otra.id === cita.id) === indice,
+      );
+      const ordenadas = [...unicas].sort((x, y) =>
         `${y.date}${y.time}`.localeCompare(`${x.date}${x.time}`),
       );
       const ultima = ordenadas[0]!;
-      const vigentes = citas.filter((c) => c.status !== "CANCELLED" && c.status !== "NO_SHOW");
+      const vigentes = unicas.filter((c) => c.status !== "CANCELLED" && c.status !== "NO_SHOW");
       const ultimaAtendida = ordenadas.find((c) => c.status === "COMPLETED");
       return {
         id,
+        idConsulta: id,
         name: ultima.patient || "Paciente",
         age: null,
         phone: ultima.patientPhone ?? "",
         email: ultima.patientEmail ?? "",
         lastVisit: (ultimaAtendida ?? ultima).date,
         specialty: ultima.service,
-        // Activo = tiene una cita pr\u00f3xima o atendida en la ventana de la agenda.
         status: vigentes.some((c) => c.date >= hoy || c.status === "COMPLETED")
           ? ("active" as const)
           : ("inactive" as const),
         appointmentsCount: vigentes.length,
       };
     });
+    return { pacientes, sinIdentificador };
   }, [agenda, appointments]);
 
   // Servicio de la \u00faltima cita de cada paciente (desc por fecha+hora).
@@ -140,7 +142,8 @@ function DentistPacientes() {
     const mapa = new Map<string, string>();
     const porPaciente = new Map<string, { key: string; service: string }[]>();
     for (const cita of [...agenda, ...appointments]) {
-      const id = cita.patientId ?? cita.patient;
+      const id = idPacienteConsultable(cita.patientId);
+      if (!id) continue;
       const lista = porPaciente.get(id) ?? [];
       lista.push({ key: `${cita.date}${cita.time}`, service: cita.service });
       porPaciente.set(id, lista);
@@ -162,7 +165,7 @@ function DentistPacientes() {
     [desdeApi, ultimoServicioPorPaciente],
   );
 
-  const patients = desdeApiConServicio ?? (listaIncompleta ? desdeAgenda : []);
+  const patients = desdeApiConServicio ?? (listaIncompleta ? desdeAgenda.pacientes : []);
 
   const filteredPatients = patients.filter((p) =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -183,6 +186,15 @@ function DentistPacientes() {
         <div className="mb-8">
           <h1 className="text-3xl font-semibold mb-2">Pacientes</h1>
           <p className="text-muted-foreground">Gestiona tu cartera de pacientes</p>
+          {listaIncompleta && desdeAgenda.sinIdentificador > 0 && (
+            <p className="mt-3 rounded-xl border border-warning/40 bg-warning/10 p-3 text-sm text-warning-foreground">
+              {desdeAgenda.sinIdentificador === 1
+                ? "Hay 1 cita sin el identificador del paciente."
+                : `Hay ${desdeAgenda.sinIdentificador} citas sin el identificador del paciente.`}{" "}
+              No se consulta su historial: el respaldo de la agenda no usa el nombre como
+              paciente_id. Limitación: sin ese id no se puede abrir la historia clínica.
+            </p>
+          )}
         </div>
 
         {/* Stats */}
@@ -337,15 +349,21 @@ function DentistPacientes() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-48">
-                                <DropdownMenuItem asChild>
-                                  <Link
-                                    to="/dentist/historial/$pacienteId"
-                                    params={{ pacienteId: patient.id }}
-                                  >
-                                    <Eye className="size-4 mr-2" />
-                                    Ver historial cl\u00ednico
-                                  </Link>
-                                </DropdownMenuItem>
+                                {patient.idConsulta ? (
+                                  <DropdownMenuItem asChild>
+                                    <Link
+                                      to="/dentist/historial/$pacienteId"
+                                      params={{ pacienteId: patient.idConsulta }}
+                                    >
+                                      <Eye className="size-4 mr-2" />
+                                      Ver historial clínico
+                                    </Link>
+                                  </DropdownMenuItem>
+                                ) : (
+                                  <DropdownMenuItem disabled>
+                                    Historial no disponible: falta el identificador
+                                  </DropdownMenuItem>
+                                )}
                                 {patient.email && (
                                   <DropdownMenuItem asChild>
                                     <a href={`mailto:${patient.email}`}>

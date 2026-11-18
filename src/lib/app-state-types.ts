@@ -38,6 +38,8 @@ export type Appointment = {
   patientEmail?: string | undefined;
   date: string;
   time: string;
+  /** Inicio real de la cita (ISO con zona). Sirve para saber si ya se puede atender. */
+  inicio: string;
   service: string;
   amount: number;
   status: AppointmentStatus;
@@ -123,6 +125,7 @@ export function citaAAppointment(
     patientEmail: paciente?.correo ?? undefined,
     date: fechaDe(c.inicio),
     time: horaDe(c.inicio),
+    inicio: c.inicio,
     service: c.servicio.titulo,
     amount: Number(c.precio),
     status: ESTADO_UI[c.estado] ?? "PENDING_PAYMENT",
