@@ -463,8 +463,9 @@ function DentistAgenda() {
         </div>
 
         <Card className="mb-8">
-          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
+          {/* En fila solo desde lg: entre 768 y 1023 px el menú lateral deja poco ancho y el selector se salía. */}
+          <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0">
               <CardTitle>Selecciona vista</CardTitle>
               <CardDescription>Día, semana o mes. Incluye citas pasadas y futuras.</CardDescription>
             </div>
