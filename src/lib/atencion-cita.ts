@@ -6,8 +6,17 @@ export type AccionesAtencion = {
   registrarHistoria: boolean;
 };
 
+/** Minutos que espera el backend antes de aceptar una inasistencia (CitaService.marcarInasistencia). */
+export const TOLERANCIA_INASISTENCIA_MIN = 15;
+
+/** Instante (ms) desde el que el backend acepta marcar la inasistencia: inicio + tolerancia. */
+export function inasistenciaDisponibleDesde(inicioIso: string): number {
+  return Date.parse(inicioIso) + TOLERANCIA_INASISTENCIA_MIN * 60_000;
+}
+
 /**
- * Una cita CONFIRMADA solo se atiende o se marca inasistencia cuando su inicio ya llegó.
+ * Una cita CONFIRMADA se marca «Atendida» desde su hora de inicio y «Inasistencia» desde
+ * inicio + 15 min (antes el backend responde 409 «Aún está dentro del tiempo de tolerancia»).
  * COMPLETADA abre el registro de historia (una vez). Canceladas, futuras e inasistencias no cambian.
  */
 export function accionesDeCita(input: {
@@ -21,10 +30,12 @@ export function accionesDeCita(input: {
 }): AccionesAtencion {
   const inicioMs = Date.parse(input.inicioIso);
   const horaAlcanzada = Number.isFinite(inicioMs) && inicioMs <= input.ahoraMs;
-  const confirmadaVencida = input.status === "CONFIRMED" && horaAlcanzada;
+  const confirmada = input.status === "CONFIRMED";
+  const toleranciaVencida =
+    Number.isFinite(inicioMs) && inasistenciaDisponibleDesde(input.inicioIso) <= input.ahoraMs;
   return {
-    atender: confirmadaVencida,
-    inasistencia: confirmadaVencida,
+    atender: confirmada && horaAlcanzada,
+    inasistencia: confirmada && toleranciaVencida,
     registrarHistoria:
       input.status === "COMPLETED" &&
       input.puedeComprobarHistoria &&

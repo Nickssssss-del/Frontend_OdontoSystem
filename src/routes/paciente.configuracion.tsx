@@ -273,7 +273,7 @@ function ConfiguracionPaciente() {
                   />
                 </div>
               )}
-              <div className="mt-5 flex items-center gap-3">
+              <div className="mt-5 flex flex-wrap items-center gap-3">
                 {!editando ? (
                   <Button type="button" onClick={() => setEditando(true)} className="rounded-xl">
                     Editar datos de contacto

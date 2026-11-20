@@ -185,8 +185,8 @@ export function NotificacionesPanel({
 
   const contenidoPanel = (
     <div className="w-[320px] sm:w-[380px] max-w-[calc(100vw-20px)] flex flex-col rounded-2xl border border-border/80 bg-popover shadow-lg shadow-brand-deep/10 backdrop-blur-sm overflow-hidden">
-      <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-border/60">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-2 px-4 py-4 border-b border-border/60 sm:gap-4 sm:px-6">
+        <div className="flex min-w-0 items-center gap-2">
           <Bell className="size-5 text-primary" />
           <h2 className="font-display text-base font-semibold text-foreground">Notificaciones</h2>
         </div>
@@ -195,9 +195,11 @@ export function NotificacionesPanel({
             variant="outline"
             size="sm"
             onClick={marcarTodasLeidas}
-            className="text-xs px-2 py-1.5 text-muted-foreground hover:text-primary transition-colors"
+            className="shrink-0 text-xs px-2 py-1.5 text-muted-foreground hover:text-primary transition-colors"
           >
-            Marcar todas como leídas
+            {/* En pantallas angostas el texto largo no cabía junto al título y se cortaba. */}
+            <span className="sm:hidden">Marcar leídas</span>
+            <span className="hidden sm:inline">Marcar todas como leídas</span>
           </Button>
         )}
       </div>
@@ -313,6 +315,7 @@ export function NotificacionesPanel({
         sideOffset={sideOffset}
         className="p-0 w-auto max-w-none"
         alignOffset={-8}
+        collisionPadding={10}
       >
         {contenidoPanel}
       </PopoverContent>

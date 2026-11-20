@@ -112,6 +112,8 @@ npm run dev              # http://localhost:5173
 npm run build            # versión de producción
 ```
 
+El detalle de variables, build y publicación está en [DESPLIEGUE.md](DESPLIEGUE.md). La compatibilidad en Chrome Android y Safari iPhone se prueba con [docs/DISP-02/PROTOCOLO_DISP02.md](docs/DISP-02/PROTOCOLO_DISP02.md); esos casos siguen pendientes.
+
 ## Seguridad
 
 - El frontend nunca guarda claves de servicios externos; solo la URL pública de la API.

@@ -154,10 +154,11 @@ export function ResumenPaciente() {
       </Card>
 
       {errorCitas && <AvisoError mensaje={errorCitas} onReintentar={reintentar} />}
-      <div className="grid gap-6 lg:grid-cols-2">
+      {/* min-w-0 en cada tarjeta: sin él, el encabezado más ancho estiraba la columna y a 360 px se salía de la pantalla. */}
+      <div className="grid gap-6 lg:grid-cols-2 [&>*]:min-w-0">
         {/* Próximas citas */}
         <Card className="transition-shadow hover:shadow-md">
-          <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+          <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 space-y-0">
             <div>
               <CardTitle className="flex items-center gap-2 font-display text-xl">
                 <CalendarClock className="size-5 text-primary" /> Próximas citas
@@ -210,7 +211,7 @@ export function ResumenPaciente() {
 
         {/* Calificaciones pendientes */}
         <Card className="transition-shadow hover:shadow-md">
-          <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+          <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 space-y-0">
             <div>
               <CardTitle className="flex items-center gap-2 font-display text-xl">
                 <Star className="size-5 text-primary" /> Calificaciones pendientes
@@ -257,7 +258,7 @@ export function ResumenPaciente() {
 
       {errorHistorias && <AvisoError mensaje={errorHistorias} onReintentar={reintentar} />}
       <Card className="transition-shadow hover:shadow-md">
-        <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+        <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 space-y-0">
           <div>
             <CardTitle className="flex items-center gap-2 font-display text-xl">
               <FileText className="size-5 text-primary" /> Historial de atenciones
