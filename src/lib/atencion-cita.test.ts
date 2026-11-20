@@ -11,9 +11,11 @@ import {
   estadoTrasOperacion,
   fusionarCita,
   historiaQuedoRegistrada,
+  inasistenciaDisponibleDesde,
   liberarOperacion,
   mensajeTransicion,
   reservarOperacion,
+  TOLERANCIA_INASISTENCIA_MIN,
 } from "@/lib/atencion-cita";
 import {
   agruparPacientesPorId,
@@ -45,6 +47,41 @@ function cita(parcial: Partial<Appointment> & Pick<Appointment, "id" | "status">
     ...parcial,
   };
 }
+
+describe("agenda: tolerancia de inasistencia (igual que el backend)", () => {
+  const base = {
+    status: "CONFIRMED" as const,
+    historiaRegistrada: false,
+    historiaCerrada: false,
+    puedeComprobarHistoria: true,
+  };
+
+  it("a los 10 min del inicio permite «Atendida» pero todavía no «Inasistencia»", () => {
+    const acciones = accionesDeCita({
+      ...base,
+      inicioIso: "2026-11-15T14:50:00-05:00",
+      ahoraMs: AHORA,
+    });
+    expect(acciones.atender).toBe(true);
+    expect(acciones.inasistencia).toBe(false);
+  });
+
+  it("justo a los 15 min del inicio permite «Inasistencia»", () => {
+    const acciones = accionesDeCita({
+      ...base,
+      inicioIso: "2026-11-15T14:45:00-05:00",
+      ahoraMs: AHORA,
+    });
+    expect(acciones.inasistencia).toBe(true);
+  });
+
+  it("inasistenciaDisponibleDesde suma 15 min al inicio", () => {
+    expect(inasistenciaDisponibleDesde("2026-11-15T14:50:00-05:00")).toBe(
+      Date.parse("2026-11-15T15:05:00-05:00"),
+    );
+    expect(TOLERANCIA_INASISTENCIA_MIN).toBe(15);
+  });
+});
 
 describe("agenda: acciones de atención", () => {
   it("una cita CONFIRMADA cuya hora ya llegó permite atendida e inasistencia", () => {

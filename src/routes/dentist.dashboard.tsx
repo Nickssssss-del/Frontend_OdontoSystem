@@ -209,10 +209,7 @@ function DentistDashboard() {
               <CardContent>
                 <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={ingresoSemanalData}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="var(--muted-foreground-opacity-20)"
-                    />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                     <XAxis
                       dataKey="day"
                       stroke="var(--muted-foreground)"
@@ -227,7 +224,7 @@ function DentistDashboard() {
                       }}
                       formatter={(value) => `S/ ${value}`}
                     />
-                    <Bar dataKey="ingresos" fill="hsl(var(--success))" radius={[8, 8, 0, 0]} />
+                    <Bar dataKey="ingresos" fill="var(--success)" radius={[8, 8, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -251,10 +248,7 @@ function DentistDashboard() {
               <CardContent>
                 <ResponsiveContainer width="100%" height={280}>
                   <LineChart data={citasPorSemanaData}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="var(--muted-foreground-opacity-20)"
-                    />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                     <XAxis
                       dataKey="week"
                       stroke="var(--muted-foreground)"
@@ -276,9 +270,9 @@ function DentistDashboard() {
                     <Line
                       type="monotone"
                       dataKey="citas"
-                      stroke="hsl(var(--primary))"
+                      stroke="var(--primary)"
                       strokeWidth={2}
-                      dot={{ fill: "hsl(var(--primary))", r: 4 }}
+                      dot={{ fill: "var(--primary)", r: 4 }}
                     />
                   </LineChart>
                 </ResponsiveContainer>

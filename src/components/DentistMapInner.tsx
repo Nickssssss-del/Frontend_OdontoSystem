@@ -8,6 +8,7 @@ import {
   Popup,
   TileLayer,
   useMap,
+  useMapEvents,
 } from "react-leaflet";
 import { Link } from "@tanstack/react-router";
 import { Calendar, Loader2, LocateFixed, MapPin, Navigation, Star } from "lucide-react";
@@ -120,6 +121,34 @@ function obtenerCoordenadas(d: Dentist, indice: number): [number, number] {
  * El icono mide 0×0 y el pin se dibuja hacia arriba desde ese punto: así la punta queda
  * exactamente sobre la coordenada sin importar cuánto mida la etiqueta ("S/90" o "S/1200").
  */
+/**
+ * Con muchos consultorios cerca, las etiquetas de precio se encimaban y no se podían leer.
+ * Por debajo de este zoom se dibujan como puntos; el precio sigue en el popup al tocarlos.
+ */
+const ZOOM_ETIQUETAS = 15;
+/** Con pocos consultorios no hay encimado: se muestran siempre con su precio. */
+const MAX_SIN_AGRUPAR = 5;
+
+function crearPuntoDentista(d: Dentist) {
+  const titulo = d.price > 0 ? `${d.name} · S/${d.price}` : d.name;
+  return L.divIcon({
+    className: "catalogo-dentist-marker",
+    html: `<div title="${titulo.replace(/"/g, "&quot;")}" style="width: 16px; height: 16px; border-radius: 9999px; background: #006B68; border: 2px solid #FFFFFF; box-shadow: 0 2px 6px rgba(0, 107, 104, 0.45); cursor: pointer;"></div>`,
+    iconSize: [16, 16],
+    iconAnchor: [8, 8],
+    popupAnchor: [0, -10],
+  });
+}
+
+/** Informa el zoom actual del mapa (al cargar y tras cada acercamiento o alejamiento). */
+function ObservadorZoom({ onZoom }: { onZoom: (zoom: number) => void }) {
+  const map = useMapEvents({ zoomend: () => onZoom(map.getZoom()) });
+  React.useEffect(() => {
+    onZoom(map.getZoom());
+  }, [map, onZoom]);
+  return null;
+}
+
 function crearIconoDentista(d: Dentist) {
   const etiqueta = d.price > 0 ? `S/${d.price}` : d.initials;
   const pinHtml = `
@@ -245,13 +274,15 @@ export function DentistMapInner({ dentists, altura = 340 }: DentistMapInnerProps
     solicitar();
   };
 
+  const [zoom, setZoom] = React.useState(13);
+  const compacto = dentists.length > MAX_SIN_AGRUPAR && zoom < ZOOM_ETIQUETAS;
   const puntosYDentistas = React.useMemo(() => {
     return dentists.map((d, i) => ({
       dentist: d,
       coords: obtenerCoordenadas(d, i),
-      icon: crearIconoDentista(d),
+      icon: compacto ? crearPuntoDentista(d) : crearIconoDentista(d),
     }));
-  }, [dentists]);
+  }, [dentists, compacto]);
 
   const puntos = React.useMemo(
     () => puntosYDentistas.map((item) => item.coords),
@@ -284,6 +315,7 @@ export function DentistMapInner({ dentists, altura = 340 }: DentistMapInnerProps
         {/* Sin el prefijo "Leaflet": deja la atribución de OpenStreetMap (obligatoria) más corta en celulares. */}
         <AttributionControl prefix={false} position="bottomright" />
         <MapSizeFixer />
+        <ObservadorZoom onZoom={setZoom} />
         <AjustadorLimites puntos={puntos} />
         <UbicacionUsuarioCapa posicion={posicion} enfocar={enfocar} puntosReferencia={puntos} />
 
@@ -391,6 +423,12 @@ export function DentistMapInner({ dentists, altura = 340 }: DentistMapInnerProps
         <span className="hidden sm:inline"> · Mapa de Ica</span>
         {tactil && <span className="text-muted-foreground"> · usa 2 dedos</span>}
       </div>
+      {/* Aviso aparte, encima del conteo: en la misma etiqueta no cabía y se cortaba. */}
+      {compacto && (
+        <div className="pointer-events-none absolute bottom-9 left-3 z-[1000] rounded-full bg-background/90 px-3 py-1 text-[11px] font-medium text-muted-foreground shadow-sm backdrop-blur">
+          Acerca el mapa para ver los precios
+        </div>
+      )}
     </div>
   );
 }

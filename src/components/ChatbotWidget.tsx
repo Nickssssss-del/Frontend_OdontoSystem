@@ -193,6 +193,8 @@ export function ChatbotWidget() {
         className={cn(
           "fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-50 size-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 sm:right-5 sm:bottom-5 sm:size-14",
           soloEscritorio ? "hidden md:flex" : "flex",
+          // En el celular el chat abierto ocupa la parte inferior y trae su propio botón de cerrar.
+          open && "max-sm:hidden",
         )}
         aria-label={open ? "Cerrar chat" : "Abrir chat de OdontoBot"}
       >
@@ -214,13 +216,29 @@ export function ChatbotWidget() {
 
       <AnimatePresence>
         {open && (
+          // Fondo oscuro solo en el celular: deja claro que el chat está encima de la página
+          // (antes su botón de cerrar quedaba sobre «Cerrar sesión» y se confundían).
+          <motion.div
+            key="fondo-chat"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className={cn("fixed inset-0 z-40 bg-black/40 sm:hidden", soloEscritorio && "hidden")}
+            aria-hidden="true"
+            onClick={() => setOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {open && (
           <motion.section
             initial={{ opacity: 0, y: 24, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 24, scale: 0.96 }}
             transition={{ type: "spring", stiffness: 320, damping: 30 }}
             className={cn(
-              "fixed right-3 bottom-[calc(max(1rem,env(safe-area-inset-bottom))+3.75rem)] z-50 h-[min(560px,calc(100dvh-8rem))] w-[min(94vw,380px)] flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-2xl sm:right-5 sm:bottom-24",
+              // Celular: hoja inferior a todo el ancho. Desde sm: tarjeta flotante sobre el botón.
+              "fixed inset-x-0 bottom-0 z-50 h-[85dvh] w-full flex-col overflow-hidden rounded-t-3xl border border-border bg-card pb-[env(safe-area-inset-bottom)] shadow-2xl sm:inset-x-auto sm:right-5 sm:bottom-24 sm:h-[min(560px,calc(100dvh-8rem))] sm:w-[min(94vw,380px)] sm:rounded-3xl sm:pb-0",
               soloEscritorio ? "hidden md:flex" : "flex",
             )}
           >
@@ -240,6 +258,14 @@ export function ChatbotWidget() {
                   {loading ? "Escribiendo…" : usuario ? "En línea" : "Inicia sesión para chatear"}
                 </p>
               </div>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label="Cerrar chat"
+                className="ml-auto flex size-10 items-center justify-center rounded-full text-muted-foreground hover:bg-muted sm:hidden"
+              >
+                <X className="size-5" />
+              </button>
             </header>
 
             <div ref={scroller} className="flex-1 space-y-3 overflow-y-auto px-3 py-4">

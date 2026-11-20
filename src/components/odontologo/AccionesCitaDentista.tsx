@@ -1,6 +1,7 @@
 import { CheckCircle2, Loader2, NotebookPen, UserX } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { accionesDeCita } from "@/lib/atencion-cita";
+import { accionesDeCita, inasistenciaDisponibleDesde } from "@/lib/atencion-cita";
+import { horaDe } from "@/lib/odontologos";
 import type { Appointment } from "@/lib/app-state-types";
 
 type Props = {
@@ -63,49 +64,62 @@ export function AccionesCitaDentista({
     ) : null;
   }
 
+  // Ya empezó pero sigue dentro de la tolerancia: se avisa en texto (en el celular no hay tooltip).
+  const esperandoTolerancia =
+    cita.status === "CONFIRMED" && acciones.atender && !acciones.inasistencia;
+
   return (
-    <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:flex-wrap">
-      {acciones.atender && (
-        <Button
-          type="button"
-          size="sm"
-          className="w-full sm:w-auto"
-          disabled={operando}
-          onClick={onAtender}
-        >
-          {operando ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <CheckCircle2 className="size-4" />
-          )}
-          Atendida
-        </Button>
-      )}
-      {acciones.inasistencia && (
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="w-full sm:w-auto"
-          disabled={operando}
-          onClick={onInasistencia}
-        >
-          <UserX className="size-4" />
-          Inasistencia
-        </Button>
-      )}
-      {acciones.registrarHistoria && (
-        <Button
-          type="button"
-          size="sm"
-          variant="secondary"
-          className="w-full sm:w-auto"
-          disabled={operando}
-          onClick={onRegistrar}
-        >
-          <NotebookPen className="size-4" />
-          Registrar historia
-        </Button>
+    <div className="space-y-2 pt-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        {acciones.atender && (
+          <Button
+            type="button"
+            size="sm"
+            className="w-full sm:w-auto"
+            disabled={operando}
+            onClick={onAtender}
+          >
+            {operando ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <CheckCircle2 className="size-4" />
+            )}
+            Atendida
+          </Button>
+        )}
+        {acciones.inasistencia && (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="w-full sm:w-auto"
+            disabled={operando}
+            onClick={onInasistencia}
+          >
+            <UserX className="size-4" />
+            Inasistencia
+          </Button>
+        )}
+        {acciones.registrarHistoria && (
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="w-full sm:w-auto"
+            disabled={operando}
+            onClick={onRegistrar}
+          >
+            <NotebookPen className="size-4" />
+            Registrar historia
+          </Button>
+        )}
+      </div>
+      {esperandoTolerancia && (
+        <p className="text-xs text-muted-foreground">
+          «Inasistencia» se habilita a las{" "}
+          {horaDe(new Date(inasistenciaDisponibleDesde(cita.inicio)).toISOString())} (15 min de
+          tolerancia).
+        </p>
       )}
     </div>
   );

@@ -21,6 +21,7 @@ import * as React from "react";
 import type { ReactNode } from "react";
 import { ChatbotWidget } from "./ChatbotWidget";
 import { NotificacionesPanel } from "./NotificacionesPanel";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { ReaceptarPolitica } from "./ReaceptarPolitica";
 import { useAppState } from "@/lib/app-state";
 import {
@@ -258,6 +259,7 @@ function DentistSidebar({
   const location = useLocation();
   const { usuario } = useAppState();
   const [notificacionesOpen, setNotificacionesOpen] = React.useState(false);
+  const esMovil = useIsMobile();
   const salir = useCerrarSesion();
   const nombre = usuario?.nombre ?? "Odontólogo";
   // En el celular el panel siempre muestra las etiquetas; en escritorio depende de "open".
@@ -357,7 +359,9 @@ function DentistSidebar({
         <NotificacionesPanel
           open={notificacionesOpen}
           onOpenChange={setNotificacionesOpen}
-          side="right"
+          // En el celular el menú lateral ocupa casi toda la pantalla: a la derecha no cabe el panel
+          // y se salía de la pantalla. Ahí se abre hacia arriba, dentro del ancho visible.
+          side={esMovil ? "top" : "right"}
           align="start"
         >
           <button
