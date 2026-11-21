@@ -1,7 +1,7 @@
 import * as React from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { AccionesCitaDentista } from "@/components/odontologo/AccionesCitaDentista";
@@ -238,6 +238,18 @@ function DentistAgenda() {
           if (accionesDe(appointment).registrarHistoria) setHistoriaPara(appointment);
         }}
       />
+      {/* Igual que la app: desde una cita atendida se abre la ficha del paciente con sus historias
+          y las citas que faltan documentar (DISP02-O07). */}
+      {appointment.status === "COMPLETED" && idPacienteConsultable(appointment.patientId) && (
+        <Button asChild variant="outline" size="sm" className="mt-2 w-full">
+          <Link
+            to="/dentist/historial/$pacienteId"
+            params={{ pacienteId: (appointment.patientId ?? "").trim() }}
+          >
+            <FileText className="size-4" /> Historia clínica
+          </Link>
+        </Button>
+      )}
     </div>
   );
 
