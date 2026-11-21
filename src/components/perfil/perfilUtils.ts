@@ -12,6 +12,16 @@ export function mensajeDeError(error: unknown, porDefecto: string): string {
   return porDefecto;
 }
 
+/**
+ * Mensaje con el código HTTP, para diagnosticar desde la pantalla del teléfono (DISP02-O06/O07).
+ * 401 y 403 se distinguen aquí, aunque mensajeDeError les da el mismo texto.
+ */
+export function detalleDeError(error: unknown, porDefecto: string): string {
+  const mensaje = mensajeDeError(error, porDefecto);
+  if (!(error instanceof ApiError)) return mensaje;
+  return error.status === 0 ? `${mensaje} (sin conexión)` : `${mensaje} (HTTP ${error.status})`;
+}
+
 /** Etiquetas y estilos de estado de cita (mismo contrato que el panel). */
 export const etiquetaEstadoCita: Record<EstadoCita, string> = {
   PENDIENTE_PAGO: "Pago pendiente",

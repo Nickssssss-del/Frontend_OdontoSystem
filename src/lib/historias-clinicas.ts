@@ -43,6 +43,16 @@ export function reducirConsultas(
 }
 
 /**
+ * ¿Se puede ofrecer «Registrar historia»? Solo cuando terminó la consulta de historias del paciente.
+ * Si la consulta falló también se ofrece (DISP02-O07): el backend es quien impide el duplicado
+ * (POST /api/citas/{id}/historia responde 409 y el diálogo lo muestra como «ya existía»).
+ * Ocultarlo dejaba el registro bloqueado cada vez que fallaba el GET.
+ */
+export function historiaConsultable(estado: EstadoConsultaPaciente | undefined): boolean {
+  return estado === "ok" || estado === "error";
+}
+
+/**
  * Solo el id que vino del backend. Un nombre (con espacios) o un valor vacío no se consulta.
  * Limitación: si la agenda no trae `paciente.id`, esa persona no abre el historial.
  */

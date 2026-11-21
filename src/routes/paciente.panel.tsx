@@ -16,6 +16,7 @@ import {
   Zap,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { CargandoSesion } from "@/components/CargandoSesion";
 import { AccionesCita } from "@/components/paciente/AccionesCita";
 import { useAppState } from "@/lib/app-state";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -98,7 +99,7 @@ type KPI = {
 };
 
 function PacientePanel() {
-  const { usuario } = useAppState();
+  const { usuario, sesionLeida } = useAppState();
   const esPaciente = usuario?.rol === "PACIENTE";
 
   const [citas, setCitas] = React.useState<Cita[]>([]);
@@ -193,6 +194,8 @@ function PacientePanel() {
       color: "primary",
     },
   ];
+
+  if (!sesionLeida) return <CargandoSesion />;
 
   if (!esPaciente) {
     return (
@@ -406,7 +409,42 @@ function PacientePanel() {
               </CardHeader>
               {historial.length > 0 && (
                 <CardContent>
-                  <div className="overflow-x-auto">
+                  {/* Celular: tarjetas. La tabla de 6 columnas solo mostraba 3 y escondía estado y
+                      acciones a la derecha, con filas muy altas (DISP02-P06). */}
+                  <ul className="space-y-3 md:hidden" aria-label="Historial de citas">
+                    {historial.map((c) => (
+                      <li key={c.id} className="rounded-xl border border-border/70 p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="font-medium">{c.servicio.titulo}</p>
+                            <p className="text-sm text-muted-foreground">{c.odontologo.nombre}</p>
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className={cn("shrink-0", claseEstado[c.estado])}
+                          >
+                            {etiquetaEstado[c.estado]}
+                          </Badge>
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-baseline justify-between gap-x-3 text-sm">
+                          <span className="text-muted-foreground">
+                            {fechaLarga(fechaDe(c.inicio))} · {horaDe(c.inicio)}
+                          </span>
+                          <span className="font-medium">{soles(Number(c.precio))}</span>
+                        </div>
+                        <div className="mt-3">
+                          <AccionesCita
+                            cita={c}
+                            onCambio={() => setRecargar((n) => n + 1)}
+                            yaResenada={
+                              errorResenas ? undefined : !porResenar.some((p) => p.cita_id === c.id)
+                            }
+                          />
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="hidden overflow-x-auto md:block">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -545,7 +583,7 @@ function CitaProxima({
 
       {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
 
-      <AccionesCita cita={cita} onCambio={onCambio} />
+      <AccionesCita cita={cita} onCambio={onCambio} sinCancelar />
 
       <div className="mt-3 border-t border-border pt-3">
         {!confirmando ? (

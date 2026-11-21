@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { rutaHistoriasDePaciente } from "@/lib/api";
+import { ApiError, rutaHistoriasDePaciente } from "@/lib/api";
+import { detalleDeError } from "@/components/perfil/perfilUtils";
 import type { Appointment } from "@/lib/app-state-types";
 import {
   accionesDeCita,
@@ -21,6 +22,7 @@ import {
   agruparPacientesPorId,
   clasificarConsultaHistorias,
   estadoListaHistorias,
+  historiaConsultable,
   historiasDelPaciente,
   idPacienteConsultable,
   reducirConsultas,
@@ -455,5 +457,37 @@ describe("consulta de historias", () => {
     expect(idPacienteConsultable("Ana López")).toBeNull();
     expect(idPacienteConsultable("pac-1")).toBe("pac-1");
     expect(rutaHistoriasDePaciente("pac-1")).toContain("paciente_id=pac-1");
+  });
+});
+
+describe("DISP02-O07: registrar historia aunque falle la consulta", () => {
+  it("solo espera mientras la consulta está pendiente", () => {
+    expect(historiaConsultable(undefined)).toBe(false);
+    expect(historiaConsultable("pendiente")).toBe(false);
+    expect(historiaConsultable("ok")).toBe(true);
+    expect(historiaConsultable("error")).toBe(true);
+  });
+
+  it("con la consulta fallida, una cita COMPLETADA ofrece «Registrar historia»", () => {
+    const acciones = accionesDeCita({
+      status: "COMPLETED",
+      inicioIso: "2026-11-16T10:00:00-05:00",
+      ahoraMs: Date.parse("2026-11-20T10:00:00-05:00"),
+      historiaRegistrada: false,
+      historiaCerrada: false,
+      puedeComprobarHistoria: historiaConsultable("error"),
+    });
+    expect(acciones.registrarHistoria).toBe(true);
+    // El duplicado lo frena el backend con 409, que no se muestra como guardado nuevo.
+    expect(efectoRespuestaHistoria(409).mostrarComoRegistrada).toBe(false);
+  });
+
+  it("el mensaje de error incluye el código HTTP", () => {
+    expect(detalleDeError(new ApiError(500, "Ocurrió un error inesperado"), "x")).toBe(
+      "Ocurrió un error inesperado (HTTP 500)",
+    );
+    expect(detalleDeError(new ApiError(403, "No"), "x")).toContain("(HTTP 403)");
+    expect(detalleDeError(new ApiError(0, "Sin red"), "x")).toBe("Sin red (sin conexión)");
+    expect(detalleDeError(new Error("x"), "por defecto")).toBe("por defecto");
   });
 });

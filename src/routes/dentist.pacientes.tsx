@@ -10,6 +10,7 @@ import { agruparPacientesPorId, idPacienteConsultable } from "@/lib/historias-cl
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { detalleDeError } from "@/components/perfil/perfilUtils";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -83,20 +84,26 @@ function DentistPacientes() {
   const [desdeApi, setDesdeApi] = React.useState<Patient[] | null>(null);
   const [listaIncompleta, setListaIncompleta] = React.useState(false);
   const [cargandoLista, setCargandoLista] = React.useState(true);
+  // Motivo real del fallo (antes se descartaba y no se podía diagnosticar: DISP02-O06).
+  const [motivoLista, setMotivoLista] = React.useState<string | null>(null);
+  const [intentoLista, setIntentoLista] = React.useState(0);
 
   React.useEffect(() => {
     let vivo = true;
+    setCargandoLista(true);
     pacientesApi
       .mios()
       .then((lista) => {
         if (!vivo) return;
         setDesdeApi(lista.map(resumenAPaciente));
         setListaIncompleta(false);
+        setMotivoLista(null);
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         if (!vivo) return;
         setDesdeApi(null);
         setListaIncompleta(true);
+        setMotivoLista(detalleDeError(err, "Error desconocido"));
       })
       .finally(() => {
         if (vivo) setCargandoLista(false);
@@ -104,7 +111,7 @@ function DentistPacientes() {
     return () => {
       vivo = false;
     };
-  }, []);
+  }, [intentoLista]);
 
   const desdeAgenda = React.useMemo(() => {
     const hoy = fechaLima(0);
@@ -285,8 +292,19 @@ function DentistPacientes() {
                   ? "Cargando pacientes\u2026"
                   : `${filteredPatients.length} paciente(s) encontrado(s).`}
                 {listaIncompleta &&
-                  " No se pudo cargar el listado completo: esta lista sale de la agenda y puede estar incompleta."}
+                  ` No se pudo cargar el listado completo (${motivoLista ?? "sin detalle"}): esta lista sale de la agenda y puede estar incompleta.`}
               </CardDescription>
+              {listaIncompleta && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 w-fit rounded-full"
+                  onClick={() => setIntentoLista((n) => n + 1)}
+                  disabled={cargandoLista}
+                >
+                  Reintentar
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
               <ul className="space-y-3 md:hidden" aria-label="Pacientes">

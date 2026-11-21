@@ -14,7 +14,7 @@ import {
   TableHead,
 } from "@/components/ui/table";
 import { miPerfilApi, pacientesApi, type HistoriaClinica, type PacienteDetalle } from "@/lib/api";
-import { mensajeDeError } from "@/components/perfil/perfilUtils";
+import { detalleDeError } from "@/components/perfil/perfilUtils";
 import {
   estadoListaHistorias,
   fechaAtencionVisible,
@@ -91,7 +91,7 @@ function HistorialClinicoPaciente() {
       .catch((err: unknown) => {
         if (!vivo) return;
         setVista(null);
-        setError(mensajeDeError(err, "No se pudo cargar el historial clínico."));
+        setError(detalleDeError(err, "No se pudo cargar el historial clínico."));
       });
 
     const pacienteP = pacientesApi
@@ -100,10 +100,13 @@ function HistorialClinicoPaciente() {
         if (!vivo) return;
         setPaciente(pacienteData);
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         if (!vivo) return;
         setPaciente(null);
-        setErrorPaciente("No se pudieron cargar los datos del paciente");
+        // Con el motivo del backend (403, 404, 5xx o sin conexión) se puede diagnosticar el fallo (DISP02-O06).
+        setErrorPaciente(
+          `No se pudieron cargar los datos del paciente: ${detalleDeError(err, "error desconocido")}`,
+        );
       });
 
     void Promise.allSettled([historiasP, pacienteP]).then(() => {

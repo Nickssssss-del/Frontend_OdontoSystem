@@ -14,6 +14,7 @@ import { ConsentimientosCard } from "@/components/paciente/ConsentimientosCard";
 import { EliminarCuentaCard } from "@/components/cuenta/EliminarCuentaCard";
 import { VerificacionCorreoCard } from "@/components/cuenta/VerificacionCorreoCard";
 import { AppShell } from "@/components/AppShell";
+import { CargandoSesion } from "@/components/CargandoSesion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -115,7 +116,7 @@ function CambiarContrasenaButton() {
 }
 
 function ConfiguracionPaciente() {
-  const { usuario: sesion, cerrarSesion } = useAppState();
+  const { usuario: sesion, sesionLeida, cerrarSesion } = useAppState();
   const esPaciente = sesion?.rol === "PACIENTE";
   const navigate = useNavigate();
   const sesionBackend = leerSesion();
@@ -154,6 +155,8 @@ function ConfiguracionPaciente() {
       vigente = false;
     };
   }, [esPaciente, intento]);
+
+  if (!sesionLeida) return <CargandoSesion />;
 
   if (!esPaciente) {
     return (
