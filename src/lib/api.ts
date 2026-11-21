@@ -779,6 +779,8 @@ export type PacienteDetalle = {
   apellido: string;
   alergias: string | null;
   antecedentes: string | null;
+  /** Citas COMPLETADAS con este odontólogo (PacienteService.PacienteDetalle.citasAtendidas). */
+  citas_atendidas?: number;
 };
 
 const FOTO_TIPOS_ADMITIDOS = ["image/jpeg", "image/png", "image/webp"];

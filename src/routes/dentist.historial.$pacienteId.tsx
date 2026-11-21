@@ -1,7 +1,7 @@
 import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "motion/react";
-import { FileText, Loader2, AlertCircle } from "lucide-react";
+import { FileText, Loader2, AlertCircle, ClipboardList, Plus } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,13 @@ import {
   idPacienteConsultable,
 } from "@/lib/historias-clinicas";
 import { useAppState } from "@/lib/app-state";
+import { citaAAppointment, type Appointment } from "@/lib/app-state-types";
+import {
+  buscarCitasSinHistoria,
+  objetivoPendientes,
+  type BusquedaSinHistoria,
+} from "@/lib/citas-sin-historia";
+import { RegistrarHistoriaDialog } from "@/components/odontologo/RegistrarHistoriaDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/dentist/historial/$pacienteId")({
@@ -132,6 +139,64 @@ function HistorialClinicoPaciente() {
   const alergias = errorPaciente ? "Sin datos" : paciente?.alergias?.trim() || "Sin datos";
   const antecedentes = errorPaciente ? "Sin datos" : paciente?.antecedentes?.trim() || "Sin datos";
 
+  // Citas atendidas sin historia (mismo cálculo que la ficha de la app móvil, DISP02-O07):
+  // atendidas según el detalle − historias registradas; se buscan en la agenda hacia atrás.
+  const objetivo = objetivoPendientes(paciente?.citas_atendidas, vista ? historias.length : null);
+  const claveConHistoria = historias
+    .map((h) => h.cita_id)
+    .sort()
+    .join(",");
+  const [busqueda, setBusqueda] = React.useState<
+    | { estado: "buscando" }
+    | { estado: "lista"; datos: BusquedaSinHistoria }
+    | { estado: "error"; motivo: string }
+    | null
+  >(null);
+  const [intentoBusqueda, setIntentoBusqueda] = React.useState(0);
+  const [paraRegistrar, setParaRegistrar] = React.useState<Appointment | null>(null);
+
+  React.useEffect(() => {
+    if (cargando || !idConsulta) {
+      setBusqueda(null);
+      return;
+    }
+    if (objetivo === 0) {
+      setBusqueda({ estado: "lista", datos: { citas: [], revisadoDesde: "" } });
+      return;
+    }
+    let vivo = true;
+    setBusqueda({ estado: "buscando" });
+    buscarCitasSinHistoria(idConsulta, {
+      objetivo,
+      conHistoria: new Set(claveConHistoria ? claveConHistoria.split(",") : []),
+      pedirAgenda: (desde, hasta) => miPerfilApi.citas(desde, hasta),
+    })
+      .then((datos) => {
+        if (vivo) setBusqueda({ estado: "lista", datos });
+      })
+      .catch((err: unknown) => {
+        if (vivo)
+          setBusqueda({
+            estado: "error",
+            motivo: detalleDeError(err, "No se pudo revisar la agenda."),
+          });
+      });
+    return () => {
+      vivo = false;
+    };
+  }, [cargando, idConsulta, objetivo, claveConHistoria, intentoBusqueda]);
+
+  const sinHistoria = busqueda?.estado === "lista" ? busqueda.datos.citas : [];
+  const totalSinHistoria = Math.max(objetivo ?? 0, sinHistoria.length);
+  const noListadas = busqueda?.estado === "lista" ? totalSinHistoria - sinHistoria.length : 0;
+  const mostrarSinHistoria =
+    busqueda !== null &&
+    (busqueda.estado === "buscando"
+      ? (objetivo ?? 0) > 0
+      : busqueda.estado === "error" || totalSinHistoria > 0);
+  /** Tras guardar (o 409 «ya existía») se recargan historias y pendientes, como hace la app. */
+  const recargarTodo = () => setIntento((n) => n + 1);
+
   const historiasOrdenadas = historias
     .slice()
     .sort((a, b) => new Date(b.fecha_cita).getTime() - new Date(a.fecha_cita).getTime());
@@ -205,6 +270,99 @@ function HistorialClinicoPaciente() {
             )}
           </CardContent>
         </Card>
+
+        {mostrarSinHistoria && (
+          <Card className="border-warning/40">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ClipboardList className="size-5 text-primary" /> Citas atendidas sin historia
+                clínica
+              </CardTitle>
+              <CardDescription>
+                {totalSinHistoria > 0 && (
+                  <strong>
+                    {totalSinHistoria === 1
+                      ? "1 cita atendida sin historia clínica. "
+                      : `${totalSinHistoria} citas atendidas sin historia clínica. `}
+                  </strong>
+                )}
+                Se registra una sola vez por cita y no se puede editar después.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {busqueda?.estado === "buscando" && (
+                <p className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
+                  <Loader2 className="size-4 animate-spin" /> Buscando las citas…
+                </p>
+              )}
+              {busqueda?.estado === "error" && (
+                <div
+                  role="alert"
+                  className="flex flex-col gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive sm:flex-row sm:items-center"
+                >
+                  <AlertCircle className="size-5 shrink-0" />
+                  <p className="flex-1">{busqueda.motivo}</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full sm:w-auto"
+                    onClick={() => setIntentoBusqueda((n) => n + 1)}
+                  >
+                    Reintentar
+                  </Button>
+                </div>
+              )}
+              {sinHistoria.length > 0 && (
+                <ul className="space-y-2" aria-label="Citas atendidas sin historia clínica">
+                  {sinHistoria.map((c) => (
+                    <li
+                      key={c.id}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-card p-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold">{c.servicio.titulo}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {fmtFecha(c.inicio)} ·{" "}
+                          {new Intl.DateTimeFormat("es-PE", {
+                            timeZone: "America/Lima",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: false,
+                          }).format(new Date(c.inicio))}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="shrink-0"
+                        onClick={() => setParaRegistrar(citaAAppointment(c))}
+                      >
+                        <Plus className="size-4" /> Registrar historia
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {noListadas > 0 && busqueda?.estado === "lista" && (
+                <p className="text-xs text-muted-foreground">
+                  {noListadas === 1
+                    ? "1 cita atendida es anterior"
+                    : `${noListadas} citas atendidas son anteriores`}{" "}
+                  al {fmtFecha(busqueda.datos.revisadoDesde)} y no se muestra
+                  {noListadas === 1 ? "" : "n"} aquí.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        <RegistrarHistoriaDialog
+          cita={paraRegistrar}
+          onClose={() => setParaRegistrar(null)}
+          onRegistrada={recargarTodo}
+          onYaExistia={recargarTodo}
+        />
 
         <Card>
           <CardHeader>
