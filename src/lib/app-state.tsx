@@ -53,6 +53,12 @@ export {
 
 type Ctx = {
   usuario: Usuario | null;
+  /**
+   * false durante el render del servidor y el primer render del navegador: la sesión está en
+   * localStorage y aún no se leyó. Las pantallas privadas esperan a este valor antes de decir
+   * «Inicia sesión», que si no aparecía unos segundos al recargar en el celular (DISP02-P12).
+   */
+  sesionLeida: boolean;
   cerrarSesion: () => void;
   userRole: UserRole;
   setUserRole: (role: UserRole) => void;
@@ -82,6 +88,7 @@ export { AppStateContext };
 export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [userRole, setUserRole] = React.useState<UserRole>("patient");
   const [usuario, setUsuario] = React.useState<Usuario | null>(null);
+  const [sesionLeida, setSesionLeida] = React.useState(false);
 
   // La sesión vive en el navegador (ver src/lib/api.ts). Se lee al cargar y cada vez que cambia
   // (login, logout o token vencido), y el rol que manda el backend decide qué vista se muestra.
@@ -90,6 +97,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       const sesion = leerSesion();
       setUsuario(sesion ? { nombre: sesion.nombre_completo, rol: sesion.rol } : null);
       if (sesion) setUserRole(sesion.rol === "ODONTOLOGO" ? "dentist" : "patient");
+      setSesionLeida(true);
     };
     sincronizar();
     return alCambiarSesion(sincronizar);
@@ -236,6 +244,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
 
   const value: Ctx = {
     usuario,
+    sesionLeida,
     cerrarSesion: () => authApi.cerrarSesion(),
     userRole,
     setUserRole,

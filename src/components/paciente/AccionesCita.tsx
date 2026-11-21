@@ -60,9 +60,15 @@ export function AccionesCita({
   cita,
   onCambio,
   yaResenada,
+  sinCancelar = false,
 }: {
   cita: Cita;
   onCambio?: () => void;
+  /**
+   * true cuando la tarjeta ya tiene su propio «Cancelar cita» (con el aviso de reembolso):
+   * evita dos botones que hacen lo mismo en la misma cita (DISP02-P06).
+   */
+  sinCancelar?: boolean;
   /** true si la cita ya tiene reseña; false si falta calificar. Sin el dato, no se muestra el botón. */
   yaResenada?: boolean | undefined;
 }) {
@@ -224,14 +230,21 @@ export function AccionesCita({
         )}
         {puedeReprogramar && (
           <>
-            <Button variant="outline" size="sm" disabled={ocupado !== null} onClick={cancelarCita}>
-              {ocupado === "cancelar" ? (
-                <Loader2 className="mr-2 size-4 animate-spin" />
-              ) : (
-                <XCircle className="mr-2 size-4" />
-              )}
-              Cancelar
-            </Button>
+            {!sinCancelar && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={ocupado !== null}
+                onClick={cancelarCita}
+              >
+                {ocupado === "cancelar" ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : (
+                  <XCircle className="mr-2 size-4" />
+                )}
+                Cancelar
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"

@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { Mail, Pencil, Phone, UserRound } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { CargandoSesion } from "@/components/CargandoSesion";
 import {
   AccesoPerfil,
   AvisoError,
@@ -33,7 +34,7 @@ export const Route = createFileRoute("/paciente/perfil")({
 });
 
 function PerfilPaciente() {
-  const { usuario: sesion } = useAppState();
+  const { usuario: sesion, sesionLeida } = useAppState();
   const esPaciente = sesion?.rol === "PACIENTE";
   const [usuario, setUsuario] = React.useState<UsuarioYo | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -66,6 +67,8 @@ function PerfilPaciente() {
       vigente = false;
     };
   }, [esPaciente, intento]);
+
+  if (!sesionLeida) return <CargandoSesion />;
 
   if (!esPaciente) {
     return (

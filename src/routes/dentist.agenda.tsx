@@ -15,7 +15,9 @@ import {
   mensajeTransicion,
   reservarOperacion,
 } from "@/lib/atencion-cita";
+import { detalleDeError } from "@/components/perfil/perfilUtils";
 import {
+  historiaConsultable,
   idPacienteConsultable,
   reducirConsultas,
   type EstadoConsultaPaciente,
@@ -76,6 +78,7 @@ function DentistAgenda() {
   );
   const [consultas, setConsultas] = React.useState<Record<string, EstadoConsultaPaciente>>({});
   const [intentoHistorias, setIntentoHistorias] = React.useState(0);
+  const [motivoHistorias, setMotivoHistorias] = React.useState<string | null>(null);
   const enCurso = React.useRef(new Set<string>());
 
   const claveDia = (d: Date) =>
@@ -101,6 +104,7 @@ function DentistAgenda() {
     let vivo = true;
     const ids = clavePacientes.split("|");
     setConsultas((prev) => reducirConsultas(prev, { tipo: "iniciar", pacienteIds: ids }));
+    setMotivoHistorias(null);
     for (const pacienteId of ids) {
       void miPerfilApi
         .historias(pacienteId)
@@ -113,8 +117,9 @@ function DentistAgenda() {
           });
           setConsultas((prev) => reducirConsultas(prev, { tipo: "exito", pacienteId }));
         })
-        .catch(() => {
+        .catch((err: unknown) => {
           if (!vivo) return;
+          setMotivoHistorias(detalleDeError(err, "error desconocido"));
           setConsultas((prev) => reducirConsultas(prev, { tipo: "fallo", pacienteId }));
         });
     }
@@ -136,7 +141,7 @@ function DentistAgenda() {
 
   const puedeComprobar = (cita: Appointment) => {
     const pacienteId = idPacienteConsultable(cita.patientId);
-    return pacienteId !== null && consultas[pacienteId] === "ok";
+    return pacienteId !== null && historiaConsultable(consultas[pacienteId]);
   };
 
   const accionesDe = (cita: Appointment) =>
@@ -538,8 +543,9 @@ function DentistAgenda() {
         {Object.values(consultas).includes("error") && (
           <div className="mb-4 flex flex-col gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive sm:flex-row sm:items-center">
             <p className="flex-1">
-              No se pudo comprobar si las citas atendidas ya tienen historia clínica. «Registrar
-              historia» permanece oculto hasta confirmarlo.
+              No se pudo comprobar si las citas atendidas ya tienen historia clínica.
+              {motivoHistorias ? ` Motivo: ${motivoHistorias}` : ""} Puedes registrarla igual: si ya
+              existe, el servidor no guarda otra.
             </p>
             <Button
               type="button"

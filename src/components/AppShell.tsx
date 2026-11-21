@@ -282,8 +282,8 @@ function DentistSidebar({
     <aside
       id="menu-odontologo"
       className={cn(
-        "fixed left-0 top-0 z-50 h-screen w-64 border-r border-border/70 bg-card shadow-[1px_0_3px_rgba(0,107,104,0.05)] transition-all duration-300 motion-reduce:transition-none md:z-40 md:translate-x-0",
-        movilAbierto ? "translate-x-0 overflow-y-auto" : "-translate-x-full",
+        "fixed left-0 top-0 z-50 flex h-dvh w-64 flex-col border-r border-border/70 bg-card shadow-[1px_0_3px_rgba(0,107,104,0.05)] transition-all duration-300 motion-reduce:transition-none md:z-40 md:translate-x-0",
+        movilAbierto ? "translate-x-0" : "-translate-x-full",
         open ? "md:w-56" : "md:w-20",
       )}
     >
@@ -296,7 +296,7 @@ function DentistSidebar({
       {/* Header de marca */}
       <div
         className={cn(
-          "relative flex h-16 items-center justify-between border-b border-border/70",
+          "relative flex h-16 shrink-0 items-center justify-between border-b border-border/70",
           expandido ? "px-4" : "px-2",
         )}
       >
@@ -332,8 +332,8 @@ function DentistSidebar({
         </button>
       </div>
 
-      {/* Navigation */}
-      <nav className="space-y-2 p-3">
+      {/* Navigation: se desplaza sola si la pantalla es baja (celular en horizontal, DISP02-O10) */}
+      <nav className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
         {navItems.map(({ to, label, icon: Icon }) => {
           const isActive = location.pathname.startsWith(to);
           return (
@@ -354,8 +354,8 @@ function DentistSidebar({
         })}
       </nav>
 
-      {/* Footer Profile */}
-      <div className="absolute bottom-4 left-3 right-3 border-t border-border/70 pt-4">
+      {/* Footer Profile: en el flujo (no absolute) para no tapar enlaces del menú */}
+      <div className="mx-3 mb-4 mt-2 shrink-0 border-t border-border/70 pt-4">
         <NotificacionesPanel
           open={notificacionesOpen}
           onOpenChange={setNotificacionesOpen}
@@ -393,7 +393,14 @@ function DentistSidebar({
               )}
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent side="right" align="end" className="w-48">
+          {/* En el celular el menú lateral ocupa casi toda la pantalla: a la derecha se cortaba
+              «Configuración» y «Cerrar sesión» (DISP02-O03). Ahí se abre hacia arriba. */}
+          <DropdownMenuContent
+            side={esMovil ? "top" : "right"}
+            align="end"
+            collisionPadding={10}
+            className="w-48"
+          >
             <DropdownMenuItem asChild>
               <Link to="/dentist/perfil">
                 <User className="size-4 mr-2" />
