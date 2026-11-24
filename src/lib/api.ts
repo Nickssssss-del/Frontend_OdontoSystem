@@ -1437,11 +1437,14 @@ export type RespuestaAsistencia = {
 
 export type AgendaHoy = {
   fecha: string;
-  /** null: todavía no confirmaste hoy (sin confirmar no se aceptan reservas para hoy). */
-  atiende: boolean | null;
-  respondido_en: string | null;
+  /**
+   * Sin confirmar hoy (sin confirmar no se aceptan reservas para hoy): el backend omite los nulos,
+   * así que llega ausente (undefined). Usar `estadoAgendaHoy`, no `=== null` (DEF-12).
+   */
+  atiende?: boolean | null;
+  respondido_en?: string | null;
   citas_hoy: number;
-  primera_cita: string | null;
+  primera_cita?: string | null;
   citas_canceladas: number;
 };
 
@@ -1452,12 +1455,13 @@ export type ReporteAusencia = {
   servicio: string;
   fecha_cita: string;
   estado: EstadoReporteAusencia;
-  distancia_metros: number | null;
-  respuesta_odontologo: string | null;
+  /** El backend omite los nulos: puede llegar ausente (undefined). */
+  distancia_metros?: number | null;
+  respuesta_odontologo?: string | null;
   historia_registrada: boolean;
   responder_antes: string;
   creado_en: string;
-  resuelto_en: string | null;
+  resuelto_en?: string | null;
 };
 
 export const asistenciaApi = {
