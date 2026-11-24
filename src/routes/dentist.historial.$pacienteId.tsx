@@ -1,7 +1,7 @@
 import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "motion/react";
-import { FileText, Loader2, AlertCircle, ClipboardList, Plus } from "lucide-react";
+import { FileText, Loader2, AlertCircle, ClipboardList, Plus, RefreshCw } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -384,7 +384,8 @@ function HistorialClinicoPaciente() {
                 onClick={() => setIntento((n) => n + 1)}
                 disabled={cargando}
               >
-                Reintentar
+                {/* OBS-14: este botón está siempre; solo recarga. «Reintentar» queda para los errores. */}
+                <RefreshCw className="size-4" aria-hidden="true" /> Actualizar
               </Button>
             </div>
           </CardHeader>

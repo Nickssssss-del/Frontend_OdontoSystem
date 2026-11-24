@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { agendaHoyApi, type AgendaHoy } from "@/lib/api";
+import { estadoAgendaHoy } from "@/lib/agenda-hoy";
 import { fechaHora, mensajeDe } from "@/lib/formato";
 
 /** "¿Atiendes hoy?" — GET/POST /api/odontologos/yo/agenda-hoy. */
@@ -46,6 +47,8 @@ export function AgendaHoyCard({ onCambio }: { onCambio?: () => void }) {
     }
   };
 
+  const estado = hoy ? estadoAgendaHoy(hoy) : null;
+
   return (
     <Card>
       <CardHeader>
@@ -60,9 +63,9 @@ export function AgendaHoyCard({ onCambio }: { onCambio?: () => void }) {
         {hoy && (
           <>
             <div className="flex flex-wrap items-center gap-2 text-sm">
-              {hoy.atiende === null && <Badge variant="outline">Sin confirmar</Badge>}
-              {hoy.atiende === true && <Badge>Atiendes hoy</Badge>}
-              {hoy.atiende === false && <Badge variant="destructive">No atiendes hoy</Badge>}
+              {estado === "sin-confirmar" && <Badge variant="outline">Sin confirmar</Badge>}
+              {estado === "atiende" && <Badge>Atiendes hoy</Badge>}
+              {estado === "no-atiende" && <Badge variant="destructive">No atiendes hoy</Badge>}
               <span className="text-muted-foreground">
                 {hoy.citas_hoy} cita(s) hoy
                 {hoy.primera_cita ? ` · la primera: ${fechaHora(hoy.primera_cita)}` : ""}
@@ -73,9 +76,9 @@ export function AgendaHoyCard({ onCambio }: { onCambio?: () => void }) {
               <p className="text-sm text-muted-foreground">No tienes citas hoy</p>
             )}
 
-            {hoy.atiende !== false && !cancelando && (
+            {estado !== "no-atiende" && !cancelando && (
               <div className="flex flex-wrap gap-2">
-                {hoy.atiende === null && (
+                {estado === "sin-confirmar" && (
                   <Button disabled={enviando} onClick={() => void responder(true)}>
                     Sí, atiendo hoy
                   </Button>

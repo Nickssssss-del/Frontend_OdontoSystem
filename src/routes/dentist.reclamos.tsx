@@ -354,7 +354,8 @@ function TarjetaReporte({
         </div>
         <p className="text-sm text-muted-foreground">
           {r.servicio} · {fechaHora(r.fecha_cita)}
-          {r.distancia_metros !== null && ` · reportó a ${r.distancia_metros} m del consultorio`}
+          {typeof r.distancia_metros === "number" &&
+            ` · reportó a ${r.distancia_metros} m del consultorio`}
         </p>
         {r.estado === "PENDIENTE" && (
           <p className="text-sm">
