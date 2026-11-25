@@ -31,7 +31,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/dentist/pacientes")({
   head: () => ({
     meta: [
-      { title: "Pacientes | OdontoSystem Odont\u00f3logo" },
+      { title: "Pacientes | OdontoSystem Odontólogo" },
       {
         name: "description",
         content: "Administra el registro de tus pacientes y visualiza su historial.",
@@ -144,7 +144,7 @@ function DentistPacientes() {
     return { pacientes, sinIdentificador };
   }, [agenda, appointments]);
 
-  // Servicio de la \u00faltima cita de cada paciente (desc por fecha+hora).
+  // Servicio de la última cita de cada paciente (desc por fecha+hora).
   const ultimoServicioPorPaciente = React.useMemo<Map<string, string>>(() => {
     const mapa = new Map<string, string>();
     const porPaciente = new Map<string, { key: string; service: string }[]>();
@@ -162,7 +162,7 @@ function DentistPacientes() {
     return mapa;
   }, [agenda, appointments]);
 
-  // Combina la lista de la API con el servicio de la \u00faltima cita (sin mutar estado).
+  // Combina la lista de la API con el servicio de la última cita (sin mutar estado).
   const desdeApiConServicio = React.useMemo<Patient[] | null>(
     () =>
       desdeApi?.map((p) => ({
@@ -415,7 +415,7 @@ function DentistPacientes() {
                     <TableRow>
                       <TableHead>Paciente</TableHead>
                       {hayEdad && <TableHead>Edad</TableHead>}
-                      <TableHead className="hidden md:table-cell">\u00daltima cita</TableHead>
+                      <TableHead className="hidden md:table-cell">Última cita</TableHead>
                       <TableHead className="hidden lg:table-cell">Especialidad</TableHead>
                       <TableHead>Citas</TableHead>
                       <TableHead>Estado</TableHead>
