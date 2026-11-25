@@ -55,7 +55,13 @@ export function AgendaHoyCard({ onCambio }: { onCambio?: () => void }) {
         <CardTitle className="flex items-center gap-2">
           <CalendarCheck className="size-5" /> ¿Atiendes hoy?
         </CardTitle>
-        <CardDescription>Sin confirmar, los pacientes no pueden reservar para hoy.</CardDescription>
+        <CardDescription>
+          {estado === "atiende"
+            ? "Confirmado: los pacientes pueden reservar para hoy."
+            : estado === "no-atiende"
+              ? "Hoy no recibes reservas."
+              : "Sin confirmar, los pacientes no pueden reservar para hoy."}
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {error && <p className="text-sm text-destructive">{error}</p>}
