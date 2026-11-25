@@ -588,7 +588,7 @@ function Agendar() {
                     variant="outline"
                     className="flex-1 rounded-full border-teal-200 text-teal-700 hover:bg-teal-50"
                   >
-                    <Link to="/paciente/panel">
+                    <Link to="/paciente/panel" search={cita ? { cita: cita.id } : {}}>
                       <Eye className="size-4" />
                       Ver detalles de la cita
                     </Link>

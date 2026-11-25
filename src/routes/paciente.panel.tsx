@@ -45,7 +45,15 @@ import { soles } from "@/lib/mock-data";
 import { fechaDe, fechaLarga, horaDe } from "@/lib/odontologos";
 import { cn } from "@/lib/utils";
 
+type PanelSearch = {
+  /** Cita recién reservada o pagada: se resalta y se lleva a la vista (OBS-05). */
+  cita?: string | undefined;
+};
+
 export const Route = createFileRoute("/paciente/panel")({
+  validateSearch: (search: Record<string, unknown>): PanelSearch => ({
+    cita: typeof search["cita"] === "string" ? search["cita"] : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Mi Panel | OdontoSystem" },
@@ -101,6 +109,7 @@ type KPI = {
 function PacientePanel() {
   const { usuario, sesionLeida } = useAppState();
   const esPaciente = usuario?.rol === "PACIENTE";
+  const { cita: citaResaltada } = Route.useSearch();
 
   const [citas, setCitas] = React.useState<Cita[]>([]);
   const [porResenar, setPorResenar] = React.useState<CitaPorResenar[]>([]);
@@ -310,6 +319,7 @@ function PacientePanel() {
                     <CitaProxima
                       key={c.id}
                       cita={c}
+                      resaltada={c.id === citaResaltada}
                       onCambio={() => setRecargar((n) => n + 1)}
                       onCancelada={(actualizada) =>
                         setCitas((prev) =>
@@ -502,13 +512,22 @@ function PacientePanel() {
 
 function CitaProxima({
   cita,
+  resaltada = false,
   onCancelada,
   onCambio,
 }: {
   cita: Cita;
+  /** Llega desde «Ver detalles de la cita» tras pagar: se marca y se desplaza hasta ella (OBS-05). */
+  resaltada?: boolean;
   onCancelada: (c: Cita) => void;
   onCambio: () => void;
 }) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    if (!resaltada || !ref.current) return;
+    const sinAnimacion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    ref.current.scrollIntoView({ behavior: sinAnimacion ? "auto" : "smooth", block: "center" });
+  }, [resaltada]);
   const [confirmando, setConfirmando] = React.useState(false);
   const [enviando, setEnviando] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -530,11 +549,19 @@ function CitaProxima({
 
   return (
     <motion.div
+      ref={ref}
       layout
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl border border-border bg-background p-4"
+      aria-current={resaltada ? "true" : undefined}
+      className={cn(
+        "scroll-mt-24 rounded-2xl border bg-background p-4",
+        resaltada ? "border-primary ring-2 ring-primary/30" : "border-border",
+      )}
     >
+      {resaltada && (
+        <p className="mb-2 text-xs font-medium text-primary">Tu cita recién reservada</p>
+      )}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="font-semibold">{cita.servicio.titulo}</p>

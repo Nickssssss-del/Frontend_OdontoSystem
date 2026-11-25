@@ -14,10 +14,12 @@ export const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
-        default: "h-9 px-4 py-2",
-        sm: "h-8 rounded-lg px-3 text-xs",
-        lg: "h-10 rounded-lg px-8",
-        icon: "h-9 w-9",
+        // En pantallas táctiles (pointer: coarse) el área mínima es 44 px (OBS-07, WCAG 2.5.5);
+        // con mouse se mantienen las medidas originales.
+        default: "h-9 px-4 py-2 pointer-coarse:min-h-11",
+        sm: "h-8 rounded-lg px-3 text-xs pointer-coarse:min-h-11",
+        lg: "h-10 rounded-lg px-8 pointer-coarse:min-h-11",
+        icon: "h-9 w-9 pointer-coarse:min-h-11 pointer-coarse:min-w-11",
       },
     },
     defaultVariants: {
